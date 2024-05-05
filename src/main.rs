@@ -26,19 +26,24 @@ fn parse_args() {
     }
 }
 
-fn format_txt_files() {
+fn get_current_dir() -> String {
     let path_buf = env::current_dir();
     let path = match path_buf {
         Ok(p) => {
             p
             .to_str()
             .map(|s| s.to_string())
-            .unwrap_or(String::from("FOUND A BUG LINE 28"))
+            .unwrap()
         },
         Err(e) => {
             println!("There was a problem getting the path: {}", e);
-            String::from("FOUND A BUG LINE 32")
+            String::from("PATH-ERROR")
         },
     };
-    dbg!(path);
+    path
+}
+
+fn format_txt_files() {
+    let current_dir = get_current_dir();
+    dbg!(current_dir);
 }
