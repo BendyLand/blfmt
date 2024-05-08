@@ -4,7 +4,7 @@ A minimally customizable polyglot text-formatter written in Rust!
 
 **icfmt is currently in early development and is non-functional.**
 
-*This document will updated regularly as the project continues, but the tool is in a purely theoretical state at the moment.*
+*This document will be updated regularly as the project continues, but the tool is in a purely theoretical state at the moment.*
 
 ### About
 
