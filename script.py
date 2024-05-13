@@ -1,3 +1,4 @@
+# Sorts the file alphabetically
 file_path = "src/file-extensions.txt"
 lines = []
 
