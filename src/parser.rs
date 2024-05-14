@@ -1,40 +1,43 @@
 use std::env;
 use std::fs;
 
-const TXT_FILE_COLUMNS: u8 = 80;
+// const TXT_FILE_COLUMNS: u8 = 80;
 // const LINE_BREAKS: u8 = 1;
 
-pub fn parse_args() {
+pub fn parse_args() -> Option<String> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        println!("USAGE:\nicfmt [file-extension] [opt-flags] [dir-path]");
-        return;
+        print_usage();
+        return None;
     }
     else if args.len() == 2 {
         if &args[1] == "help" || &args[1] == "-h" {
             println!("Welcome to the icfmt help menu!\n");
-            println!("USAGE:\nicfmt [file-extension] [opt-flags] [dir-path]\n");
+            print_usage();
             println!("Valid file extensions:");
             display_file_extensions();
         }
         else if check_valid_file_extension(&args[1].to_string()) {
             println!("Please provide a valid directory path.");
-            println!("USAGE:\nicfmt [file-extension] [opt-flags] [dir-path]");
-            return;
+            print_usage();
+            return None;
         }
         else {
             println!("Please provide a valid file extension.");
-            println!("USAGE:\nicfmt [file-extension] [opt-flags] [dir-path]");
-            return;
+            print_usage();
+            return None;
         }
     }
     let path = args[args.len()-1].clone();
     if args[1].as_str() == "txt" {
-        find_txt_files(TXT_FILE_COLUMNS, path);
+        return Some(path);
+    }
+    else {
+        return None; // until I have more supported file types
     }
 }
 
-fn expand_arg(arg: &str) -> String {
+pub fn expand_arg(arg: &str) -> String {
     let result;
     match arg {
         "." => {
@@ -53,41 +56,6 @@ fn expand_arg(arg: &str) -> String {
     return result;
 }
 
-fn find_txt_files(columns: u8, mut dir: String) {
-    if dir == "." { 
-        dir = expand_arg(".");
-    }
-    let read_dir_result = match fs::read_dir(&dir) {
-        Ok(dir) => dir,
-        Err(e) => {
-            eprintln!("Failed to read directory: {}", e);
-            return;
-        },
-    };
-    for entry in read_dir_result {
-        match entry {
-            Ok(entry) => {
-                let path = entry.path();
-                let is_txt_file: bool = {
-                    path
-                        .extension()
-                        .map(|s| s.to_str().unwrap_or_default()) == Some("txt")
-                };
-                if path.is_file() && is_txt_file {
-                    let path = path.to_str().unwrap_or_default();
-                    process_txt_file(columns, path);
-                }
-            },
-            Err(e) => {
-                eprintln!("Error processing txt file: {}", e);
-            }
-        }
-    }
-}
-
-fn process_txt_file(columns: u8, path: &str) {
-    println!("Processing txt file '{}' into {} columns...", path, columns);
-}
 
 fn check_valid_file_extension(arg: &String) -> bool {
     let extensions = get_file_extensions_list();
@@ -122,4 +90,8 @@ fn display_file_extensions() {
     for line in lines {
         println!("{}", line);
     }
+}
+
+fn print_usage() {
+    println!("USAGE:\nicfmt [file-extension] [opt-flags] [dir-path]");
 }
