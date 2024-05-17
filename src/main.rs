@@ -3,7 +3,6 @@ mod text_file;
 
 /*
 Usage:
-
 icfmt [file-extension] [opt-flags] [dir-path]
 */
 
