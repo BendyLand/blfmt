@@ -7,7 +7,7 @@ pub struct TxtOpts {
     pub spacing: u8,
 }
 
-pub fn process_txt_file(contents: &str, options: &TxtOpts) {
+pub fn process_txt_file(contents: &str, _options: &TxtOpts) {
     println!("Processing text file...");
     let paragraphs = contents.split("\n\n").collect::<Vec<&str>>();
     for paragraph in paragraphs {
