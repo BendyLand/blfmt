@@ -7,29 +7,6 @@ pub struct TxtOpts {
     pub spacing: u8,
 }
 
-pub fn process_txt_file(contents: &str, _options: &TxtOpts) {
-    println!("Processing text file...");
-    let paragraphs = contents.split("\n\n").collect::<Vec<&str>>();
-    for paragraph in paragraphs {
-        dbg!(paragraph);
-        /* 
-        split each paragraph into words.
-        rejoin into a single line.
-        if the length is > max_columns:
-            call split_at_final_whitespace() (not written yet).
-        else:
-            done; return the string and a placeholder.
-        
-        here I will have (&str, &str)...
-        either the first and new lines, or the original string and "".
-
-        add (at least) the first string to a result container.
-        
-        repeat for the new line if it is still too long (recursion?).
-        */
-    }
-}
-
 pub fn find_txt_files(mut dir: String) -> Option<Vec<String>> {
     println!("Finding txt files...");
     let mut result = Vec::new();
