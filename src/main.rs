@@ -1,11 +1,6 @@
 mod parser;
 mod text_file;
-use std::process::Command;
-
-/*
-Usage:
-icfmt [file-extension] [opt-flags] [dir-path]
-*/
+mod file_type;
 
 fn main() {
     let (file_path, file_type) = parser::parse_args();
@@ -23,26 +18,10 @@ fn main() {
 fn process_file_type(path: String, file_type: String) {
     match file_type.as_str() {
         "txt" => {
-            let opts = text_file::TxtOpts{columns: 80, spacing: 1};
-            let maybe_text_files = text_file::find_txt_files(path);
-            let text_files = match maybe_text_files {
-                Some(files) => files,
-                None => Vec::<String>::new(),
-            };
-            for file in text_files {
-                text_file::process_txt_file(&file, &opts);
-            }
+            file_type::process_txt_file(path);
         },
         "go" => {
-            let command = format!("gofmt -w {}", path);
-            let res = Command::new("sh").arg("-c").arg(command).output().unwrap();
-            let err = String::from_utf8(res.stderr).unwrap_or_default();
-            if err.as_str() != "" {
-                eprintln!("Error running gofmt:\n{}", err);
-            }
-            else {
-                println!("Go files formatted successfully!");
-            }
+            file_type::process_go_file(path);
         }
         _ => println!("File type not supported."),
     }
