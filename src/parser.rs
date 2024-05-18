@@ -4,11 +4,11 @@ use std::fs;
 // const TXT_FILE_COLUMNS: u8 = 80;
 // const LINE_BREAKS: u8 = 1;
 
-pub fn parse_args() -> Option<String> {
+pub fn parse_args() -> (Option<String>, Option<String>) {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         print_usage();
-        return None;
+        return (None, None);
     }
     else if args.len() == 2 {
         if &args[1] == "help" || &args[1] == "-h" {
@@ -20,20 +20,22 @@ pub fn parse_args() -> Option<String> {
         else if check_valid_file_extension(&args[1].to_string()) {
             println!("Please provide a valid directory path.");
             print_usage();
-            return None;
+            return (None, None);
         }
         else {
             println!("Please provide a valid file extension.");
             print_usage();
-            return None;
+            return (None, None);
         }
     }
     let path = args[args.len()-1].clone();
-    if args[1].as_str() == "txt" {
-        return Some(path);
+    let valid_file_ext: bool = check_valid_file_extension(&args[1]);
+    if valid_file_ext {
+        let file_ext = &args[1];
+        return (Some(path), Some(file_ext.to_owned()));
     }
     else {
-        return None; // until I have more supported file types
+        return (None, None)
     }
 }
 

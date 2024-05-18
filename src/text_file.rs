@@ -30,7 +30,8 @@ pub fn process_txt_file(contents: &str, options: &TxtOpts) {
     }
 }
 
-pub fn get_txt_files(mut dir: String) -> Option<Vec<String>> {
+pub fn find_txt_files(mut dir: String) -> Option<Vec<String>> {
+    println!("Finding txt files...");
     let mut result = Vec::new();
     if dir == "." { 
         dir = parser::expand_arg(".");
