@@ -18,10 +18,10 @@ fn main() {
 fn process_file_type(path: String, file_type: String) {
     match file_type.as_str() {
         "txt" => {
-            file_type::process_txt_file(path);
+            file_type::begin_processing_txt_files(path);
         },
         "go" => {
-            file_type::process_go_file(path);
+            file_type::begin_processing_go_files(path);
         }
         _ => println!("File type not supported."),
     }
