@@ -1,3 +1,4 @@
 /target
 main.go
 script.py
+storage/**
