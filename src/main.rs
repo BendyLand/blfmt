@@ -18,7 +18,7 @@ fn main() {
 fn process_file_type(path: String, file_type: String) {
     match file_type.as_str() {
         "txt" => {
-            file_type::begin_processing_txt_files(path);
+            file_type::begin_processing_txt_files(path); // this chops off each word before newline.
         },
         "go" => {
             file_type::begin_processing_go_files(path);

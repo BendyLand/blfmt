@@ -13,7 +13,7 @@ pub fn process_txt_file(path: &String, opts: TxtOpts) -> String {
     let mut new_file = String::new();
     for (i, line) in lines.iter().enumerate() {
         if line == &"" && i < lines.len() {
-            new_file += "\n\n";
+            new_file += "\n";
             continue;
         }
         let mut new_line = String::new();
@@ -25,7 +25,7 @@ pub fn process_txt_file(path: &String, opts: TxtOpts) -> String {
             else {
                 let newline = new_line + "\n";
                 new_file += newline.as_str();
-                new_line = "".to_string();
+                new_line = word.to_owned() + " ";
             }
         }
         let newline = new_line + "\n";
