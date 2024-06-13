@@ -2,7 +2,7 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is currently in early development and is non-functional.**
+**blfmt is currently in early development and is only functional for basic Go files.**
 
 *This document will be updated regularly as the project continues, but the tool is in a purely theoretical state at the moment.*
 
