@@ -13,12 +13,6 @@ fn main() {
         }
     };
     process_file_type(path, ext, opts);
-    // let test1 = vec!["this is the first line", "this is the second line", "this is the third line"];
-    // let test2 = test1.join("\n");
-    // let test3 = test1.join("\n\n");
-    // let test4 = test1.join("\n\n\n");
-    // let test5 = test1.join("\n\n\n\n");
-    // println!("{:?} {} {} {} {}", test1, test2, test3, test4, test5);
 }
 
 fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
