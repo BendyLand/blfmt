@@ -68,7 +68,7 @@ fn check_valid_file_extension(arg: &String) -> bool {
 }
 
 fn get_file_extensions_list() -> Vec<String> {
-    let file_result = fs::read_to_string("src/file-extensions.txt");
+    let file_result = fs::read_to_string("src/non-code/list-of-file-ext.txt");
     let file = match file_result {
         Ok(s) => s,
         Err(e) => {

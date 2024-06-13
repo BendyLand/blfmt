@@ -1,4 +1,4 @@
-use crate::{groups, parser};
+use crate::{grouping, parser, utils};
 use std::fs;
 
 #[derive(Debug, Clone, Copy)]
@@ -14,7 +14,8 @@ pub fn process_txt_file(path: &String, opts: TxtOpts) -> String {
     let mut result = Vec::<String>::new();
     for line in lines {
         let words = line.split_whitespace().collect::<Vec<&str>>();
-        for word in words {
+        for mut word in words {
+            word = word.trim();
             if temp.len() + word.len() > opts.columns as usize {
                 result.push(temp.trim_end().to_owned());
                 temp.clear();
@@ -30,12 +31,13 @@ pub fn process_txt_file(path: &String, opts: TxtOpts) -> String {
     result = result.into_iter().filter(|item| !item.is_empty()).collect::<Vec<String>>();
     let mut result_str = result.join("\n").to_string();
     let options = &[opts.columns.to_string(), opts.spacing.to_string()];
-    let paragraphs = groups::group_paragraphs(&result_str, &options[..]);
+    let paragraphs = grouping::group_paragraphs(&result_str, &options[..]);
     let mut sep = String::from("\n");
     for _ in 0..opts.spacing {
         sep.push_str("\n");
     }
-    result_str = paragraphs.join(&sep.as_str());
+    let new_paras = utils::intersperse(paragraphs, sep);
+    result_str = new_paras.join("");
     return result_str;
 }
 
