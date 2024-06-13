@@ -1,4 +1,4 @@
-use crate::parser;
+use crate::{groups, parser};
 use std::fs;
 
 #[derive(Debug, Clone, Copy)]
@@ -9,35 +9,40 @@ pub struct TxtOpts {
 
 pub fn process_txt_file(path: &String, opts: TxtOpts) -> String {
     let file = fs::read_to_string(path).unwrap_or_default();
-    let lines = file.lines().collect::<Vec<&str>>();
-    let mut new_file = String::new();
-    for (i, line) in lines.iter().enumerate() {
-        if line == &"" && i < lines.len() {
-            new_file += "\n";
-            continue;
-        }
-        let mut new_line = String::new();
-        let words = line.split(" ").collect::<Vec<&str>>();
+    let lines = file.split("\n").collect::<Vec<&str>>();
+    let mut temp = String::new();
+    let mut result = Vec::<String>::new();
+    for line in lines {
+        let words = line.split_whitespace().collect::<Vec<&str>>();
         for word in words {
-            if new_line.len() + word.len() <= opts.columns as usize {
-                new_line += (word.to_owned() + " ").as_str();
+            if temp.len() + word.len() > opts.columns as usize {
+                result.push(temp.trim_end().to_owned());
+                temp.clear();
             }
-            else {
-                let newline = new_line + "\n";
-                new_file += newline.as_str();
-                new_line = word.to_owned() + " ";
-            }
+            temp += (word.to_owned() + " ").as_str();
         }
-        let newline = new_line + "\n";
-        new_file += newline.as_str();
+        if !temp.is_empty() {
+            result.push(temp.clone());
+            temp = "".to_string();
+        }
     }
-    return new_file;
+    result.push(temp);
+    result = result.into_iter().filter(|item| !item.is_empty()).collect::<Vec<String>>();
+    let mut result_str = result.join("\n").to_string();
+    let options = &[opts.columns.to_string(), opts.spacing.to_string()];
+    let paragraphs = groups::group_paragraphs(&result_str, &options[..]);
+    let mut sep = String::from("\n");
+    for _ in 0..opts.spacing {
+        sep.push_str("\n");
+    }
+    result_str = paragraphs.join(&sep.as_str());
+    return result_str;
 }
 
 pub fn find_txt_file_paths(mut dir: String) -> Option<Vec<String>> {
     println!("Finding txt files...");
     let mut result = Vec::new();
-    if dir == "." { 
+    if dir == "." {
         dir = parser::expand_arg(".");
     }
     let read_dir_result = match fs::read_dir(&dir) {

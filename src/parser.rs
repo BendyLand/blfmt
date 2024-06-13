@@ -1,41 +1,39 @@
 use std::env;
 use std::fs;
 
-// const TXT_FILE_COLUMNS: u8 = 80;
-// const LINE_BREAKS: u8 = 1;
-
-pub fn parse_args() -> (Option<String>, Option<String>) {
+pub fn parse_args() -> Option<(String, String, Vec<String>)> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         print_usage();
-        return (None, None);
+        return None;
     }
     else if args.len() == 2 {
         if &args[1] == "help" || &args[1] == "-h" {
-            println!("Welcome to the icfmt help menu!\n");
+            println!("Welcome to the blfmt help menu!\n");
             print_usage();
             println!("Valid file extensions:");
             display_file_extensions();
         }
-        else if check_valid_file_extension(&args[1].to_string()) {
+        else if check_valid_file_extension(&args[2]) {
             println!("Please provide a valid directory path.");
             print_usage();
-            return (None, None);
+            return None;
         }
         else {
             println!("Please provide a valid file extension.");
             print_usage();
-            return (None, None);
+            return None;
         }
     }
-    let path = args[args.len()-1].clone();
-    let valid_file_ext: bool = check_valid_file_extension(&args[1]);
+    let path = args[1].clone();
+    let valid_file_ext: bool = check_valid_file_extension(&args[2]);
     if valid_file_ext {
-        let file_ext = &args[1];
-        return (Some(path), Some(file_ext.to_owned()));
+        let file_ext = &args[2];
+        let opts = &args[2..].into_iter().map(|x| x.to_owned()).collect::<Vec<String>>();
+        return Some((path, file_ext.to_owned(), opts.to_owned()));
     }
     else {
-        return (None, None)
+        return None;
     }
 }
 
@@ -95,5 +93,5 @@ fn display_file_extensions() {
 }
 
 fn print_usage() {
-    println!("USAGE:\nicfmt [file-extension] [opt-flags] [dir-path]");
+    println!("USAGE:\nblfmt [file-extension] [opt-flags] [dir-path]");
 }
