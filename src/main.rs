@@ -1,27 +1,58 @@
 mod parser;
 mod text_file;
-mod file_type;
+mod processing;
+mod groups;
+mod utils;
 
 fn main() {
-    let (file_path, file_type) = parser::parse_args();
-    let path = match file_path {
-        Some(fp) => fp,
-        None => String::new(),
+    let maybe_args = parser::parse_args();
+    let (path, ext, opts) = {
+        match maybe_args {
+            Some((a, b, c)) => (a, b, c),
+            None => (String::new(), String::new(), Vec::<String>::new()),
+        }
     };
-    let ext = match file_type {
-        Some(t) => t,
-        None => String::new(),
-    };
-    process_file_type(path, ext);
+    process_file_type(path, ext, opts);
+    // let test1 = vec!["this is the first line", "this is the second line", "this is the third line"];
+    // let test2 = test1.join("\n");
+    // let test3 = test1.join("\n\n");
+    // let test4 = test1.join("\n\n\n");
+    // let test5 = test1.join("\n\n\n\n");
+    // println!("{:?} {} {} {} {}", test1, test2, test3, test4, test5);
 }
 
-fn process_file_type(path: String, file_type: String) {
+fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
     match file_type.as_str() {
         "txt" => {
-            file_type::begin_processing_txt_files(path); // this chops off each word before newline.
+            if opts.len() >= 2 {
+                let cols = {
+                    match opts[1].parse::<u8>() {
+                        Ok(num) => num,
+                        Err(e) => {
+                            println!("Invalid argument provided: {}", e);
+                            80
+                        },
+                    }
+                };
+                let spaces = {
+                    match opts[2].parse::<u8>() {
+                        Ok(num) => num,
+                        Err(e) => {
+                            println!("Invalid argument provided: {}", e);
+                            1
+                        },
+                    }
+                };
+                println!("Columns: {}, Spacing: {}", &cols, &spaces);
+                let opts = text_file::TxtOpts { columns: (cols), spacing: (spaces) };
+                processing::begin_processing_txt_files(path, opts); 
+            }
+            else {
+                println!("Invalid arguments.");
+            }
         },
         "go" => {
-            file_type::begin_processing_go_files(path);
+            processing::begin_processing_go_files(path);
         }
         _ => println!("File type not supported."),
     }
