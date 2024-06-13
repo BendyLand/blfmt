@@ -1,3 +1,16 @@
+pub fn intersperse<T: Clone>(vec: Vec<T>, value: T) -> Vec<T> {
+    if vec.is_empty() {
+        return vec;
+    }
+    let mut result = Vec::<T>::new();
+    for item in vec {
+        result.push(item);
+        result.push(value.clone());
+    }
+    result = result[..result.len()-1].into_iter().map(|x| x.to_owned()).collect::<Vec<T>>();
+    return result;
+}
+
 pub fn median(lengths: &Vec<usize>) -> usize {
     let mut sorted_list = lengths.clone();
     sorted_list.sort();

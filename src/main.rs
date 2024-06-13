@@ -1,7 +1,7 @@
 mod parser;
 mod text_file;
 mod processing;
-mod groups;
+mod grouping;
 mod utils;
 
 fn main() {
@@ -43,7 +43,6 @@ fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
                         },
                     }
                 };
-                println!("Columns: {}, Spacing: {}", &cols, &spaces);
                 let opts = text_file::TxtOpts { columns: (cols), spacing: (spaces) };
                 processing::begin_processing_txt_files(path, opts); 
             }

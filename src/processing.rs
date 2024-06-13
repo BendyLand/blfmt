@@ -13,7 +13,7 @@ pub fn begin_processing_txt_files(path: String, opts: text_file::TxtOpts) {
         let path_clone = current_path.clone();
         let new_file = text_file::process_txt_file(&current_path, opts);
         let mut dest = File::create(current_path).unwrap();
-        let ok = dest.write_all(new_file.as_bytes());
+        let ok = dest.write_all(new_file.as_bytes()); 
         match ok {
             Err(e) => println!("There was a problem writing to the file: {}", e),
             _ => println!("Successfully formatted file at: {}", path_clone)

@@ -41,14 +41,15 @@ fn group_paragraphs_by_line_length(lines: Vec<&str>) -> Vec<String> {
 pub fn group_paragraphs(text: &String, args: &[String]) -> Vec<String> {
     let result;
     let lines = text.split("\n").collect::<Vec<&str>>();
-    if args.len() > 0 {
+    let args_are_dimensions = &args.iter().all(|x| x.parse::<f64>().is_ok());
+    if args.len() > 0 && !args_are_dimensions {
         result = group_paragraph_by_titles(lines, args);
     }
     else if utils::check_for_even_line_length(&lines) {
-        result = group_paragraphs_by_line_length(lines)
+        result = lines.into_iter().map(|line| line.to_string()).collect::<Vec<String>>();
     }
     else {
-        result = lines.into_iter().map(|line| line.to_string()).into_iter().map(|line| line.to_string()).collect::<Vec<String>>();
+        result = group_paragraphs_by_line_length(lines)
     }
     return result;
 }
