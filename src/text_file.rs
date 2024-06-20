@@ -31,6 +31,8 @@ pub fn process_txt_file(path: &String, opts: TxtOpts) -> String {
     result = result.into_iter().filter(|item| !item.is_empty()).collect::<Vec<String>>();
     let mut result_str = result.join("\n").to_string();
     let options = &[opts.columns.to_string(), opts.spacing.to_string()];
+    //todo: change function to expect more parameters telling how to group paragraphs
+    //todo: start it with dimensions then give titles or leave blank for inferred line lengths.
     let paragraphs = grouping::group_paragraphs(&result_str, &options[..]);
     let mut sep = String::from("\n");
     for _ in 0..opts.spacing {
