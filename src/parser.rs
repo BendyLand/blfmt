@@ -13,8 +13,9 @@ pub fn parse_args() -> Option<(String, String, Vec<String>)> {
             print_usage();
             println!("Valid file extensions:");
             display_file_extensions();
+            return None;
         }
-        else if check_valid_file_extension(&args[2]) {
+        else if check_valid_file_extension(&args[1]) {
             println!("Please provide a valid directory path.");
             print_usage();
             return None;
@@ -25,15 +26,17 @@ pub fn parse_args() -> Option<(String, String, Vec<String>)> {
             return None;
         }
     }
-    let path = args[1].clone();
-    let valid_file_ext: bool = check_valid_file_extension(&args[2]);
-    if valid_file_ext {
-        let file_ext = &args[2];
-        let opts = &args[2..].into_iter().map(|x| x.to_owned()).collect::<Vec<String>>();
-        return Some((path, file_ext.to_owned(), opts.to_owned()));
-    }
     else {
-        return None;
+        let path = args[1].clone();
+        let valid_file_ext: bool = check_valid_file_extension(&args[2]);
+        if valid_file_ext {
+            let file_ext = &args[2];
+            let opts = &args[2..].into_iter().map(|x| x.to_owned()).collect::<Vec<String>>();
+            return Some((path, file_ext.to_owned(), opts.to_owned()));
+        }
+        else {
+            return None;
+        }
     }
 }
 
@@ -68,7 +71,7 @@ fn check_valid_file_extension(arg: &String) -> bool {
 }
 
 fn get_file_extensions_list() -> Vec<String> {
-    let file_result = fs::read_to_string("src/non-code/list-of-file-ext.txt");
+    let file_result = fs::read_to_string("non-code/list-of-file-ext.txt");
     let file = match file_result {
         Ok(s) => s,
         Err(e) => {
@@ -93,5 +96,5 @@ fn display_file_extensions() {
 }
 
 fn print_usage() {
-    println!("USAGE:\nblfmt [file-extension] [opt-flags] [dir-path]");
+    println!("USAGE:\nblfmt [dir-path] [file-extension] [opt-flags]");
 }

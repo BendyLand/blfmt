@@ -4,6 +4,13 @@ mod processing;
 mod grouping;
 mod utils;
 
+// Usage:
+// cargo run [path] [filetype] [filetype opts] 
+// cargo run ../storage txt 80 1 
+// 
+// To reset text files:
+// cp ../storage/safe-dir-in-storage/*.txt ../storage
+
 fn main() {
     let maybe_args = parser::parse_args();
     let (path, ext, opts) = {
