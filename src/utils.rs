@@ -1,5 +1,32 @@
 use std::{fs, io::Write};
 
+
+pub fn find_paths(file_ext: &str, root_dir: &str) -> Option<Vec<String>> {
+    let maybe_files = fs::read_dir(root_dir);
+    let files = match maybe_files {
+        Ok(f) => f,
+        Err(e) => {
+            println!("Error reading directory: {}", e);
+            return None;
+        },
+    };
+    let mut result = Vec::<String>::new();
+    for file in files {
+        let file = match file {
+            Ok(f) => f,
+            Err(e) => {
+                println!("There is some kind of error on this file: {}", e);
+                continue;
+            }
+        };
+        let file_path = file.path().as_os_str().to_string_lossy().into_owned();
+        if file_path.ends_with(file_ext) {
+            result.push(file_path);
+        }
+    }
+    return Some(result);
+}
+
 pub fn restore_test_files() {
     let temp1 = fs::read_to_string("../storage/safe-dir-in-storage/one.txt").unwrap_or_default().to_owned();
     let good1 = temp1.as_bytes();

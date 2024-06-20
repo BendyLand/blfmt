@@ -1,23 +1,33 @@
 use std::process::Command;
-use std::fs::{File};
+use std::fs::{self, File};
 use std::io::{Write};
-use crate::text_file;
+use crate::{options, utils};
 
-pub fn begin_processing_txt_files(path: String, opts: text_file::TxtOpts) {
-    let file_paths = text_file::find_txt_file_paths(path);
-    let paths = match file_paths {
-        Some(paths) => paths,
-        None => vec![],
-    };
-    for current_path in paths {
-        let path_clone = current_path.clone();
-        let new_file = text_file::process_txt_file(&current_path, opts);
-        let mut dest = File::create(current_path).unwrap();
+
+fn process_txt_file(path: &str, opts: &options::TxtOpts) -> String {
+    let file_contents = fs::read_to_string(path).unwrap();
+    let mut result = String::new();
+    let (cols, spacing) = (opts.columns, opts.spacing);
+    
+    
+    
+    
+    
+    let safe_temp = &file_contents.clone();
+    return safe_temp.to_owned();
+}
+
+pub fn begin_processing_txt_files(path: String, opts: options::TxtOpts) {
+    let file_paths = utils::find_paths("txt", &path).unwrap_or_default();
+    for path in file_paths {
+        let path_clone = path.clone();
+        let new_file = process_txt_file(&path, &opts);
+        let mut dest = File::create(path).unwrap();
         let ok = dest.write_all(new_file.as_bytes()); 
         match ok {
-            Err(e) => println!("There was a problem writing to the file: {}", e),
-            _ => println!("Successfully formatted file at: {}", path_clone)
-        }
+            Ok(_) => println!("Successfully wrote: {}", path_clone),
+            Err(e) => println!("Error writing file: {}", e),
+        };
     }
 }
 
