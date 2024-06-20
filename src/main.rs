@@ -1,8 +1,10 @@
+use processing::begin_processing_txt_files;
+
 mod parser;
-mod text_file;
 mod processing;
 mod grouping;
 mod utils;
+mod options;
 
 // Usage:
 // cargo run [path] [filetype] [filetype opts] 
@@ -12,15 +14,17 @@ mod utils;
 // cp ../storage/safe-dir-in-storage/*.txt ../storage
 
 fn main() {
-    let maybe_args = parser::parse_args();
-    let (path, ext, opts) = {
-        match maybe_args {
-            Some((a, b, c)) => (a, b, c),
-            None => (String::new(), String::new(), Vec::<String>::new()),
-        }
-    };
-    process_file_type(path, ext, opts);
-    utils::restore_test_files();
+    let txt_opts = options::TxtOpts{columns: 80, spacing:1};
+    begin_processing_txt_files("../storage".to_string(), txt_opts);
+    // let maybe_args = parser::parse_args();
+    // let (path, ext, opts) = {
+    //     match maybe_args {
+    //         Some((a, b, c)) => (a, b, c),
+    //         None => (String::new(), String::new(), Vec::<String>::new()),
+    //     }
+    // };
+    // process_file_type(path, ext, opts);
+    // utils::restore_test_files();
 }
 
 fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
@@ -45,7 +49,7 @@ fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
                         },
                     }
                 };
-                let opts = text_file::TxtOpts { columns: (cols), spacing: (spaces) };
+                let opts = options::TxtOpts{columns: 80, spacing: 1};
                 processing::begin_processing_txt_files(path, opts); 
             }
             else {
