@@ -20,6 +20,7 @@ fn main() {
         }
     };
     process_file_type(path, ext, opts);
+    utils::restore_test_files();
 }
 
 fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
