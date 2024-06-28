@@ -2,8 +2,10 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
+use crate::options::TxtOpts;
+
 mod parser;
-mod processing;
+mod format;
 mod grouping;
 mod utils;
 mod options;
@@ -42,12 +44,20 @@ fn main() {
         utils::print_usage();
         return;
     }
-    if utils::check_valid_file_extension(&filepath) {
-        //todo: main parsing logic
-        println!("I'm in the main parsing logic!");
-    }
-    else {
-        println!("Invalid file extension provided.");
-    }
+    let file_type = utils::infer_file_type(&filepath);
+    match file_type.as_str() {
+        "txt" => {
+            let opts: TxtOpts;
+            if args.contains(&"-o".to_string()) || args.contains(&"--opts".to_string()) {
+                let args = args.iter().map(|x| x.as_str()).collect::<Vec<&str>>();
+                opts = utils::extract_txt_opts(args);
+            }
+            else {
+                opts = TxtOpts{columns: 80, spacing: 1};
+            }
+            format::format_txt_file(filepath, opts)
+        },
+        _ => println!("Unknown file type."),
+    };
     // dbg!(std::env::current_dir());
 }

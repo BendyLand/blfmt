@@ -1,9 +1,5 @@
+#[derive(Clone, Copy, Debug)]
 pub struct TxtOpts {
-    pub columns: u8,
-    pub spacing: u8,
+    pub columns: usize,
+    pub spacing: usize,
 }
-
-
-
-
-
