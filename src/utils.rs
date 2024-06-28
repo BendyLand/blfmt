@@ -1,4 +1,6 @@
 use std::{fs, io::Write};
+use regex::Regex;
+use crate::options::{self, TxtOpts};
 
 pub fn restore_test_files() {
     let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/safe-dir-in-storage/one.txt").unwrap().to_owned();
@@ -25,6 +27,32 @@ pub fn restore_test_files() {
         Err(e) => println!("{}", e),
         _ => (),
     }
+}
+
+pub fn extract_txt_opts(args: Vec<&str>) -> options::TxtOpts {
+    let start = args.iter().position(|x| x == &"-o" || x == &"--opts").unwrap() + 1;
+    let remainder = args[start..].into_iter().map(|x| x.to_owned()).collect::<Vec<&str>>();
+    let pattern = Regex::new(r"\s-\w").unwrap();
+    let remainder_string = &remainder.join(" ");
+    let matches = &pattern.find_iter(&remainder_string).map(|x| x.as_str()).collect::<Vec<&str>>();
+    let end: usize;
+    if matches.len() > 0 {
+        let flag = remainder.iter().filter(|x| x.contains("-")).collect::<Vec<&&str>>()[0].to_owned();
+        let start = &start.clone();
+        end = args[*start..].iter().position(|x| x == &flag).unwrap() + start;
+    }
+    else {
+        end = args.len();
+    }
+    let opts = args[start..end].into_iter().map(|s| s.parse::<usize>().expect("Error parsing number.")).collect::<Vec<usize>>();
+    let result: TxtOpts;
+    let cols = opts[0];
+    let spacing = opts[1];
+    result = TxtOpts{
+        columns: cols,
+        spacing: spacing
+    };
+    return result;
 }
 
 pub fn intersperse<T: Clone>(vec: Vec<T>, value: T) -> Vec<T> {
@@ -60,14 +88,14 @@ pub fn check_for_even_line_length(lines: &Vec<&str>) -> bool {
     return count == 0;
 }
 
-pub fn check_valid_file_extension(filepath: &String) -> bool {
-    let extensions = get_file_extensions_list();
-    for extension in extensions {
-        if filepath.contains(&extension) {
-            return true;
+pub fn infer_file_type(filepath: &String) -> String {
+    let supported_types = get_file_extensions_list();
+    for item in supported_types {
+        if filepath.contains(&item) {
+            return item.to_string();
         }
     }
-    return false;
+    return "unknown".to_string();
 }
 
 pub fn get_file_extensions_list() -> Vec<String> {
