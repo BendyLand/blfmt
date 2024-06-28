@@ -1,4 +1,6 @@
-use processing::begin_processing_txt_files;
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
 
 mod parser;
 mod processing;
@@ -7,58 +9,45 @@ mod utils;
 mod options;
 
 // Usage:
-// cargo run [path] [filetype] [filetype opts] 
-// cargo run ../storage txt 80 1 
-// 
-// To reset text files:
-// cp ../storage/safe-dir-in-storage/*.txt ../storage
+// cargo run <filepath> <flags + opts> 
+// cargo run ../storage/one.txt -o 80 1 -t Cyber Digital Tech
 
 fn main() {
-    let txt_opts = options::TxtOpts{columns: 80, spacing:1};
-    begin_processing_txt_files("../storage".to_string(), txt_opts);
-    // let maybe_args = parser::parse_args();
-    // let (path, ext, opts) = {
-    //     match maybe_args {
-    //         Some((a, b, c)) => (a, b, c),
-    //         None => (String::new(), String::new(), Vec::<String>::new()),
-    //     }
-    // };
-    // process_file_type(path, ext, opts);
-    // utils::restore_test_files();
-}
-
-fn process_file_type(path: String, file_type: String, opts: Vec<String>) {
-    match file_type.as_str() {
-        "txt" => {
-            if opts.len() >= 2 {
-                let cols = {
-                    match opts[1].parse::<u8>() {
-                        Ok(num) => num,
-                        Err(e) => {
-                            println!("Invalid argument provided: {}", e);
-                            80
-                        },
-                    }
-                };
-                let spaces = {
-                    match opts[2].parse::<u8>() {
-                        Ok(num) => num,
-                        Err(e) => {
-                            println!("Invalid argument provided: {}", e);
-                            1
-                        },
-                    }
-                };
-                let opts = options::TxtOpts{columns: 80, spacing: 1};
-                processing::begin_processing_txt_files(path, opts); 
-            }
-            else {
-                println!("Invalid arguments.");
-            }
-        },
-        "go" => {
-            processing::begin_processing_go_files(path);
+    let maybe_args = parser::parse_args();
+    let (filepath, args) = {
+        match maybe_args {
+            Some((a, b)) => (a, b),
+            None => (String::new(), Vec::<String>::new()),
         }
-        _ => println!("File type not supported."),
+    };
+    let contains_restore_arg = {
+        args.contains(&"-r".to_string()) || 
+        args.contains(&"--restore".to_string())
+    };
+    if contains_restore_arg {
+        utils::restore_test_files();
+        println!("Test files restored.");
+        return;
     }
+    let contains_help_arg = {
+        args.contains(&"-h".to_string()) || 
+        args.contains(&"--help".to_string())
+    };
+    if contains_help_arg {
+        utils::print_usage();
+        return;
+    }
+    if &args.len() < &2 {
+        println!("Invalid arguments provided.");
+        utils::print_usage();
+        return;
+    }
+    if utils::check_valid_file_extension(&filepath) {
+        //todo: main parsing logic
+        println!("I'm in the main parsing logic!");
+    }
+    else {
+        println!("Invalid file extension provided.");
+    }
+    // dbg!(std::env::current_dir());
 }

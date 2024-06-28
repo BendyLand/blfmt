@@ -1,42 +1,15 @@
 use std::{fs, io::Write};
 
-
-pub fn find_paths(file_ext: &str, root_dir: &str) -> Option<Vec<String>> {
-    let maybe_files = fs::read_dir(root_dir);
-    let files = match maybe_files {
-        Ok(f) => f,
-        Err(e) => {
-            println!("Error reading directory: {}", e);
-            return None;
-        },
-    };
-    let mut result = Vec::<String>::new();
-    for file in files {
-        let file = match file {
-            Ok(f) => f,
-            Err(e) => {
-                println!("There is some kind of error on this file: {}", e);
-                continue;
-            }
-        };
-        let file_path = file.path().as_os_str().to_string_lossy().into_owned();
-        if file_path.ends_with(file_ext) {
-            result.push(file_path);
-        }
-    }
-    return Some(result);
-}
-
 pub fn restore_test_files() {
-    let temp1 = fs::read_to_string("../storage/safe-dir-in-storage/one.txt").unwrap_or_default().to_owned();
+    let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/safe-dir-in-storage/one.txt").unwrap().to_owned();
     let good1 = temp1.as_bytes();
-    let temp2 = fs::read_to_string("../storage/safe-dir-in-storage/two.txt").unwrap_or_default();
+    let temp2 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/safe-dir-in-storage/two.txt").unwrap();
     let good2 = temp2.as_bytes();
-    let temp3 = fs::read_to_string("../storage/safe-dir-in-storage/three.txt").unwrap_or_default();
+    let temp3 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/safe-dir-in-storage/three.txt").unwrap();
     let good3 = temp3.as_bytes();
-    let mut file1 = fs::File::create("../storage/one.txt").expect("Unable to get one.txt");
-    let mut file2 = fs::File::create("../storage/two.txt").expect("Unable to get two.txt");
-    let mut file3 = fs::File::create("../storage/three.txt").expect("Unable to get three.txt");
+    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/one.txt").expect("Unable to get one.txt");
+    let mut file2 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/two.txt").expect("Unable to get two.txt");
+    let mut file3 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/three.txt").expect("Unable to get three.txt");
     let res1 = file1.write_all(good1);
     let res2 = file2.write_all(good2);
     let res3 = file3.write_all(good3);
@@ -87,4 +60,41 @@ pub fn check_for_even_line_length(lines: &Vec<&str>) -> bool {
     return count == 0;
 }
 
+pub fn check_valid_file_extension(filepath: &String) -> bool {
+    let extensions = get_file_extensions_list();
+    for extension in extensions {
+        if filepath.contains(&extension) {
+            return true;
+        }
+    }
+    return false;
+}
 
+pub fn get_file_extensions_list() -> Vec<String> {
+    let file_result = fs::read_to_string("src/non-code/list-of-file-ext.txt");
+    let file = match file_result {
+        Ok(s) => s,
+        Err(e) => {
+            println!("Error reading file: {}", e);
+            String::from("ERROR")
+        }
+    };
+    let lines = {
+        file
+            .lines()
+            .map(|line| line.to_string())
+            .collect::<Vec<String>>()
+    };
+    return lines;
+}
+
+fn display_file_extensions() {
+    let lines = get_file_extensions_list();
+    for line in lines {
+        println!("{}", line);
+    }
+}
+
+pub fn print_usage() {
+    println!("USAGE:\nblfmt <file-path> <flags + options>");
+}
