@@ -59,5 +59,4 @@ fn main() {
         },
         _ => println!("Unknown file type."),
     };
-    // dbg!(std::env::current_dir());
 }
