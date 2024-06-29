@@ -6,7 +6,7 @@ use crate::options::TxtOpts;
 
 mod parser;
 mod format;
-mod grouping;
+mod group;
 mod utils;
 mod options;
 
@@ -55,7 +55,7 @@ fn main() {
             else {
                 opts = TxtOpts{columns: 80, spacing: 1};
             }
-            format::format_txt_file(filepath, opts)
+            format::format_txt_file(filepath, opts, &args);
         },
         _ => println!("Unknown file type."),
     };
