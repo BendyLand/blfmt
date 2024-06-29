@@ -10,6 +10,15 @@ pub fn format_txt_file(path: String, opts: options::TxtOpts) {
     let result = String::new();
     let (cols, spacing) = (opts.columns, opts.spacing);
     dbg!(path_clone);
+    /* 
+    todo: 
+
+        ? make group_paragraphs(lines, opt_titles)
+        ? make format_paragraph(paragraph, opts)
+        ? double check the write_file logic commented out below.
+
+    */
+
     // let mut dest = File::create(path).unwrap();
     // let ok = dest.write_all(new_file.as_bytes()); 
     // match ok {
