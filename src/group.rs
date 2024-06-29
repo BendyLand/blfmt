@@ -41,8 +41,7 @@ fn group_paragraphs_by_line_length(lines: Vec<&str>) -> Vec<String> {
 pub fn group_paragraphs(text: &String, args: &[String]) -> Vec<String> {
     let result;
     let lines = text.split("\n").collect::<Vec<&str>>();
-    let args_are_dimensions = &args.iter().all(|x| x.parse::<f64>().is_ok());
-    if args.len() > 0 && !args_are_dimensions {
+    if args.contains(&"-t".to_string()) || args.contains(&"--titles".to_string()) {
         result = group_paragraph_by_titles(lines, args);
     }
     else if utils::check_for_even_line_length(&lines) {

@@ -1,30 +1,47 @@
 use std::process::Command;
 use std::fs::{self, File};
 use std::io::{Write};
-use crate::{options, utils};
+use crate::{options, utils, group};
+
+fn format_paragraph(paragraph: String, opts: options::TxtOpts) -> String {
+    let mut result = String::new();
+    let cols = opts.columns.clone();
+    let words = paragraph.split_whitespace();
+    let mut line = String::new();
+    for word in words {
+        if &line.len() + &word.len() > cols {
+            result += (line.to_owned() + "\n").as_str();
+            line = "".to_string();
+        }
+        line += (word.trim().to_string() + " ").as_str();
+    }
+    result += &line;
+    return result;
+}
 
 
-pub fn format_txt_file(path: String, opts: options::TxtOpts) {
+pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String]) {
     let path_clone = path.clone();
-    let file_contents = fs::read_to_string(path).unwrap();
+    let file_contents = fs::read_to_string(&path).unwrap();
     let result = String::new();
     let (cols, spacing) = (opts.columns, opts.spacing);
-    dbg!(path_clone);
-    /* 
-    todo: 
-
-        ? make group_paragraphs(lines, opt_titles)
-        ? make format_paragraph(paragraph, opts)
-        ? double check the write_file logic commented out below.
-
-    */
-
-    // let mut dest = File::create(path).unwrap();
-    // let ok = dest.write_all(new_file.as_bytes()); 
-    // match ok {
-    //     Ok(_) => println!("Successfully wrote: {}", path_clone),
-    //     Err(e) => println!("Error writing file: {}", e),
-    // };
+    let paragraphs = group::group_paragraphs(&file_contents, opt_titles);
+    let mut result = Vec::<String>::new();
+    for paragraph in paragraphs {
+        let temp_para = format_paragraph(paragraph, opts);
+        result.push(temp_para);
+    }
+    let mut sep = "\n".to_string();
+    for _ in 0..opts.spacing {
+        sep += "\n";
+    }
+    let paragraphs = result.join(sep.as_str());
+    let mut dest = File::create(path).unwrap();
+    let ok = dest.write_all(paragraphs.as_bytes()); 
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path_clone),
+        Err(e) => println!("Error writing file: {}", e),
+    };
 }
 
 pub fn format_go_file(path: String) {
