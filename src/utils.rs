@@ -116,7 +116,7 @@ pub fn get_file_extensions_list() -> Vec<String> {
     return lines;
 }
 
-fn display_file_extensions() {
+pub fn display_file_extensions() {
     let lines = get_file_extensions_list();
     for line in lines {
         println!("{}", line);
