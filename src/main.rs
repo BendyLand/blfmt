@@ -30,15 +30,19 @@ fn main() {
     let res_arg = options::check_restore_arg(&args);
     if res_arg == 1 { return; }
 
-    let min_args = options::check_minimum_args(&args);
-    if min_args == 1 { return; }
-
     let file_type = utils::infer_file_type(&filepath);
     match file_type.as_str() {
         "txt" => {
             let opts: TxtOpts = options::get_txt_opts(&args);
             format::format_txt_file(filepath, opts, &args);
         },
-        _ => println!("Unknown file type."),
+        "go" => {
+            format::format_go_file(filepath);
+        }
+        _ => {
+            println!("Unknown file type");
+            println!("Valid file types are:");
+            utils::display_file_extensions();
+        },
     };
 }
