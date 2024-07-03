@@ -19,7 +19,6 @@ fn format_paragraph(paragraph: String, opts: options::TxtOpts) -> String {
     return result;
 }
 
-
 pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String]) {
     let path_clone = path.clone();
     let file_contents = fs::read_to_string(&path).unwrap();
