@@ -101,8 +101,26 @@ fn indent_c_function_group(group: String) -> String {
     let mut result = String::new();
     let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     let lines_clone = lines.clone();
+    let mut inner_group = false;
+    let mut indent = 0;
     for (i, line) in lines.into_iter().enumerate() {
         if i > 1 && i < lines_clone.len()-2 {
+            if i > 2 && i < lines_clone.len()-1 && lines_clone[i-1].contains("{") {
+                dbg!(i, &line);
+                inner_group = true;
+                indent += 1;
+            }
+            if line.contains("}") {
+                indent -= 1;
+                if indent == 0 {
+                    inner_group = false;
+                }
+            }
+            if inner_group {
+                for _ in 0..indent {
+                    result += "    ";
+                }
+            }
             result += ("    ".to_string() + &line + "\n").as_str();
         }
         else {
