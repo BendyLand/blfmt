@@ -1,7 +1,28 @@
+use regex::Regex;
 use crate::utils;
 
+fn separate_c_file_sections(lines: Vec<String>) -> String {
+    let mut result = String::new();
+    let mut inner_brackets = 0;
+    let mut is_function_line: bool;
+    for line in lines {
+        is_function_line = Regex::new(r"^\w|\*+\s\w+\s*\(.*\).*").unwrap().is_match(&line);
+        if is_function_line {
+            result += "\n";
+            result += (line.to_string() + "\n").as_str();
+            continue;
+        }
+        result += (line.to_string() + "\n").as_str();
+    }
+    return result;
+}
+
 pub fn group_c_file_into_sections(lines: Vec<&str>) -> Vec<String> {
-    vec![]
+    let text = utils::remove_empty_lines(lines);
+    let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let new_text = separate_c_file_sections(lines.clone());
+    let result = new_text.split("\n\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    return result;
 }
 
 fn group_paragraph_by_titles(lines: Vec<&str>, titles: &[String]) -> Vec<String> {

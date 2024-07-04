@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
+#![allow(unused_mut)]
 
-use crate::options::TxtOpts;
+use std::io::stdin;
 
 mod parser;
 mod format;
@@ -33,11 +34,14 @@ fn main() {
     let file_type = utils::infer_file_type(&filepath);
     match file_type.as_str() {
         "txt" => {
-            let opts: TxtOpts = options::get_txt_opts(&args);
+            let opts: options::TxtOpts = options::get_txt_opts(&args);
             format::format_txt_file(filepath, opts, &args);
         },
         "go" => {
             format::format_go_file(filepath);
+        }
+        "c" => {
+            format::format_c_file(filepath);
         }
         _ => {
             println!("Unknown file type");
@@ -45,4 +49,8 @@ fn main() {
             utils::display_file_extensions();
         },
     };
+
+    // let mut s = String::new();
+    // println!("Run leaks now...");
+    // stdin().read_line(&mut s).expect("Error getting input");
 }

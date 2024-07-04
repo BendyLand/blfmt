@@ -24,8 +24,9 @@ pub fn check_restore_arg(args: &Vec<String>) -> usize {
         args.contains(&"--restore".to_string())
     };
     if contains_restore_arg {
-        utils::restore_test_files();
-        println!("Test files restored.");
+        // utils::restore_example_txt_files();
+        utils::restore_example_c_file();
+        println!("Example file restored.");
         return 1; 
     }
     return 0;
