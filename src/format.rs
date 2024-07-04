@@ -3,6 +3,32 @@ use std::fs::{self, File};
 use std::io::{Write};
 use crate::{options, utils, group};
 
+pub fn format_c_file(path: String) {
+    let path_clone = path.clone();
+    let lines = path.split("\n").collect:: <Vec<&str>>();
+    let mut sections = group::group_c_file_into_sections(lines);
+    for i in 0..sections.len() {
+        let original = &sections[i].clone().to_string();
+        sections[i] = format_c_file_group(original.to_owned());
+    }
+    let result = join_c_file_groups(sections);
+
+    // let mut dest = File::create(path).unwrap();
+    // let ok = dest.write_all(result); 
+    // match ok {
+    //     Ok(_) => println!("Successfully wrote: {}", path_clone),
+    //     Err(e) => println!("Error writing file: {}", e),
+    // }; 
+}
+
+fn join_c_file_groups(groups: Vec<String>) -> String {
+    String::new()
+}
+
+fn format_c_file_group(group: String) -> String {
+    String::new()
+}
+
 fn format_paragraph(paragraph: String, opts: options::TxtOpts) -> String {
     let mut result = String::new();
     let cols = opts.columns.clone();
