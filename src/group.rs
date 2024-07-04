@@ -1,5 +1,9 @@
 use crate::utils;
 
+pub fn group_c_file_into_sections(lines: Vec<&str>) -> Vec<String> {
+    vec![]
+}
+
 fn group_paragraph_by_titles(lines: Vec<&str>, titles: &[String]) -> Vec<String> {
     let mut result = Vec::<String>::new();
     let mut temp = String::new();
