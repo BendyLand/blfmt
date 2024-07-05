@@ -2,6 +2,40 @@ use std::{fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 
+fn handle_one_liner(line: String) -> String {
+    let mut result = String::new();
+    let idx1 = line.chars().position(|x| x == '{').unwrap();
+    let idx2 = line.chars().position(|x| x == '}').unwrap();
+    result += (line[0..idx1].to_string()+ "\n").as_str();
+    result += ("{".to_string() + "\n").as_str();
+    result += (line[idx1+1..idx2].trim_start().to_string() + "\n").as_str();
+    result += ("}".to_string() + "\n").as_str();
+    return result;
+}
+
+pub fn extract_c_function_header(group: &String) -> String {
+    let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let result; 
+    if lines[0].ends_with(")") {
+        lines[0].clone()
+    }
+    else {
+        let end = lines[0].chars().position(|x| x == ')').unwrap_or(lines[0].len());
+        let one_liner = lines[0].contains("{") && lines[0].contains("}");
+        if one_liner {
+            result = handle_one_liner(lines[0].to_string());
+            return result;
+        }
+        if lines[0].len() > 0 {
+            let temp = &lines[0][..end+1];
+            temp.to_owned().to_string()
+        }
+        else {
+            String::new()
+        }
+    }
+}
+
 pub fn remove_empty_lines(lines: Vec<&str>) -> String {
     let mut result = String::new();
     for line in lines {

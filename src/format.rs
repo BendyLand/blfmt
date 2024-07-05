@@ -48,41 +48,11 @@ fn swap_include_kind_locations(group: String) -> String {
     return result;
 }
 
-fn handle_one_liner(line: String) -> String {
-    let mut result = String::new();
-    let idx1 = line.chars().position(|x| x == '{').unwrap();
-    let idx2 = line.chars().position(|x| x == '}').unwrap();
-    result += (line[0..idx1].to_string()+ "\n").as_str();
-    result += ("{".to_string() + "\n").as_str();
-    result += (line[idx1+1..idx2].trim_start().to_string() + "\n").as_str();
-    result += ("}".to_string() + "\n").as_str();
-    return result;
-}
-
 fn normalize_c_function_group(group: String) -> String {
     let temp_result = group.clone();
     let mut result = String::new();
     let mut lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
-    let header = {
-        if lines[0].ends_with(")") {
-            lines[0].clone()
-        }
-        else {
-            let end = lines[0].chars().position(|x| x == ')').unwrap_or(lines[0].len());
-            let one_liner = lines[0].contains("{") && lines[0].contains("}");
-            if one_liner {
-                result = handle_one_liner(lines[0].to_string());
-                return result;
-            }
-            if lines[0].len() > 0 {
-                let temp = &lines[0][..end+1];
-                temp.to_owned().to_string()
-            }
-            else {
-                String::new()
-            }
-        }
-    };
+    let header = utils::extract_c_function_header(&group);
     result += (header + "\n" + "{" + "\n").as_str();
     lines = lines[1..].into_iter().map(|x| x.to_owned()).collect::<Vec<String>>();
     for line in lines {
@@ -92,11 +62,11 @@ fn normalize_c_function_group(group: String) -> String {
         let temp = line.trim_start();
         result += (temp.to_string() + "\n").as_str(); 
     }
-    result = indent_c_function_group(result);
     return result;
 }
 
 fn indent_c_function_group(group: String) -> String {
+    if group.contains("#include") { return group; }
     let res = group.clone();
     let mut result = String::new();
     let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
@@ -106,7 +76,6 @@ fn indent_c_function_group(group: String) -> String {
     for (i, line) in lines.into_iter().enumerate() {
         if i > 1 && i < lines_clone.len()-2 {
             if i > 2 && i < lines_clone.len()-1 && lines_clone[i-1].contains("{") {
-                dbg!(i, &line);
                 inner_group = true;
                 indent += 1;
             }
@@ -128,6 +97,10 @@ fn indent_c_function_group(group: String) -> String {
         }
     }
     return result;
+}
+
+fn format_curly_braces(group: String) -> String {
+    group
 }
 
 fn format_c_file_group(group: String) -> String {
@@ -154,6 +127,8 @@ fn format_c_file_group(group: String) -> String {
     else {
         result = normalize_c_function_group(group);
     }
+    result = indent_c_function_group(result);
+    result = format_curly_braces(result);
     return result;
 }
 
