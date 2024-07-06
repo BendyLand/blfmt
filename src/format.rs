@@ -15,12 +15,11 @@ pub fn format_c_file(path: String) {
         sections[i] = format_c_file_group(original.to_owned());
     }
     let result = join_c_file_groups(sections);
-    // println!("{}",  result);
-    // let ok = utils::write_file(path.clone(), result.as_bytes());
-    // match ok {
-    //     Ok(_) => println!("Successfully wrote: {}", path),
-    //     Err(e) => println!("Error writing file: {}", e),
-    // };
+    let ok = utils::write_file(path.clone(), result.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path),
+        Err(e) => println!("Error writing file: {}", e),
+    };
 }
 
 fn format_c_file_group(group: String) -> String {
@@ -49,7 +48,6 @@ fn format_c_file_group(group: String) -> String {
     }
     result = format_inner_curly_braces(result);
     result = indent_c_function_group(result);
-    println!("{}", &result);
     return result;
 }
 
@@ -118,7 +116,7 @@ fn format_inner_curly_braces(group: String) -> String {
                     result += (line_clone.to_string() + " {\n").as_str();
                 }
                 else {
-                    dbg!("No brace"); 
+                    // dbg!("No brace"); 
                     result += (line_clone.to_string() + " {\n").as_str();
                     no_brace_layers += 1;
                 }
