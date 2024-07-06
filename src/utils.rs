@@ -2,11 +2,6 @@ use std::{fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 
-pub fn check_line_for_func(line: &String) -> bool {
-    let pattern = Regex::new(r"^.*\(.*\)").unwrap();
-    return pattern.is_match(line);
-}
-
 pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
     for opt in opts {
         if line.trim().to_string().starts_with(opt) {
@@ -17,16 +12,13 @@ pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
 }
 
 pub fn extract_inner_header(line: String) -> String {
-    let pattern = Regex::new(r"^.*\(.*\)").unwrap();
-    let result = pattern.find_iter(&line).map(|x| x.as_str().to_string()).collect::<Vec<String>>();
-    let result_str;
-    if result.len() > 0 {
-        result_str = result[0].trim().to_string().clone();
+    let re = Regex::new(r"^.*\(.*\)").unwrap();
+    let mut result = line.strip_suffix("{").unwrap_or(&line).to_string();
+    let matches = re.find_iter(&result).map(|x| x.as_str().to_string()).collect::<Vec<String>>();
+    if matches.len() > 0 {
+        result = matches[0].clone();
     }
-    else {
-        result_str = String::new();
-    }
-    return result_str;
+    return result;
 }
 
 fn handle_one_liner(line: String) -> String {

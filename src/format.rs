@@ -15,11 +15,12 @@ pub fn format_c_file(path: String) {
         sections[i] = format_c_file_group(original.to_owned());
     }
     let result = join_c_file_groups(sections);
-    let ok = utils::write_file(path.clone(), result.as_bytes());
-    match ok {
-        Ok(_) => println!("Successfully wrote: {}", path),
-        Err(e) => println!("Error writing file: {}", e),
-    };
+    // println!("{}",  result);
+    // let ok = utils::write_file(path.clone(), result.as_bytes());
+    // match ok {
+    //     Ok(_) => println!("Successfully wrote: {}", path),
+    //     Err(e) => println!("Error writing file: {}", e),
+    // };
 }
 
 fn format_c_file_group(group: String) -> String {
@@ -48,6 +49,7 @@ fn format_c_file_group(group: String) -> String {
     }
     result = format_inner_curly_braces(result);
     result = indent_c_function_group(result);
+    println!("{}", &result);
     return result;
 }
 
@@ -88,6 +90,11 @@ fn normalize_c_function_group(group: String) -> String {
     return result;
 }
 
+/* 
+? problematic functions:
+? one-liners
+*/
+
 fn format_inner_curly_braces(group: String) -> String {
     let names = {
         vec!["for", "while", "if", "else if", "else", "switch"]
@@ -104,20 +111,14 @@ fn format_inner_curly_braces(group: String) -> String {
         if utils::starts_with_any(&line, &names.clone()) {
             line = line.trim().to_string();
             let line_clone = line.clone();
-            let header;
-            if utils::check_line_for_func(&line) {
-                header = utils::extract_inner_header(line);
-            }
-            else {
-                header = line.clone();
-            }
+            let header = utils::extract_inner_header(line);
             if header.len() == line_clone.len() {
-                if &i < &lines.len() && lines[i+1].contains("{") {
+                if lines[i+1].contains("{") {
                     // dbg!("Trailing brace");
                     result += (line_clone.to_string() + " {\n").as_str();
                 }
                 else {
-                    // dbg!("No brace");
+                    dbg!("No brace"); 
                     result += (line_clone.to_string() + " {\n").as_str();
                     no_brace_layers += 1;
                 }
@@ -128,7 +129,7 @@ fn format_inner_curly_braces(group: String) -> String {
                     result += (line_clone + "\n").as_str();
                 }
                 else {
-                    // dbg!("One-liner");
+                    // dbg!("One-liner"); 
                     result += (line_clone + "\n").as_str();
                 }
             }
