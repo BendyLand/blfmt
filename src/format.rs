@@ -130,7 +130,7 @@ fn format_inner_curly_braces(group: String) -> String {
         else {
             if line.contains("}") && line.contains("{") {
                 result += "}\n";
-                let pos = &line.chars().position(|x| x == 'e').unwrap();
+                let pos = &line.chars().position(|x| x == 'e').unwrap_or_default();
                 let slc = &line.as_str()[pos.to_owned()..];
                 line = slc.to_owned().clone();
             }
