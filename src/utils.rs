@@ -2,6 +2,28 @@ use std::{fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 
+pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
+    for opt in opts {
+        if line.trim().to_string().starts_with(opt) {
+            return true;
+        }
+    }
+    return false;
+}
+
+pub fn extract_inner_header(line: String) -> String {
+    let pattern = Regex::new(r"^.*\(.*\)").unwrap();
+    let result = pattern.find_iter(&line).map(|x| x.as_str().to_string()).collect::<Vec<String>>();
+    let result_str;
+    if result.len() > 0 {
+        result_str = result[0].trim().to_string().clone();
+    }
+    else {
+        result_str = String::new();
+    }
+    return result_str;
+}
+
 fn handle_one_liner(line: String) -> String {
     let mut result = String::new();
     let idx1 = line.chars().position(|x| x == '{').unwrap();
@@ -15,7 +37,7 @@ fn handle_one_liner(line: String) -> String {
 
 pub fn extract_c_function_header(group: &String) -> String {
     let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
-    let result; 
+    let result;
     if lines[0].ends_with(")") {
         lines[0].clone()
     }
@@ -48,7 +70,7 @@ pub fn remove_empty_lines(lines: Vec<&str>) -> String {
 
 pub fn write_file(path: String, contents: &[u8]) -> Result<(), Error> {
     let mut dest = File::create(path).unwrap();
-    let ok = dest.write_all(contents); 
+    let ok = dest.write_all(contents);
     return ok;
 }
 
