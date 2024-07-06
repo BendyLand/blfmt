@@ -2,6 +2,11 @@ use std::{fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 
+pub fn check_line_for_func(line: &String) -> bool {
+    let pattern = Regex::new(r"^.*\(.*\)").unwrap();
+    return pattern.is_match(line);
+}
+
 pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
     for opt in opts {
         if line.trim().to_string().starts_with(opt) {
