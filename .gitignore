@@ -7,3 +7,5 @@ example_file.go
 example_file.c
 safe_example_file.c
 example_header.h
+debug
+release

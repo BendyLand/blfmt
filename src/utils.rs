@@ -179,21 +179,13 @@ pub fn infer_file_type(filepath: &String) -> String {
 }
 
 pub fn get_file_extensions_list() -> Vec<String> {
-    let file_result = fs::read_to_string("src/non-code/list-of-file-ext.txt");
-    let file = match file_result {
-        Ok(s) => s,
-        Err(e) => {
-            println!("Error reading file: {}", e);
-            String::from("ERROR")
-        }
-    };
-    let lines = {
-        file
-            .lines()
-            .map(|line| line.to_string())
+    let exts = {
+        vec!["c", "go", "txt"]
+            .into_iter()
+            .map(|x| x.to_string())
             .collect::<Vec<String>>()
     };
-    return lines;
+    return exts;
 }
 
 pub fn display_file_extensions() {
