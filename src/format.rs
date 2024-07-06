@@ -88,11 +88,6 @@ fn normalize_c_function_group(group: String) -> String {
     return result;
 }
 
-/* 
-? problematic functions:
-? one-liners
-*/
-
 fn format_inner_curly_braces(group: String) -> String {
     let names = {
         vec!["for", "while", "if", "else if", "else", "switch"]
@@ -133,6 +128,12 @@ fn format_inner_curly_braces(group: String) -> String {
             }
         }
         else {
+            if line.contains("}") && line.contains("{") {
+                result += "}\n";
+                let pos = &line.chars().position(|x| x == 'e').unwrap();
+                let slc = &line.as_str()[pos.to_owned()..];
+                line = slc.to_owned().clone();
+            }
             result += (line.to_string() + "\n").as_str();
             if no_brace_layers > 0 {
                 for layer in 0..no_brace_layers {
