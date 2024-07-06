@@ -4,8 +4,7 @@ use std::io::{Write};
 use crate::{options, utils, group};
 
 pub fn format_c_file(path: String) {
-    let path_clone = path.clone();
-    let contents = fs::read_to_string(path).unwrap();
+    let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
     let mut sections = group::group_c_file_into_sections(lines);
     for i in 0..sections.len() {
@@ -15,17 +14,12 @@ pub fn format_c_file(path: String) {
         let original = &sections[i].clone().to_string();
         sections[i] = format_c_file_group(original.to_owned());
     }
-    for section in sections {
-        println!("Section: {}", section); 
-    }
-
-    // let result = join_c_file_groups(sections);
-
-    // let ok = utils::write_file(path, result.as_bytes());
-    // match ok {
-    //     Ok(_) => println!("Successfully wrote: {}", path_clone),
-    //     Err(e) => println!("Error writing file: {}", e),
-    // };
+    let result = join_c_file_groups(sections);
+    let ok = utils::write_file(path.clone(), result.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path),
+        Err(e) => println!("Error writing file: {}", e),
+    };
 }
 
 fn format_c_file_group(group: String) -> String {
@@ -110,9 +104,15 @@ fn format_inner_curly_braces(group: String) -> String {
         if utils::starts_with_any(&line, &names.clone()) {
             line = line.trim().to_string();
             let line_clone = line.clone();
-            let header = utils::extract_inner_header(line);
+            let header;
+            if utils::check_line_for_func(&line) {
+                header = utils::extract_inner_header(line);
+            }
+            else {
+                header = line.clone();
+            }
             if header.len() == line_clone.len() {
-                if &i < &line_clone.len() && lines[i+1].contains("{") {
+                if &i < &lines.len() && lines[i+1].contains("{") {
                     // dbg!("Trailing brace");
                     result += (line_clone.to_string() + " {\n").as_str();
                 }
@@ -145,7 +145,6 @@ fn format_inner_curly_braces(group: String) -> String {
     }
     return result;
 }
-
 
 fn indent_c_function_group(group: String) -> String {
     if group.contains("#include") { return group; }
@@ -197,7 +196,7 @@ fn indent_c_function(group: String) -> String {
 }
 
 fn join_c_file_groups(groups: Vec<String>) -> String {
-    String::new()
+    return groups.join("\n").to_string();
 }
 
 fn format_paragraph(paragraph: String, opts: options::TxtOpts) -> String {
