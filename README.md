@@ -2,7 +2,7 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is currently in early development and is only functional for .go, .txt, and .c files.**
+**blfmt is currently in early development and is only functional for .go, .txt, and VERY basic .c files.**
 
 *This document will be updated regularly as the project continues, but the tool is in a minimally functional state at the moment.*
 
