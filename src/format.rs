@@ -18,7 +18,7 @@ pub fn format_c_file(path: String) {
     let ok = utils::write_file(path.clone(), result.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path),
-        Err(e) => println!("Error writing file: {}", e),
+        Err(e) => println!("Error during `format_c_file()`: {}", e),
     };
 }
 
@@ -234,7 +234,7 @@ pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[Strin
     let ok = utils::write_file(path, paragraphs.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path_clone),
-        Err(e) => println!("Error writing file: {}", e),
+        Err(e) => println!("Error during `format_txt_file()`: {}", e),
     };
 }
 
