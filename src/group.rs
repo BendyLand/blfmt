@@ -3,14 +3,31 @@ use crate::utils;
 
 fn separate_c_file_sections(lines: Vec<String>) -> String {
     let mut result = String::new();
-    let mut inner_brackets = 0;
     let mut is_function_line: bool;
+    let mut is_preprocessor_section: bool;
+    let mut is_function_hoist_section: bool;
+    let mut function_hoist_lines = 0;
+    let mut preprocessor_lines = 0;
     for line in lines {
         is_function_line = Regex::new(r"^\w|\*+\s\w+\s*\(.*\).*").unwrap().is_match(&line);
-        if is_function_line {
+        is_preprocessor_section = line.starts_with("#");
+        is_function_hoist_section = is_function_line && line.trim_end().ends_with(";");
+        if is_function_hoist_section {
+            if function_hoist_lines == 0 {
+                result += "\n";
+            }
+            function_hoist_lines += 1;
+        }
+        else if is_function_line { 
             result += "\n";
             result += (line.to_string() + "\n").as_str();
             continue;
+        }
+        else if is_preprocessor_section {
+            if preprocessor_lines == 0 {
+                result += "\n";
+            }
+            preprocessor_lines += 1;
         }
         result += (line.to_string() + "\n").as_str();
     }

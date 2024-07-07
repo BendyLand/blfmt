@@ -1,6 +1,7 @@
 use std::process::Command;
 use std::fs::{self, File};
 use std::io::{Write};
+use regex::Regex;
 use crate::{options, utils, group};
 
 pub fn format_c_file(path: String) {
@@ -23,7 +24,11 @@ pub fn format_c_file(path: String) {
 }
 
 fn format_c_file_group(group: String) -> String {
-    let is_preprocessor = group.starts_with("#include");
+    let is_preprocessor = group.trim_start().starts_with("#include");
+    let is_function_hoist = {
+        let re = Regex::new(r"^\s*\w+.*\)\s*;\s*(\n\s*\w+.*\)\s*;\s*)*$").unwrap();
+        re.is_match(&group)
+    };
     let mut result = String::new();
     if is_preprocessor {
         let mut names = {
@@ -32,6 +37,7 @@ fn format_c_file_group(group: String) -> String {
                 .map(|line| line.trim_start_matches("#include "))
                 .collect::<Vec<&str>>()
         };
+        names = names.into_iter().filter(|x| !x.is_empty()).collect::<Vec<&str>>();
         names.sort_by(|a, b| {
             let a_slice = &a[1..];
             let b_slice = &b[1..];
@@ -42,6 +48,9 @@ fn format_c_file_group(group: String) -> String {
             result += (temp.to_string() + "\n").as_str();
         }
         result = swap_include_kind_locations(result);
+    }
+    else if is_function_hoist {
+        result += (group + "\n").as_str();
     }
     else {
         result = normalize_c_function_group(group);
@@ -111,7 +120,7 @@ fn format_inner_curly_braces(group: String) -> String {
                     result += (line_clone.to_string() + " {\n").as_str();
                 }
                 else {
-                    // dbg!("No brace"); 
+                    // dbg!("No brace");
                     result += (line_clone.to_string() + " {\n").as_str();
                     no_brace_layers += 1;
                 }
@@ -122,7 +131,7 @@ fn format_inner_curly_braces(group: String) -> String {
                     result += (line_clone + "\n").as_str();
                 }
                 else {
-                    // dbg!("One-liner"); 
+                    // dbg!("One-liner");
                     result += (line_clone + "\n").as_str();
                 }
             }
@@ -148,8 +157,17 @@ fn format_inner_curly_braces(group: String) -> String {
 
 fn indent_c_function_group(group: String) -> String {
     if group.contains("#include") { return group; }
+    let is_function_hoist_group = {
+        let lines = group.split("\n").collect::<Vec<&str>>();
+        let re = Regex::new(r"^.*\(.*\);").unwrap();
+        if re.is_match(&lines[0]) {
+            let result = (group + "\n").to_string();
+            return result;
+        }
+    };
     let mut result = String::new();
     let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    if lines[0].ends_with(";") { return group; }
     let lines_clone = lines.clone();
     let mut inner_group = false;
     let mut indent = 0;
@@ -182,6 +200,10 @@ fn indent_c_function_group(group: String) -> String {
 
 fn indent_c_function(group: String) -> String {
     let mut result = String::new();
+    let is_function_hoist = &group.trim_end().ends_with(";");
+    if *is_function_hoist {
+        return group.trim().to_string();
+    }
     let lines = group.split("\n").collect::<Vec<&str>>();
     let lines = utils::remove_empty_lines(lines).split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     for i in 0..2 {
@@ -196,7 +218,14 @@ fn indent_c_function(group: String) -> String {
 }
 
 fn join_c_file_groups(groups: Vec<String>) -> String {
-    return groups.join("\n").to_string();
+    let result; 
+    let mut temp = Vec::<String>::new();
+    for group in groups {
+        let temp_group = group.trim_end();
+        temp.push(temp_group.to_string() + "\n");
+    }
+    result = temp.join("\n");
+    return result;
 }
 
 fn format_paragraph(paragraph: String, opts: options::TxtOpts) -> String {
