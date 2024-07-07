@@ -218,13 +218,14 @@ fn indent_c_function(group: String) -> String {
 }
 
 fn join_c_file_groups(groups: Vec<String>) -> String {
-    let result; 
+    let mut result; 
     let mut temp = Vec::<String>::new();
     for group in groups {
         let temp_group = group.trim_end();
         temp.push(temp_group.to_string() + "\n");
     }
     result = temp.join("\n");
+    result = (result.trim_end().to_string() + "\n").to_string();
     return result;
 }
 
