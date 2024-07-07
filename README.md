@@ -94,9 +94,9 @@ But you're in luck...
 ## Future Plans
 
 As I mentioned, right now C files are formatted directly to a pre-determined style. 
-(Also, for the time being, anything beyond a very basic file structure will fundamentally break...)
+(Also, for the time being, anything beyond a very basic file structure will fundamentally break).
 Eventually, I want to allow the user to specify a known style (Allman, K&R, Stroustrup, etc.).
-(I would obviously also like to fix the broken parts.)
+(I would obviously also like to fix the broken parts).
 
 Additionally, I would like to build in functionality for Rust and C++ files; 
 however, since these languages are so complex, they might just be wishful thinking. 

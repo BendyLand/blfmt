@@ -39,7 +39,15 @@ pub fn extract_c_function_header(group: &String) -> String {
         lines[0].clone()
     }
     else {
-        let end = lines[0].chars().position(|x| x == ')').unwrap_or(lines[0].len()-1);
+        let end = lines[0].chars().position(|x| x == ')').unwrap_or_else(|| {
+            let length = lines[0].len();
+            if length > 0 {
+                length - 1
+            }
+            else {
+                length
+            }
+        });
         let one_liner = lines[0].contains("{") && lines[0].contains("}");
         if one_liner {
             result = handle_one_liner(lines[0].to_string());
