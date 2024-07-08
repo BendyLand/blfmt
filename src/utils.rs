@@ -2,6 +2,11 @@ use std::{fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 
+pub fn check_is_function_hoist(group: &String) -> bool {
+    let re = Regex::new(r"^\s*\w+.*\)\s*;\s*(\n\s*\w+.*\)\s*;\s*)*$").unwrap();
+    return re.is_match(&group);
+}
+
 pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
     for opt in opts {
         if line.trim().to_string().starts_with(opt) {
