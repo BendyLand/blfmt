@@ -23,31 +23,34 @@ pub fn format_c_file(path: String) {
     };
 }
 
+fn format_preprocessor_group(group: String) -> String {
+    let mut result = String::new();
+    let mut names = {
+        group
+            .split("\n")
+            .map(|line| line.trim_start_matches("#include "))
+            .collect::<Vec<&str>>()
+    };
+    names = names.into_iter().filter(|x| !x.is_empty()).collect::<Vec<&str>>();
+    names.sort_by(|a, b| {
+        let a_slice = &a[1..];
+        let b_slice = &b[1..];
+        a_slice.cmp(&b_slice)
+    });
+    for name in names {
+        let temp = "#include ".to_string() + name;
+        result += (temp.to_string() + "\n").as_str();
+    }
+    result = swap_include_kind_locations(result);
+    return result;
+}
+
 fn format_c_file_group(group: String) -> String {
     let is_preprocessor = group.trim_start().starts_with("#include");
-    let is_function_hoist = {
-        let re = Regex::new(r"^\s*\w+.*\)\s*;\s*(\n\s*\w+.*\)\s*;\s*)*$").unwrap();
-        re.is_match(&group)
-    };
+    let is_function_hoist = utils::check_is_function_hoist(&group);
     let mut result = String::new();
     if is_preprocessor {
-        let mut names = {
-            group
-                .split("\n")
-                .map(|line| line.trim_start_matches("#include "))
-                .collect::<Vec<&str>>()
-        };
-        names = names.into_iter().filter(|x| !x.is_empty()).collect::<Vec<&str>>();
-        names.sort_by(|a, b| {
-            let a_slice = &a[1..];
-            let b_slice = &b[1..];
-            a_slice.cmp(&b_slice)
-        });
-        for name in names {
-            let temp = "#include ".to_string() + name;
-            result += (temp.to_string() + "\n").as_str();
-        }
-        result = swap_include_kind_locations(result);
+        result = format_preprocessor_group(group);
     }
     else if is_function_hoist {
         result += (group + "\n").as_str();
@@ -97,6 +100,47 @@ fn normalize_c_function_group(group: String) -> String {
     return result;
 }
 
+fn format_keyword_line(dest: &mut String, no_brace_layers: &mut usize, 
+                       line: &mut String, lines: &Vec<String>, i: usize) {
+    *line = line.trim().to_string();
+    let line_clone = line.clone();
+    let header = utils::extract_inner_header(line.clone());
+    if header.len() == line_clone.len() {
+        if lines[i+1].contains("{") { // trailing brace
+            *dest += (line_clone.to_string() + " {\n").as_str();
+        }
+        else {                        // no brace
+            *dest += (line_clone.to_string() + " {\n").as_str();
+            *no_brace_layers += 1;
+        }
+    }
+    else { 
+        if line_clone.contains("{") { // same-line brace
+            *dest += (line_clone + "\n").as_str();
+        }
+        else {                        // one-liner
+            *dest += (line_clone + "\n").as_str();
+        }
+    }
+}
+
+fn format_non_keyword_line(dest: &mut String, no_brace_layers: &mut usize, 
+                           line: &mut String, lines: &Vec<String>, i: usize) {
+    if line.contains("}") && line.contains("{") {
+        *dest += "}\n";
+        let pos = &line.chars().position(|x| x == 'e').unwrap_or_default();
+        let slc = &line.as_str()[pos.to_owned()..];
+        *line = slc.to_owned().clone();
+    }
+    *dest += (line.to_string() + "\n").as_str();
+    if *no_brace_layers > 0 {
+        for layer in 0..*no_brace_layers {
+            *dest += "}\n"
+        }
+    }
+    *no_brace_layers = 0; 
+}
+
 fn format_inner_curly_braces(group: String) -> String {
     let names = {
         vec!["for", "while", "if", "else if", "else", "switch"]
@@ -107,52 +151,37 @@ fn format_inner_curly_braces(group: String) -> String {
     let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     let lines_clone = lines.clone();
     let mut result = String::new();
-    let mut no_brace_layers = 0;
+    let mut no_brace_layers: usize = 0;
     for (i, mut line) in lines_clone.into_iter().enumerate() {
         if i > 1 && &line == &"{" { continue; }
         if utils::starts_with_any(&line, &names.clone()) {
-            line = line.trim().to_string();
-            let line_clone = line.clone();
-            let header = utils::extract_inner_header(line);
-            if header.len() == line_clone.len() {
-                if lines[i+1].contains("{") {
-                    // dbg!("Trailing brace");
-                    result += (line_clone.to_string() + " {\n").as_str();
-                }
-                else {
-                    // dbg!("No brace");
-                    result += (line_clone.to_string() + " {\n").as_str();
-                    no_brace_layers += 1;
-                }
-            }
-            else {
-                if line_clone.contains("{") {
-                    // dbg!("Same-line brace");
-                    result += (line_clone + "\n").as_str();
-                }
-                else {
-                    // dbg!("One-liner");
-                    result += (line_clone + "\n").as_str();
-                }
-            }
+            format_keyword_line(&mut result, &mut no_brace_layers, &mut line, &lines, i);
         }
         else {
-            if line.contains("}") && line.contains("{") {
-                result += "}\n";
-                let pos = &line.chars().position(|x| x == 'e').unwrap_or_default();
-                let slc = &line.as_str()[pos.to_owned()..];
-                line = slc.to_owned().clone();
-            }
-            result += (line.to_string() + "\n").as_str();
-            if no_brace_layers > 0 {
-                for layer in 0..no_brace_layers {
-                    result += "}\n"
-                }
-            }
-            no_brace_layers = 0;
+            format_non_keyword_line(&mut result, &mut no_brace_layers, &mut line, &lines, i);
         }
     }
     return result;
+}
+
+fn format_function_group(dest: &mut String, lines: &Vec<String>, i: usize, 
+                         inner_group: &mut bool, indent: &mut i8, line: &String) {
+    if i > 2 && i < lines.len()-1 && lines[i-1].contains("{") {
+        *inner_group = true;
+        *indent += 1;
+    }
+    if line.contains("}") {
+        *indent -= 1;
+        if *indent == 0 {
+            *inner_group = false;
+        }
+    }
+    if *inner_group {
+        for _ in 0..*indent {
+            *dest += "    ";
+        }
+    }
+    *dest += (line.to_string() + "\n").as_str();
 }
 
 fn indent_c_function_group(group: String) -> String {
@@ -173,22 +202,7 @@ fn indent_c_function_group(group: String) -> String {
     let mut indent = 0;
     for (i, line) in lines.into_iter().enumerate() {
         if i > 1 && i < lines_clone.len()-1 {
-            if i > 2 && i < lines_clone.len()-1 && lines_clone[i-1].contains("{") {
-                inner_group = true;
-                indent += 1;
-            }
-            if line.contains("}") {
-                indent -= 1;
-                if indent == 0 {
-                    inner_group = false;
-                }
-            }
-            if inner_group {
-                for _ in 0..indent {
-                    result += "    ";
-                }
-            }
-            result += (line.to_string() + "\n").as_str();
+            format_function_group(&mut result, &lines_clone, i, &mut inner_group, &mut indent, &line);
         }
         else {
             result += (line.to_string() + "\n").as_str();
