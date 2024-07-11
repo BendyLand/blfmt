@@ -7,6 +7,10 @@ use crate::{options, utils, group};
 pub fn format_rs_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
+    let mut sections = group::group_rs_file_into_sections(lines);
+    for section in sections {
+        println!("Section:\n{}", section);
+    }
 }
 
 pub fn format_c_file(path: String) {
