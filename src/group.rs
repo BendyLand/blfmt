@@ -20,13 +20,13 @@ fn separate_rs_file_sections(lines: Vec<String>) -> Vec<String> {
 pub fn group_c_file_into_sections(lines: Vec<&str>) -> Vec<String> {
     let text = utils::remove_empty_lines(lines);
     let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
-    let new_text = separate_c_file_sections(lines.clone());
-    let result = new_text.split("\n\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let result = separate_c_file_sections(lines.clone());
     return result;
 }
 
-fn separate_c_file_sections(lines: Vec<String>) -> String {
-    let mut result = String::new();
+fn separate_c_file_sections(lines: Vec<String>) -> Vec<String> {
+    let mut temp = String::new();
+    let mut result = Vec::<String>::new();
     let mut is_function_line: bool;
     let mut is_preprocessor_section: bool;
     let mut is_function_hoist_section: bool;
@@ -38,22 +38,25 @@ fn separate_c_file_sections(lines: Vec<String>) -> String {
         is_function_hoist_section = is_function_line && line.trim_end().ends_with(";");
         if is_function_hoist_section {
             if function_hoist_lines == 0 {
-                result += "\n";
+                result.push(temp);
+                temp = "".to_string();
             }
             function_hoist_lines += 1;
         }
         else if is_function_line { 
-            result += "\n";
-            result += (line.to_string() + "\n").as_str();
+            result.push(temp);
+            temp = "".to_string();
+            temp += (line.to_string() + "\n").as_str();
             continue;
         }
         else if is_preprocessor_section {
             if preprocessor_lines == 0 {
-                result += "\n";
+                result.push(temp);
+                temp = "".to_string();
             }
             preprocessor_lines += 1;
         }
-        result += (line.to_string() + "\n").as_str();
+        temp += (line.to_string() + "\n").as_str();
     }
     return result;
 }
