@@ -193,7 +193,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 
 pub fn get_file_extensions_list() -> Vec<String> {
     let exts = {
-        vec!["c", "go", "txt"]
+        vec![".c", ".cpp", ".go", ".rs", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()

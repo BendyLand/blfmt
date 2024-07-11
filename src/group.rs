@@ -1,6 +1,22 @@
 use regex::Regex;
 use crate::utils;
 
+pub fn group_rs_file_into_sections(lines: Vec<&str>) -> Vec<String> {
+    let text = utils::remove_empty_lines(lines);
+    let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let sections = separate_rs_file_sections(lines);
+    return sections;
+}
+
+fn separate_rs_file_sections(lines: Vec<String>) -> Vec<String> {
+    
+
+
+
+
+    return vec![];
+}
+
 pub fn group_c_file_into_sections(lines: Vec<&str>) -> Vec<String> {
     let text = utils::remove_empty_lines(lines);
     let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();

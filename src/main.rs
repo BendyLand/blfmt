@@ -33,16 +33,22 @@ fn main() {
 
     let file_type = utils::infer_file_type(&filepath);
     match file_type.as_str() {
-        "txt" => {
+        ".txt" => {
             let opts: options::TxtOpts = options::get_txt_opts(&args);
             format::format_txt_file(filepath, opts, &args);
         },
-        "go" => {
+        ".go" => {
             format::format_go_file(filepath);
-        }
-        "c" => {
+        },
+        ".c" => {
             format::format_c_file(filepath);
-        }
+        },
+        ".cpp" => {
+            format::format_c_file(filepath); // update with cpp eventually
+        },
+        ".rs" => {
+            format::format_rs_file(filepath);
+        },
         _ => {
             println!("Unknown file type");
             println!("Valid file types are:");
