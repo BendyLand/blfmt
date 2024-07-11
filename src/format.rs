@@ -4,6 +4,11 @@ use std::io::{Write};
 use regex::Regex;
 use crate::{options, utils, group};
 
+pub fn format_rs_file(path: String) {
+    let contents = fs::read_to_string(path.clone()).unwrap();
+    let lines = contents.split("\n").collect::<Vec<&str>>();
+}
+
 pub fn format_c_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
