@@ -20,7 +20,7 @@ pub fn format_c_file(path: String) {
         let original = &sections[i].clone().to_string();
         sections[i] = format_c_file_group(original.to_owned());
     }
-    let result = join_c_file_groups(sections);
+    let result = join_c_file_groups(sections).trim_start().to_string();
     let ok = utils::write_file(path.clone(), result.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path),
