@@ -1,16 +1,51 @@
-use std::process::Command;
-use std::fs::{self, File};
-use std::io::{Write};
+use crate::{group, options, utils};
 use regex::Regex;
-use crate::{options, utils, group};
+use std::fs::{self, File};
+use std::io::Write;
+use std::process::Command;
 
 pub fn format_rs_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
     let mut sections = group::group_rs_file_into_sections(lines);
-    for section in sections {
-        println!("Section:\n{}", section);
+    for i in 0..sections.len() {
+        if sections[i].is_empty() {
+            continue;
+        }
+        let original = &sections[i].clone().to_string();
+        sections[i] = format_rs_file_group(original.to_owned());
     }
+}
+
+fn format_rs_file_group(section: String) -> String {
+    let top_lines = {
+        vec!["#", "use", "mod", "//"]
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+    };
+    let mid_levels = {
+        vec!["trait", "struct", "enum", "pub"]
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+    };
+    if utils::starts_with_any(&section, &top_lines) {
+        // todo: order: use, mod, comments; then join by single space between them.
+        println!("Top level statement!");
+        println!("{}", &section);
+    }
+    else if utils::starts_with_any(&section, &mid_levels) {
+        // todo: order: traits, enums, structs, public functions; format funcs; then join by single space between them.
+        println!("Mid level statement!");
+        println!("{}", &section);
+    }
+    else {
+        // todo: format private functions.
+        println!("Bottom level statement!");
+        println!("{}", &section);
+    }
+    return section;
 }
 
 pub fn format_c_file(path: String) {
@@ -40,7 +75,10 @@ fn format_preprocessor_group(group: String) -> String {
             .map(|line| line.trim_start_matches("#include "))
             .collect::<Vec<&str>>()
     };
-    names = names.into_iter().filter(|x| !x.is_empty()).collect::<Vec<&str>>();
+    names = names
+        .into_iter()
+        .filter(|x| !x.is_empty())
+        .collect::<Vec<&str>>();
     names.sort_by(|a, b| {
         let a_slice = &a[1..];
         let b_slice = &b[1..];
@@ -92,14 +130,15 @@ fn swap_include_kind_locations(group: String) -> String {
 fn normalize_c_function_group(group: String) -> String {
     let temp_result = group.clone();
     let mut result = String::new();
-    let mut lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let mut lines = group
+        .split("\n")
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
     let header = utils::extract_c_function_header(&group);
     result += (header + "\n" + "{" + "\n").as_str();
     lines = lines[1..].into_iter().map(|x| x.to_owned()).collect::<Vec<String>>();
     for line in lines {
-        if line == "{" {
-            continue;
-        }
+        if line == "{" { continue; }
         let temp = line.trim_start();
         result += (temp.to_string() + "\n").as_str();
     }
@@ -109,31 +148,31 @@ fn normalize_c_function_group(group: String) -> String {
     return result;
 }
 
-fn format_keyword_line(dest: &mut String, no_brace_layers: &mut usize, 
+fn format_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
                        line: &mut String, lines: &Vec<String>, i: usize) {
     *line = line.trim().to_string();
     let line_clone = line.clone();
     let header = utils::extract_inner_header(line.clone());
     if header.len() == line_clone.len() {
-        if lines[i+1].contains("{") { // trailing brace
+        if lines[i + 1].contains("{") { // trailing brace
             *dest += (line_clone.to_string() + " {\n").as_str();
         }
-        else {                        // no brace
+        else { // no brace
             *dest += (line_clone.to_string() + " {\n").as_str();
             *no_brace_layers += 1;
         }
     }
-    else { 
+    else {
         if line_clone.contains("{") { // same-line brace
             *dest += (line_clone + "\n").as_str();
         }
-        else {                        // one-liner
+        else { // one-liner
             *dest += (line_clone + "\n").as_str();
         }
     }
 }
 
-fn format_non_keyword_line(dest: &mut String, no_brace_layers: &mut usize, 
+fn format_non_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
                            line: &mut String, lines: &Vec<String>, i: usize) {
     if line.contains("}") && line.contains("{") {
         *dest += "}\n";
@@ -147,7 +186,7 @@ fn format_non_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
             *dest += "}\n"
         }
     }
-    *no_brace_layers = 0; 
+    *no_brace_layers = 0;
 }
 
 fn format_inner_curly_braces(group: String) -> String {
@@ -162,7 +201,9 @@ fn format_inner_curly_braces(group: String) -> String {
     let mut result = String::new();
     let mut no_brace_layers: usize = 0;
     for (i, mut line) in lines_clone.into_iter().enumerate() {
-        if i > 1 && &line == &"{" { continue; }
+        if i > 1 && &line == &"{" {
+            continue;
+        }
         if utils::starts_with_any(&line, &names.clone()) {
             format_keyword_line(&mut result, &mut no_brace_layers, &mut line, &lines, i);
         }
@@ -173,9 +214,9 @@ fn format_inner_curly_braces(group: String) -> String {
     return result;
 }
 
-fn format_function_group(dest: &mut String, lines: &Vec<String>, i: usize, 
+fn format_function_group(dest: &mut String, lines: &Vec<String>, i: usize,
                          inner_group: &mut bool, indent: &mut i8, line: &String) {
-    if i > 2 && i < lines.len()-1 && lines[i-1].contains("{") {
+    if i > 2 && i < lines.len() - 1 && lines[i - 1].contains("{") {
         *inner_group = true;
         *indent += 1;
     }
@@ -210,8 +251,8 @@ fn indent_c_function_group(group: String) -> String {
     let mut inner_group = false;
     let mut indent = 0;
     for (i, line) in lines.into_iter().enumerate() {
-        if i > 1 && i < lines_clone.len()-1 {
-            format_function_group(&mut result, &lines_clone, i, &mut inner_group, &mut indent, &line);
+        if i > 1 && i < lines_clone.len() - 1 {
+            format_function_group(&mut result,&lines_clone, i, &mut inner_group, &mut indent, &line);
         }
         else {
             result += (line.to_string() + "\n").as_str();
@@ -233,7 +274,7 @@ fn indent_c_function(group: String) -> String {
         result += (lines[i].clone() + "\n").as_str();
     }
     let length = lines.len();
-    for i in 2..length-2 {
+    for i in 2..length - 2 {
         result += ("    ".to_string() + lines[i].clone().as_str() + "\n").as_str();
     }
     result += "}\n";
@@ -241,7 +282,7 @@ fn indent_c_function(group: String) -> String {
 }
 
 fn join_c_file_groups(groups: Vec<String>) -> String {
-    let mut result; 
+    let mut result;
     let mut temp = Vec::<String>::new();
     for group in groups {
         let temp_group = group.trim_end();
