@@ -16,7 +16,7 @@ fn separate_rs_file_sections(lines: Vec<String>) -> Vec<String> {
             .collect::<Vec<String>>()
     };
     let starts = {
-        vec!["pub", "fn", "trait", "struct", "enum", "{", "}", "use", "mod", "#", "//"]
+        vec!["pub", "fn", "type", "trait", "struct", "enum", "{", "}", "use", "mod", "#", "//"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
