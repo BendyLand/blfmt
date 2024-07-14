@@ -98,8 +98,9 @@ As I mentioned, right now C files are formatted directly to a pre-determined sty
 Eventually, I want to allow the user to specify a known style (Allman, K&R, Stroustrup, etc.).
 (I would obviously also like to fix the broken parts).
 
-Additionally, I would like to build in functionality for Rust and C++ files; 
-however, since these languages are so complex, they might just be wishful thinking. 
+Additionally, I am in the process of adding support for C++ and Rust. 
+However, since these languages are so complex, I may only be able to include support for basic
+structuring and certain constructs, like the positioning of conditionals.
 
 I actually plan to add support for Python though. 
 And Lua support would be a pleasant surprise for everyone; 
