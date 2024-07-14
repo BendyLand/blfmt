@@ -84,6 +84,17 @@ pub fn write_file(path: String, contents: &[u8]) -> Result<(), Error> {
     return ok;
 }
 
+pub fn restore_example_cpp_file() {
+    let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_cpp_ex.cpp").unwrap().to_owned();
+    let good1 = temp1.as_bytes();
+    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/example_file2.cpp").expect("Unable to get example_file.c");
+    let res1 = file1.write_all(good1);
+    match res1 {
+        Err(e) => println!("{}", e),
+        _ => (),
+    };
+}
+
 pub fn restore_example_c_file() {
     let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_example_file.c").unwrap().to_owned();
     let good1 = temp1.as_bytes();
@@ -193,7 +204,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 
 pub fn get_file_extensions_list() -> Vec<String> {
     let exts = {
-        vec![".c", ".cpp", ".go", ".rs", ".txt"]
+        vec![".cpp", ".c", ".go", ".rs", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()

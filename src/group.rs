@@ -89,6 +89,59 @@ pub fn group_c_file_into_sections(lines: Vec<&str>) -> Vec<String> {
     return result;
 }
 
+pub fn group_cpp_file_into_sections(lines: Vec<&str>) -> Vec<String> {
+    let text = utils::remove_empty_lines(lines);
+    let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let result = separate_cpp_file_sections(lines.clone());
+    return result;
+}
+
+fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
+    let mut temp = String::new();
+    let mut result = Vec::<String>::new();
+    let mut top_level: bool;
+    let mut is_function = false;
+    let mut is_long_comment = false;
+    for line in lines {
+        top_level = line.starts_with("#") || line.starts_with("using");
+        is_function = Regex::new(r"^\w|\*+\s\w+\s*\(.*\)[^;]*").unwrap().is_match(&line) || is_function;
+        is_long_comment = line.starts_with("/*") || is_long_comment;
+        if top_level {
+            temp += (line.clone() + "\n").as_str();
+            continue;
+        }
+        else if line.trim_end() == "}" && is_function {
+            is_function = false;
+            temp += "}";
+            result.push(temp.trim_end().to_string());
+            temp = "".to_string();
+            continue;
+        }
+        else if line.contains("*/") {
+            is_long_comment = false;
+            temp += "*/";
+            result.push(temp.trim_end().to_string());
+            temp = "".to_string();
+            continue;
+        }
+        else if is_function {
+            if temp.starts_with("#") || temp.starts_with("using") {
+                result.push(temp.trim_end().to_string());
+                temp = "".to_string();
+            }
+            temp += (line.clone() + "\n").as_str();
+            continue;
+        }
+        else {
+            temp += (line.clone() + "\n").as_str();
+        }
+    }
+    if !temp.trim().is_empty() {
+        result.push(temp);
+    }
+    return result;
+}
+
 fn separate_c_file_sections(lines: Vec<String>) -> Vec<String> {
     let mut temp = String::new();
     let mut result = Vec::<String>::new();

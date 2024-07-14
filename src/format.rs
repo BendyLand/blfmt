@@ -48,6 +48,25 @@ fn format_rs_file_group(section: String) -> String {
     return section;
 }
 
+pub fn format_cpp_file(path: String) {
+    let contents = fs::read_to_string(path.clone()).unwrap();
+    let lines = contents.split("\n").collect::<Vec<&str>>();
+    let mut sections = group::group_cpp_file_into_sections(lines);
+    for i in 0..sections.len() {
+        if sections[i].is_empty() {
+            continue;
+        }
+        let original = &sections[i].clone().to_string();
+        sections[i] = format_cpp_file_group(original.to_owned());
+    }
+    // let result = join_c_file_groups(sections).trim_start().to_string();
+    // let ok = utils::write_file(path.clone(), result.as_bytes());
+    // match ok {
+    //     Ok(_) => println!("Successfully wrote: {}", path),
+    //     Err(e) => println!("Error during `format_c_file()`: {}", e),
+    // };
+}
+
 pub fn format_c_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
@@ -90,6 +109,20 @@ fn format_preprocessor_group(group: String) -> String {
     }
     result = swap_include_kind_locations(result);
     return result;
+}
+
+fn format_cpp_file_group(group: String) -> String {
+    let is_comment_group = group.starts_with("//") || group.starts_with("/*");
+    if is_comment_group { return group; }
+    let mut result = String::new();
+    println!("Group:\n{}", &group);
+    if group.starts_with("#") || group.starts_with("using") {
+        println!("Top-level group!");
+    }
+    else {
+        println!("Not top-level group!");
+    }
+    return "".to_string();
 }
 
 fn format_c_file_group(group: String) -> String {

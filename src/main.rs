@@ -40,11 +40,11 @@ fn main() {
         ".go" => {
             format::format_go_file(filepath);
         },
+        ".cpp" => {
+            format::format_cpp_file(filepath); 
+        },
         ".c" => {
             format::format_c_file(filepath);
-        },
-        ".cpp" => {
-            format::format_c_file(filepath); // update with cpp eventually
         },
         ".rs" => {
             format::format_rs_file(filepath);
