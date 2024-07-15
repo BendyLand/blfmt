@@ -69,7 +69,6 @@ pub fn format_cpp_file(path: String) {
 }
 
 fn format_cpp_top_level_group(group: String) -> String {
-    //todo: sort includes, flip lang and user libs, sort using, join by space.
     let mut result;
     let mut lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     lines = lines.into_iter().filter(|x| !x.is_empty()).collect();
@@ -94,7 +93,6 @@ fn format_cpp_file_group(group: String) -> String {
     if is_comment_group { return group; }
     let mut result: String;
     if group.starts_with("#") || group.starts_with("using") {
-        //todo: sort includes, flip lang and user libs, sort using, join by space.
         result = format_cpp_top_level_group(group);
     }
     else {
@@ -166,7 +164,7 @@ fn swap_include_kind_locations(group: String) -> String {
     let mut lang_lines = String::new();
     let mut custom_lines = String::new();
     for line in lines {
-        if line.contains("<") {
+        if line.contains("<") && !line.contains("//") {
             lang_lines += (line.to_string() + "\n").as_str();
         }
         else {

@@ -8,7 +8,9 @@ vector<string> extractInnerVariables(string text)
 {
     vector<string> result;
     boost::regex pat("\\$\\{(.*?)\\}");
-    if (boost::regex_search(text, pat, boost::match_default)) {
+    
+    if (boost::regex_search(text, pat, boost::match_default))
+    {
         boost::sregex_iterator iter(text.begin(), text.end(), pat);
         boost::sregex_iterator end;
         while (iter != end) {
@@ -36,17 +38,6 @@ string removeFirstToken(string line)
     return line.substr(i+1);
 }
 
-/*
-* Complications:
-* - Variables may be passed before they exist.
-*     - Panic.
-* - DQuotes may be unmatched.
-*     - Panic.
-* - Strings may contain escaped characters.
-*     - Handle per case.
-* - Escaped characters (currently) include: \", \r, \n, \t, \\.
-*/
-
 bool containsMultipleArgs(string text)
 {
     size_t dQuotes = 0;
@@ -62,10 +53,13 @@ bool containsMultipleArgs(string text)
 
 bool executePrint(string text)
 {
+    
     if (containsInnerVariables(text)) {
         vector<string> vars = extractInnerVariables(text);
         vars = vecDedup(vars);
+        
         string line = removeFirstToken(text);
+        
         cout << "log contains variable: " << line << endl;
         for (string var : vars) {
             cout << "\tVar: " << var << endl;
@@ -93,3 +87,14 @@ bool executePrint(string text)
     }
     return true;
 }
+
+/*
+* Complications:
+* - Variables may be passed before they exist.
+*     - Panic.
+* - DQuotes may be unmatched.
+*     - Panic.
+* - Strings may contain escaped characters.
+*     - Handle per case.
+* - Escaped characters (currently) include: \", \r, \n, \t, \\.
+*/

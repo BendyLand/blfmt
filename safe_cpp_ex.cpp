@@ -1,13 +1,15 @@
-#include "logging.hpp"
 #include "utils.hpp"
-
+#include <iostream>
+#include "logging.hpp"
 using namespace std;
 
-vector<string> extractInnerVariables(string text)
-{
+
+vector<string> extractInnerVariables(string text) {
     vector<string> result;
     boost::regex pat("\\$\\{(.*?)\\}");
-    if (boost::regex_search(text, pat, boost::match_default)) {
+    
+    if (boost::regex_search(text, pat, boost::match_default)) 
+    {
         boost::sregex_iterator iter(text.begin(), text.end(), pat);
         boost::sregex_iterator end;
         while (iter != end) {
@@ -17,7 +19,7 @@ vector<string> extractInnerVariables(string text)
                 if (strContains(item, "${")) continue;
                 result.push_back(item);
             }
-            iter++;
+        iter++;
         }
     }
     return result;
@@ -48,12 +50,17 @@ bool containsMultipleArgs(string text)
     return false;
 }
 
+
+
 bool executePrint(string text)
 {
+    
     if (containsInnerVariables(text)) {
         vector<string> vars = extractInnerVariables(text);
         vars = vecDedup(vars);
+        
         string line = removeFirstToken(text);
+        
         cout << "log contains variable: " << line << endl;
         for (string var : vars) {
             cout << "\tVar: " << var << endl;
@@ -81,6 +88,7 @@ bool executePrint(string text)
     }
     return true;
 }
+
 
 /*
 * Complications:
