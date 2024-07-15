@@ -1,3 +1,4 @@
+#include <iostream>
 #include "logging.hpp"
 #include "utils.hpp"
 

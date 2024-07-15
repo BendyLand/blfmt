@@ -1,4 +1,4 @@
-use crate::{group, options, utils};
+use crate::{group, options, utils, utils::StringUtils};
 use regex::Regex;
 use std::fs::{self, File};
 use std::io::Write;
@@ -59,31 +59,123 @@ pub fn format_cpp_file(path: String) {
         let original = &sections[i].clone().to_string();
         sections[i] = format_cpp_file_group(original.to_owned());
     }
-    // let result = join_c_file_groups(sections).trim_start().to_string();
-    // let ok = utils::write_file(path.clone(), result.as_bytes());
-    // match ok {
-    //     Ok(_) => println!("Successfully wrote: {}", path),
-    //     Err(e) => println!("Error during `format_c_file()`: {}", e),
-    // };
-}
-
-pub fn format_c_file(path: String) {
-    let contents = fs::read_to_string(path.clone()).unwrap();
-    let lines = contents.split("\n").collect::<Vec<&str>>();
-    let mut sections = group::group_c_file_into_sections(lines);
-    for i in 0..sections.len() {
-        if sections[i].is_empty() {
-            continue;
-        }
-        let original = &sections[i].clone().to_string();
-        sections[i] = format_c_file_group(original.to_owned());
-    }
-    let result = join_c_file_groups(sections).trim_start().to_string();
+    // c_file_groups should still work on cpp files
+    let result = join_c_file_groups(sections).trim_start().to_string(); 
     let ok = utils::write_file(path.clone(), result.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path),
         Err(e) => println!("Error during `format_c_file()`: {}", e),
     };
+}
+
+fn format_cpp_top_level_group(group: String) -> String {
+    //todo: sort includes, flip lang and user libs, sort using, join by space.
+    let mut result;
+    let mut lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    lines = lines.into_iter().filter(|x| !x.is_empty()).collect();
+    lines.sort();
+    result = lines.join("\n").to_string();
+    result = swap_include_kind_locations(result);
+    if result.contains("#") && result.contains("using") {
+        lines = result.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+        result = "".to_string();
+        for line in lines {
+            if line.starts_with("using") && !result.contains("using"){
+                result += "\n";
+            }
+            result += (line + "\n").as_str();
+        }
+    }
+    return result;
+}
+
+fn format_cpp_file_group(group: String) -> String {
+    let is_comment_group = group.starts_with("//") || group.starts_with("/*");
+    if is_comment_group { return group; }
+    let mut result: String;
+    if group.starts_with("#") || group.starts_with("using") {
+        //todo: sort includes, flip lang and user libs, sort using, join by space.
+        result = format_cpp_top_level_group(group);
+    }
+    else {
+        result = format_cpp_non_top_level_group(group);
+    }
+    return result;
+}
+
+fn format_cpp_non_top_level_group(group: String) -> String {
+    let mut result = String::new();
+    let mut in_function = false;
+    let one_liners = {
+        vec!["if", "else if", "else", "for", "while"]
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+    };
+    let mut lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let mut open_braces = 0;
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        let line_clone = line.clone();
+        if line_clone.contains("}") { open_braces -= 1; }
+        let is_one_liner = {
+            utils::starts_with_any(&line_clone, &one_liners) &&
+            line_clone.trim_end().ends_with(";")
+        };
+        match i {
+            0 => {
+                if !line.ends_with(")") {
+                    let idx = line.rfind(")").unwrap_or(line.len()-1);
+                    let temp = line.substring(0, idx+1);
+                    result += (temp.to_string() + "\n").as_str();
+                }
+                else {
+                    result += (line + "\n").as_str();
+                }
+            },
+            1 => {
+                if line.trim_end().len() > 1 {
+                    result += "{\n";
+                    result += (line + "\n").as_str();
+                }
+                else {
+                    result += (line + "\n").as_str();
+                }
+                in_function = true;
+            },
+            x if x == lines.len()-1 => {
+                result += "}";
+            },
+            _ => {
+                let temp = line.trim();
+                let mut prefix = String::new();
+                for _ in 0..open_braces { prefix += "    "; }
+                if in_function && prefix.is_empty() { prefix += "    "; }
+                let temp_str = prefix + temp;
+                result += (temp_str + "\n").as_str();
+            }
+        }
+        if is_one_liner { open_braces -= 1; }
+        if line_clone.contains("{") { open_braces += 1; }
+    }
+    result = result.trim_end().to_string();
+    return result;
+}
+
+fn swap_include_kind_locations(group: String) -> String {
+    let lines = group.split("\n").collect::<Vec<&str>>();
+    let mut lang_lines = String::new();
+    let mut custom_lines = String::new();
+    for line in lines {
+        if line.contains("<") {
+            lang_lines += (line.to_string() + "\n").as_str();
+        }
+        else {
+            custom_lines += (line.to_string() + "\n").as_str();
+        }
+    }
+    let mut result = lang_lines + &custom_lines;
+    result = result.trim_end().to_string();
+    return result;
 }
 
 fn format_preprocessor_group(group: String) -> String {
@@ -111,18 +203,23 @@ fn format_preprocessor_group(group: String) -> String {
     return result;
 }
 
-fn format_cpp_file_group(group: String) -> String {
-    let is_comment_group = group.starts_with("//") || group.starts_with("/*");
-    if is_comment_group { return group; }
-    let mut result = String::new();
-    println!("Group:\n{}", &group);
-    if group.starts_with("#") || group.starts_with("using") {
-        println!("Top-level group!");
+pub fn format_c_file(path: String) {
+    let contents = fs::read_to_string(path.clone()).unwrap();
+    let lines = contents.split("\n").collect::<Vec<&str>>();
+    let mut sections = group::group_c_file_into_sections(lines);
+    for i in 0..sections.len() {
+        if sections[i].is_empty() {
+            continue;
+        }
+        let original = &sections[i].clone().to_string();
+        sections[i] = format_c_file_group(original.to_owned());
     }
-    else {
-        println!("Not top-level group!");
-    }
-    return "".to_string();
+    let result = join_c_file_groups(sections).trim_start().to_string();
+    let ok = utils::write_file(path.clone(), result.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path),
+        Err(e) => println!("Error during `format_c_file()`: {}", e),
+    };
 }
 
 fn format_c_file_group(group: String) -> String {
@@ -140,23 +237,6 @@ fn format_c_file_group(group: String) -> String {
     }
     result = format_inner_curly_braces(result);
     result = indent_c_function_group(result);
-    return result;
-}
-
-fn swap_include_kind_locations(group: String) -> String {
-    let lines = group.split("\n").collect::<Vec<&str>>();
-    let mut lang_lines = String::new();
-    let mut custom_lines = String::new();
-    for line in lines {
-        if line.contains("<") {
-            lang_lines += (line.to_string() + "\n").as_str();
-        }
-        else {
-            custom_lines += (line.to_string() + "\n").as_str();
-        }
-    }
-    let mut result = lang_lines + &custom_lines;
-    result = result.trim_end().to_string();
     return result;
 }
 
