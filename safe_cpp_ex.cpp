@@ -55,7 +55,8 @@ bool containsMultipleArgs(string text)
 bool executePrint(string text)
 {
     
-    if (containsInnerVariables(text)) {
+    if (containsInnerVariables(text)) 
+    {
         vector<string> vars = extractInnerVariables(text);
         vars = vecDedup(vars);
         
@@ -65,18 +66,15 @@ bool executePrint(string text)
         for (string var : vars) {
             cout << "\tVar: " << var << endl;
         }
-    }
-    else {
+    } else {
         if (text.starts_with("print")) {
             string argStr = removeFirstToken(text);
             if (containsMultipleArgs(argStr)) {
                 cout << "print multiple args: " << argStr << endl;
-            }
-            else {
+            } else {
                 cout << "print single arg: " <<  argStr << endl;
             }
-        }
-        else {
+        } else {
             string argStr = removeFirstToken(text);
             if (containsMultipleArgs(argStr)) {
                 cout << "puts multiple args: " << argStr << endl;
