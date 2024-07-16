@@ -15,15 +15,13 @@ std::string readFile(std::string path)
     return result;
 }
 
-std::vector<std::string> strSplit(std::string text, std::string delim) {
+std::vector<std::string> strSplit(std::string text, std::string delim)
+{
     size_t pos = 0;
     std::string token;
     std::vector<std::string> result;
-    while ((pos = text.find(delim)) != std::string::npos) 
-    {
-
+    while ((pos = text.find(delim)) != std::string::npos) {
         token = text.substr(0, pos);
-
         result.push_back(token);
         text.erase(0, pos + delim.size());
     }
@@ -33,24 +31,24 @@ std::vector<std::string> strSplit(std::string text, std::string delim) {
     return result;
 }
 
-bool containsEmbeddedString(std::string src) {
+bool containsEmbeddedString(std::string src)
+{
     size_t first = src.find_first_of("\"");
     size_t last = src.find_last_of("\"");
-
     return (first != last) && (first != std::string::npos);
 }
 
-bool strContains(std::string haystack, std::string needle) {
+bool strContains(std::string haystack, std::string needle)
+{
     return haystack.find(needle) != std::string::npos;
 }
 
 std::string lstrip(std::string original)
 {
     std::string result = "";
-    for (char c : original) 
-    {
+    for (char c : original) {
         if (result.size() == 0 && c == ' ') continue;
-        result += c;
+    result += c;
     }
     return result;
 }
