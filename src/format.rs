@@ -48,6 +48,7 @@ fn format_rs_file_group(section: String) -> String {
     return section;
 }
 
+//todo: create format_inner_cpp_function()
 pub fn format_cpp_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
@@ -131,7 +132,7 @@ fn format_cpp_non_top_level_group(group: String) -> String {
                 }
             },
             1 => {
-                if line.trim_end().len() > 1 {
+                if line.trim_end().len() > 1 || !line.contains("{") {
                     result += "{\n";
                     result += (line + "\n").as_str();
                 }
