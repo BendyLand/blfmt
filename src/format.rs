@@ -163,9 +163,21 @@ fn format_cpp_non_top_level_group(group: String) -> String {
                         skip = true;
                     }
                 }
+                else if temp.starts_with("}") && temp.len() > 1 {
+                    let temp2 = temp.clone();
+                    let suffix = temp2.substring(1, temp.len()+1).trim();
+                    temp = "}\n".to_string();
+                    for _ in 0..open_braces { temp += "    "; }
+                    temp += suffix;
+                }
                 let mut prefix = String::new();
                 for _ in 0..open_braces { prefix += "    "; }
                 if in_function && prefix.is_empty() { prefix += "    "; }
+                let following_one_liner = {
+                    utils::starts_with_any(&lines[i-1], &one_liners) &&
+                    lines[i-1].ends_with(";")
+                };
+                // if following_one_liner { prefix += "    "; }
                 let temp_str = prefix + temp.as_str();
                 result += (temp_str + "\n").as_str();
             }
