@@ -113,7 +113,13 @@ fn format_cpp_non_top_level_group(group: String) -> String {
     };
     let mut lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     let mut open_braces = 0;
+    let mut skip = false;
     for (i, line) in lines.clone().into_iter().enumerate() {
+        if skip { 
+            skip = false;
+            open_braces += 1;
+            continue;
+        }
         let line_clone = line.clone();
         if line_clone.contains("}") { open_braces -= 1; }
         let is_one_liner = {
@@ -134,22 +140,33 @@ fn format_cpp_non_top_level_group(group: String) -> String {
             1 => {
                 if line.trim_end().len() > 1 || !line.contains("{") {
                     result += "{\n";
-                    result += (line + "\n").as_str();
+                    let mut temp = line.clone().trim_end().to_string();
+                    if utils::starts_with_any(&line, &one_liners) {
+                        if !line.contains("{") && lines[i+1].contains("{") {
+                            temp += " {";
+                            skip = true;
+                        }
+                    }
+                    result += (temp + "\n").as_str();
                 }
                 else {
                     result += (line + "\n").as_str();
                 }
                 in_function = true;
             },
-            x if x == lines.len()-1 => {
-                result += "}";
-            },
+            x if x == lines.len()-1 => result += "}",
             _ => {
-                let temp = line.trim();
+                let mut temp = line.trim().to_string();
+                if utils::starts_with_any(&temp.to_string(), &one_liners) && !is_one_liner {
+                    if !line.contains("{") && lines[i+1].contains("{") {
+                        temp += " {";
+                        skip = true;
+                    }
+                }
                 let mut prefix = String::new();
                 for _ in 0..open_braces { prefix += "    "; }
                 if in_function && prefix.is_empty() { prefix += "    "; }
-                let temp_str = prefix + temp;
+                let temp_str = prefix + temp.as_str();
                 result += (temp_str + "\n").as_str();
             }
         }

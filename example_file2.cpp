@@ -8,9 +8,8 @@ vector<string> extractInnerVariables(string text)
 {
     vector<string> result;
     boost::regex pat("\\$\\{(.*?)\\}");
-
-    if (boost::regex_search(text, pat, boost::match_default))
-    {
+    
+    if (boost::regex_search(text, pat, boost::match_default)) {
         boost::sregex_iterator iter(text.begin(), text.end(), pat);
         boost::sregex_iterator end;
         while (iter != end) {
@@ -53,29 +52,26 @@ bool containsMultipleArgs(string text)
 
 bool executePrint(string text)
 {
-
+    
     if (containsInnerVariables(text)) {
         vector<string> vars = extractInnerVariables(text);
         vars = vecDedup(vars);
-
+        
         string line = removeFirstToken(text);
-
+        
         cout << "log contains variable: " << line << endl;
         for (string var : vars) {
             cout << "\tVar: " << var << endl;
         }
-    }
-    else {
+    } else {
         if (text.starts_with("print")) {
             string argStr = removeFirstToken(text);
             if (containsMultipleArgs(argStr)) {
                 cout << "print multiple args: " << argStr << endl;
-            }
-            else {
+            } else {
                 cout << "print single arg: " <<  argStr << endl;
             }
-        }
-        else {
+        } else {
             string argStr = removeFirstToken(text);
             if (containsMultipleArgs(argStr)) {
                 cout << "puts multiple args: " << argStr << endl;
