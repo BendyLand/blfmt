@@ -48,7 +48,6 @@ fn format_rs_file_group(section: String) -> String {
     return section;
 }
 
-//todo: create format_inner_cpp_function()
 pub fn format_cpp_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
@@ -231,10 +230,30 @@ fn format_preprocessor_group(group: String) -> String {
         a_slice.cmp(&b_slice)
     });
     for name in names {
-        let temp = "#include ".to_string() + name;
-        result += (temp.to_string() + "\n").as_str();
+        if utils::check_is_function_hoist(&name.to_string()) {
+            result += (name.to_string() + "\n").as_str();
+        }
+        else {
+            let temp = "#include ".to_string() + name;
+            result += (temp.to_string() + "\n").as_str();
+        }
     }
     result = swap_include_kind_locations(result);
+    if result.contains("#include") && result.contains(";") {
+        let lines = result.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+        result = "".to_string();
+        for line in lines {
+            let is_function_hoist_section = {
+                result.contains("#include") &&
+                !result.contains(";") &&
+                line.contains(";")  
+            };
+            if is_function_hoist_section {
+                result += "\n";
+            }
+            result += (line + "\n").as_str();
+        }
+    }
     return result;
 }
 

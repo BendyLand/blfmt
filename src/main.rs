@@ -11,11 +11,6 @@ mod group;
 mod utils;
 mod options;
 
-// Usage:
-// cargo run <filepath> <flags + opts> 
-// cargo run storage/one.txt -o 80 1 -t Cyber Digital Tech-Infused
-// cargo run -r
-
 fn main() {
     let maybe_args = parser::parse_args();
     let (filepath, args) = {
@@ -44,8 +39,7 @@ fn main() {
             format::format_cpp_file(filepath); 
         },
         ".c" => {
-            // format::format_c_file(filepath);
-            //? This function currently removes a significant amount of the file.
+            format::format_c_file(filepath);
         },
         ".rs" => {
             format::format_rs_file(filepath);
