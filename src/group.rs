@@ -145,36 +145,47 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
 fn separate_c_file_sections(lines: Vec<String>) -> Vec<String> {
     let mut temp = String::new();
     let mut result = Vec::<String>::new();
-    let mut is_function_line: bool;
-    let mut is_preprocessor_section: bool;
-    let mut is_function_hoist_section: bool;
-    let mut function_hoist_lines = 0;
-    let mut preprocessor_lines = 0;
+    let mut top_level: bool;
+    let mut is_function = false;
+    let mut is_long_comment = false;
+    let mut is_function_hoist: bool;
     for line in lines {
-        is_function_line = Regex::new(r"^\w|\*+\s\w+\s*\(.*\).*").unwrap().is_match(&line);
-        is_preprocessor_section = line.starts_with("#");
-        is_function_hoist_section = is_function_line && line.trim_end().ends_with(";");
-        if is_function_hoist_section {
-            if function_hoist_lines == 0 {
-                result.push(temp);
-                temp = "".to_string();
-            }
-            function_hoist_lines += 1;
-        }
-        else if is_function_line { 
-            result.push(temp);
-            temp = "".to_string();
-            temp += (line.to_string() + "\n").as_str();
+        is_function_hoist = utils::check_is_function_hoist(&line);
+        top_level = line.starts_with("#") || is_function_hoist;
+        is_function = Regex::new(r"^\w|\*+\s\w+\s*\(.*\)[^;]*").unwrap().is_match(&line) || is_function;
+        is_long_comment = line.starts_with("/*") || is_long_comment;
+        if top_level {
+            temp += (line.clone() + "\n").as_str();
             continue;
         }
-        else if is_preprocessor_section {
-            if preprocessor_lines == 0 {
-                result.push(temp);
+        else if line.trim_end() == "}" && is_function {
+            is_function = false;
+            temp += "}";
+            result.push(temp.trim_end().to_string());
+            temp = "".to_string();
+            continue;
+        }
+        else if line.contains("*/") {
+            is_long_comment = false;
+            temp += "*/";
+            result.push(temp.trim_end().to_string());
+            temp = "".to_string();
+            continue;
+        }
+        else if is_function {
+            if temp.starts_with("#") || is_function_hoist {
+                result.push(temp.trim_end().to_string());
                 temp = "".to_string();
             }
-            preprocessor_lines += 1;
+            temp += (line.clone() + "\n").as_str();
+            continue;
         }
-        temp += (line.to_string() + "\n").as_str();
+        else {
+            temp += (line.clone() + "\n").as_str();
+        }
+    }
+    if !temp.trim().is_empty() {
+        result.push(temp);
     }
     return result;
 }
