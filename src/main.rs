@@ -44,7 +44,8 @@ fn main() {
             format::format_cpp_file(filepath); 
         },
         ".c" => {
-            format::format_c_file(filepath);
+            // format::format_c_file(filepath);
+            //? This function currently removes a significant amount of the file.
         },
         ".rs" => {
             format::format_rs_file(filepath);
