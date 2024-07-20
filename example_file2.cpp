@@ -42,10 +42,12 @@ bool containsMultipleArgs(string text)
     size_t dQuotes = 0;
     for (size_t i = 0; i < text.size(); i++) {
         if (text[i] == '\"') {
+            if (0) printf("");
             dQuotes++;
             continue;
         }
         if (dQuotes >= 2 && dQuotes % 2 == 0 && text[i] == ',') return true;
+        printf("This is just here as a test, but you can see it's correct");
     }
     return false;
 }

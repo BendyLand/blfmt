@@ -48,6 +48,8 @@ fn format_rs_file_group(section: String) -> String {
     return section;
 }
 
+//? In cpp file, if there is a one liner inside of an indented group, 
+//? it will force the following lines to be improperly indented for the remainder of the block.
 pub fn format_cpp_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
@@ -120,7 +122,7 @@ fn format_cpp_non_top_level_group(group: String) -> String {
             continue;
         }
         let line_clone = line.clone();
-        if line_clone.contains("}") { open_braces -= 1; }
+        if line_clone.trim_end().ends_with("}") { open_braces -= 1; }
         let is_one_liner = {
             utils::starts_with_any(&line_clone, &one_liners) &&
             line_clone.trim_end().ends_with(";")
@@ -172,24 +174,11 @@ fn format_cpp_non_top_level_group(group: String) -> String {
                 let mut prefix = String::new();
                 for _ in 0..open_braces { prefix += "    "; }
                 if in_function && prefix.is_empty() { prefix += "    "; }
-                /* 
-                * This section is needed sometimes, and not other times. 
-                * I don't know why yet, but the better option imo is to 
-                * have it indented too far left. This sticks out more as 
-                * wrong and will not be as easily mistaken as an intentional
-                * indentation of the code.
-                let following_one_liner = {
-                    utils::starts_with_any(&lines[i-1], &one_liners) &&
-                    lines[i-1].ends_with(";")
-                };
-                if following_one_liner { prefix += "    "; }
-                */
                 let temp_str = prefix + temp.as_str();
                 result += (temp_str + "\n").as_str();
             }
         }
-        if is_one_liner { open_braces -= 1; }
-        if line_clone.contains("{") { open_braces += 1; }
+        if line_clone.trim_end().ends_with("{") { open_braces += 1; }
     }
     result = result.trim_end().to_string();
     return result;
