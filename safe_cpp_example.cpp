@@ -1,18 +1,17 @@
-#include "lexer.hpp" // "utils.hpp" -> iostream, string, fstream, vector; "symbols.hpp" -> unordered_map, variant; <boost/regex.hpp>
 #include "logging.hpp" // "utils.hpp", <boost/regex.hpp>
+#include "lexer.hpp" // "utils.hpp" -> iostream, string, fstream, vector; "symbols.hpp" -> unordered_map, variant; <boost/regex.hpp>
+
 
 using namespace std;
 
-string prepareFile(string file)
-{
+string prepareFile(string file) {
     file = removeComments(file);
     file = normalize(file);
     file = removeEmptyLines(file);
     return file;
 }
 
-string normalize(string file)
-{
+string normalize(string file) {
     string result = "";
     vector<string> lines = split(file, "\n");
     for (string line : lines) {
@@ -60,14 +59,14 @@ string removeEmptyLines(string file)
     return result;
 }
 
-bool identifyArithmeticExpression(string line)
+bool identifyArithmeticExpression(string line) 
 {
     boost::regex pat(R"(\(?\-?\d+(.\d+)?([\+\-\*/]\*?\(?\d+(.\d+)?\)?)+)");
     return boost::regex_match(line, pat);
 }
 
-string extractVarName(string line)
-{
+
+string extractVarName(string line) {
     vector<string> words = split(line, " ");
     string name = "";
     if (words.size() > 1) {
@@ -81,30 +80,26 @@ string extractVarName(string line)
     return name;
 }
 
+
+
 AnyType parseValIntoType(string val, string type)
 {
     AnyType result;
     if (type == "int") {
         result = std::stoi(val);
-    }
-    else if (type == "double") {
+    } else if (type == "double") {
         result = std::stod(val);
-    }
-    else if (type == "char") {
-        result = val[1];
-    }
-    else if (type == "bool") {
+    } else if (type == "char") {
+        result = val[1]; 
+    } else if (type == "bool") {
         result = (val == "true") ? true : false;
-    }
-    else if (type == "arithmetic") {
+    } else if (type == "arithmetic") {
         //todo: reduce arithmetic
         result = val; //! temporary
-    }
-    else if (type == "variable") {
-        //todo: lookup variables
+    } else if (type == "variable") {
+        //todo: lookup variables 
         result = val; //! temporary
-    }
-    else {
+    } else {
         result = val.substr(1, val.size()-2);
     }
     return result;
@@ -127,29 +122,37 @@ string inferType(string original)
     boost::regex boolPat("true|false");
     boost::regex strPat(R"(\".*\")");
     string result;
-    if (boost::regex_match(original, doublePat)) {
+    if (boost::regex_match(original, doublePat)) 
+    {
         result = "double";
     }
-    else if (boost::regex_match(original, intPat)) {
+    else if (boost::regex_match(original, intPat)) 
+    {
         result = "int";
     }
-    else if (boost::regex_match(original, boolPat)) {
+    else if (boost::regex_match(original, boolPat)) 
+    {
         result = "bool";
     }
-    else if (count(original, '\'') == 2 && original.size() <= 3) {
+    else if (count(original, '\'') == 2 && original.size() <= 3) 
+    {
         result = "char";
     }
-    else if (boost::regex_match(original, strPat)) {
-        result = "str";
+    else if (boost::regex_match(original, strPat)) 
+    {
+        result = "str"; 
     }
-    else {
+    else 
+    {
         original = removeInnerWhitespace(original);
-        if (identifyArithmeticExpression(original)) {
+        if (identifyArithmeticExpression(original)) 
+        {
             // just in case: R"(\(?\-?\d+(.\d+)?([\+\-\*/]\*?\(?\d+(.\d+)?\)?)+)"
             result = "arithmetic";
             //todo: create reduceArithmeticExpression()
         }
-        else {
+        else 
+        {
             result = "variable";
         }
     }

@@ -108,21 +108,12 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
         is_long_comment = line.starts_with("/*") || is_long_comment;
         if top_level {
             temp += (line.clone() + "\n").as_str();
-            continue;
         }
         else if line.trim_end() == "}" && is_function {
             is_function = false;
             temp += "}";
             result.push(temp.trim_end().to_string());
             temp = "".to_string();
-            continue;
-        }
-        else if line.contains("*/") {
-            is_long_comment = false;
-            temp += "*/";
-            result.push(temp.trim_end().to_string());
-            temp = "".to_string();
-            continue;
         }
         else if is_function {
             if temp.starts_with("#") || temp.starts_with("using") {
@@ -130,7 +121,12 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
                 temp = "".to_string();
             }
             temp += (line.clone() + "\n").as_str();
-            continue;
+        }
+        else if line.contains("*/") {
+            is_long_comment = false;
+            temp += "*/";
+            result.push(temp.trim_end().to_string());
+            temp = "".to_string();
         }
         else {
             temp += (line.clone() + "\n").as_str();

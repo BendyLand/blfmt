@@ -4,6 +4,7 @@
         "*.Rmd": "rmd",
         "*.scala": "scala",
         "*.txt": "plaintext",
-        "string": "c"
+        "string": "c",
+        "__locale": "cpp"
     }
 }
