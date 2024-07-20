@@ -436,7 +436,12 @@ fn indent_c_function(group: String) -> String {
         return group.trim().to_string();
     }
     let lines = group.split("\n").collect::<Vec<&str>>();
-    let lines = utils::remove_empty_lines(lines).split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
+    let lines = {
+        utils::remove_empty_lines(lines)
+            .split("\n")
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+    };
     for i in 0..2 {
         result += (lines[i].clone() + "\n").as_str();
     }
