@@ -2,9 +2,9 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is currently in early development and is only functional for .go, .txt, and VERY basic .c files.**
+**blfmt is currently in early development and is only functional for .go, .txt, and VERY basic .c and .cpp files.**
 
-*This document will be updated regularly as the project continues, but the tool is in a minimally functional state at the moment.*
+*This document will be updated regularly as the project continues, but the tool is in a basic functional state at the moment. Its behavior in certain circumstances can be unpredictable. Always make a copy of your file before formatting!*
 
 ### About
 
@@ -58,15 +58,15 @@ cargo run -- path/to/file.txt
 
  > As cool as it would be, this program does *not* utilize actual magic to function.
 
-#### C files:
+#### C/C++ files:
 ```bash
-cargo run -- path/to/file.c
+cargo run -- path/to/file.c(pp)
 ```
 
- - Currently, C files will be formatted using my personal favorite style. 
+ - Currently, C/C++ files will be formatted using my personal favorite style. 
  - It is easier to show you than to try to explain it:
 ```c
-// Example C file format
+// Example C/C++ file format
 void example()
 {
     size_t condition = 1;
