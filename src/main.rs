@@ -10,6 +10,10 @@ mod format;
 mod group;
 mod utils;
 mod options;
+mod c_format;
+mod cpp_format;
+mod rs_format;
+mod txt_format;
 
 fn main() {
     let maybe_args = parser::parse_args();
