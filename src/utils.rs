@@ -33,6 +33,7 @@ impl StringUtils for str {
         }
         &self[byte_start..byte_end]
     }
+
     fn slice(&self, range: impl RangeBounds<usize>) -> &str {
         let start = match range.start_bound() {
             Bound::Included(bound) | Bound::Excluded(bound) => *bound,
@@ -249,7 +250,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 
 pub fn get_file_extensions_list() -> Vec<String> {
     let exts = {
-        vec![".cpp", ".c", ".go", ".rs", ".txt"]
+        vec![".cpp", ".c", ".go", ".rs", ".swift", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
@@ -262,6 +263,14 @@ pub fn display_file_extensions() {
     for line in lines {
         println!("{}", line);
     }
+}
+
+pub fn check_valid_file_ext(path: &String) -> bool {
+    let exts = get_file_extensions_list();
+    for ext in exts {
+        if path.contains(&ext) { return true; }
+    }
+    return false;
 }
 
 pub fn print_usage() {

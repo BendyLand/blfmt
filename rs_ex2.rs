@@ -46,17 +46,15 @@ fn main() {
             format::format_c_file(filepath);
         },
         ".rs" => {
-            // format::format_rs_file(filepath);
+            format::format_rs_file(filepath);
         },
+        ".swift" => {
+            format::basic_format(filepath);
+        }
         _ => {
-            if utils::check_valid_file_ext(&filepath) {
-                format::basic_format(filepath);
-            }
-            else {
-                println!("Unknown file type");
-                println!("Valid file types are:");
-                utils::display_file_extensions();
-            }
+            println!("Unknown file type");
+            println!("Valid file types are:");
+            utils::display_file_extensions();
         },
     };
 
