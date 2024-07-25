@@ -26,6 +26,7 @@ pub fn basic_format(path: String) {
             }
         }
     }
+    if !temp.is_empty() { pieces.push(temp); }
     let result = pieces.into_iter().filter(|x| !x.is_empty()).collect::<Vec<String>>().join("\n");
     let ok = utils::write_file(path.clone(), result.as_bytes());
     match ok {

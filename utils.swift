@@ -53,3 +53,5 @@ func extractComment(line: String, delim: String) -> String {
     let start = line.index(line.startIndex, offsetBy: off)
     return String(line[start...])
 }
+
+extractComment(line: "String", delim: "String")
