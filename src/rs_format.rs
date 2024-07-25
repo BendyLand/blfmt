@@ -13,20 +13,71 @@ pub fn format_rs_file_group(section: String) -> String {
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
     };
+    let result; 
     if utils::starts_with_any(&section, &top_lines) {
-        // todo: order: use, mod, comments; then join by single space between them.
-        println!("Top level statement!");
-        println!("{}", &section);
+        result = order_top_level(&section);
     }
     else if utils::starts_with_any(&section, &mid_levels) {
         // todo: order: traits, enums, structs, public functions; format funcs; then join by single space between them.
-        println!("Mid level statement!");
-        println!("{}", &section);
+        // println!("Mid level statement!");
+        result = format_rs_function(&section);
     }
     else {
         // todo: format private functions.
-        println!("Bottom level statement!");
-        println!("{}", &section);
+        // println!("Bottom level statement!");
+        result = format_rs_function(&section);
     }
-    return section;
+    return result;
+}
+
+fn order_top_level(section: &String) -> String {
+    let lines = section.split("\n").collect::<Vec<&str>>();
+    let mut result = String::new();
+    let mut attr_temp = String::new();
+    let mut use_temp = String::new();
+    let mut mod_temp = String::new();
+    let mut remainder = String::new();
+    let mut in_comment = false;
+    for line in lines {
+        in_comment = line.starts_with("/*") || in_comment;
+        if in_comment && line.contains("*/") { in_comment = false; }
+        if line.starts_with("#") && !in_comment {
+            attr_temp += (line.to_string() + "\n").as_str();
+        }
+        else if line.starts_with("use") && !in_comment {
+            use_temp += (line.to_string() + "\n").as_str();
+        }
+        else if line.starts_with("mod") && !in_comment {
+            mod_temp += (line.to_string() + "\n").as_str();
+        }
+        else {
+            remainder += (line.to_string() + "\n").as_str();
+        }
+    }
+    let temp = {
+        vec![attr_temp, use_temp, mod_temp, remainder]
+            .into_iter()
+            .map(|x| order_top_level_group(x))
+            .collect::<Vec<String>>()
+    };
+    return temp.join("\n");
+}
+
+fn order_top_level_group(group: String) -> String {
+    let mut lines = group.split("\n").filter(|x| !x.is_empty()).collect::<Vec<&str>>();
+    lines.sort();
+    let result = lines.join("\n").trim().to_string();
+    return result;
+}
+
+fn format_rs_function(section: &String) -> String {
+    let lines = section.split("\n").map(|x| x.to_string()).filter(|x| !x.is_empty()).collect::<Vec<String>>();
+    let mut result = Vec::<String>::new();
+    let mut result_str = "".to_string();
+    /*  
+    format_top_brace()
+    format_inner_curly_braces()
+    format_long_statements()
+    */
+    return result_str;
 }

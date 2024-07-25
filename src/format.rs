@@ -4,6 +4,36 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command;
 
+pub fn basic_format(path: String) {
+    let contents = fs::read_to_string(path.clone()).unwrap();
+    let lines = contents.split("\n").collect::<Vec<&str>>();
+    let mut brace_count = 0;
+    let mut temp = String::new();
+    let mut pieces = Vec::<String>::new();
+    for line in lines {
+        if line.contains("{") { brace_count += 1; }
+        if line.contains("}") { brace_count -= 1; }
+        if brace_count >= 1 {
+            temp += (line.to_string() + "\n").as_str();
+        }
+        else if brace_count == 0 {
+            if !line.trim_end().is_empty() {
+                temp += (line.to_string() + "\n").as_str();
+            }
+            else {
+                pieces.push(temp);
+                temp = "".to_string();
+            }
+        }
+    }
+    let result = pieces.into_iter().filter(|x| !x.is_empty()).collect::<Vec<String>>().join("\n");
+    let ok = utils::write_file(path.clone(), result.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path),
+        Err(e) => println!("Error during `format_c_file()`: {}", e),
+    };
+}
+
 pub fn format_c_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
