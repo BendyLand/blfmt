@@ -74,10 +74,109 @@ fn format_rs_function(section: &String) -> String {
     let lines = section.split("\n").map(|x| x.to_string()).filter(|x| !x.is_empty()).collect::<Vec<String>>();
     let mut result = Vec::<String>::new();
     let mut result_str = "".to_string();
+    result.push(format_top_brace(&lines));
+    let mut lines = normalize(&lines);
+    lines = format_inner_curly_braces(&lines);
+    println!("");
+    println!("Line: {}", result[0]);
+    for line in lines {
+        println!("Line: {}", line);
+    }
+    println!("");
     /*  
-    format_top_brace()
-    format_inner_curly_braces()
+    indent_inside_fn()
     format_long_statements()
     */
     return result_str;
+}
+
+fn format_top_brace(lines: &Vec<String>) -> String {
+    let mut result = String::new();
+    for (i, line) in lines.into_iter().enumerate() {
+        if i == 0 {
+            let mut temp_line; 
+            if line.trim_end().ends_with(",") {
+                temp_line = format!("{} {}", line, &lines[i+1].trim()); // won't handle > 2 line fn defs
+                if !temp_line.contains("{") {
+                    temp_line = temp_line.trim_end().to_string() + " {";
+                }
+                else {
+                    temp_line = temp_line;
+                }
+            }
+            else {
+                if !line.contains("{") {
+                    temp_line = line.trim_end().to_string() + " {";
+                }
+                else {
+                    temp_line = line.to_string(); 
+                }
+            }
+            result = temp_line;
+            break;
+        }
+    }
+    return result;
+}
+
+fn normalize(lines: &Vec<String>) -> Vec<String> {
+    let mut result = Vec::<String>::new();
+    for (i, line) in lines.into_iter().enumerate() {
+        if i == 0 { continue; }
+        result.push(line.trim().to_string());
+    }
+    return result;
+}
+
+fn format_inner_curly_braces(lines: &Vec<String>) -> Vec<String> {
+    let mut result = Vec::<String>::new();
+    let brace_lines = {
+        vec!["if", "else", "for", "while"]
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+    }; 
+    let mut temp = String::new();
+    let mut skip = false;
+    for (i, line) in lines.into_iter().enumerate() {
+        if skip { 
+            skip = false;
+            continue; 
+        }
+        if i == 0 {
+            let is_remaining_fn_def = {
+                line.contains(")") &&
+                line.contains("{") &&
+                !utils::starts_with_any(line, &brace_lines)
+            };
+            if is_remaining_fn_def { continue; }
+        }
+        if utils::starts_with_any(line, &brace_lines) {
+            if !line.contains("{") {
+                temp += (line.trim_end().to_string() + " {").as_str();
+                skip = true;
+            }
+            else {
+                temp += line;
+            }
+            result.push(temp);
+            temp = "".to_string();
+        }
+        else {
+            if line.contains("else") && line.contains("}") {
+                temp = line[1..].trim().to_string();
+                if !temp.contains("{") {
+                    temp += " {";
+                    skip = true;
+                }
+                result.push("}".to_string());
+            }
+            else {
+                temp = line.to_string();
+            }
+            result.push(temp);
+            temp  = "".to_string();
+        }
+    }
+    return result;
 }

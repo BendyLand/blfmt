@@ -46,7 +46,7 @@ fn main() {
             format::format_c_file(filepath);
         },
         ".rs" => {
-            // format::format_rs_file(filepath);
+            format::format_rs_file(filepath);
         },
         _ => {
             if utils::check_valid_file_ext(&filepath) {
