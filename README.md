@@ -2,7 +2,7 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is currently in early development and is only functional for .go, .txt, and VERY basic .c and .cpp files.**
+**blfmt is currently in early development and is only functional for .go, .txt, and VERY basic .c, .cpp, and .rs files.**
 
 *This document will be updated regularly as the project continues, but the tool is in a basic functional state at the moment. Its behavior in certain circumstances can be unpredictable. Always make a copy of your file before formatting!*
 
@@ -89,7 +89,17 @@ int main(void)
 ```
 Make sense? Good!
 Don't like it? That's actually pretty reasonable; it's not for everyone. 
-But you're in luck...
+But you're in luck! See *Future Plans* below for details.
+
+#### Rust files:
+```bash
+cargo run -- path/to/file.rs
+```
+ 
+ - Just like with C and C++ files, Rust files are currently formatted to my preferred style.
+ - Unlike C/C++, I do not plan to add several known styles to this one.
+     - In my opinion, the various styles don't look as good with Rust's syntax rules, so I'm just sticking with the one version for this language.
+ - If you would like a reference for the style I am aiming for, `rs_ex1.rs` (which is taken from this very project) is probably the best example currently. It was formatted from what you see in `safe_rs_ex1.rs`.
 
 ## Future Plans
 
@@ -106,5 +116,5 @@ I actually plan to add support for Python though.
 And Lua support would be a pleasant surprise for everyone; 
 we'll see how long Python takes.  
 
-
+If it would allow for greater flexibility in languages, I may just end up wrapping existing formatters inside of this one, like how the Go implementation works. 
 

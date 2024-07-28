@@ -22,6 +22,7 @@ pub fn swap_include_kind_locations(group: String) -> String {
     return result;
 }
 
+
 pub fn format_c_file_group(group: String) -> String {
     let is_preprocessor = group.trim_start().starts_with("#include");
     let is_function_hoist = utils::check_is_function_hoist(&group);
@@ -31,6 +32,7 @@ pub fn format_c_file_group(group: String) -> String {
         result = format_preprocessor_group(group);
     } else if is_function_hoist {
         result += (group + "\n").as_str();
+
     } else {
         result = normalize_c_function_group(group);
     }
@@ -98,6 +100,7 @@ fn format_function_group(dest: &mut String, lines: &Vec<String>, i: usize,
         *inner_group = true;
         *indent += 1;
     }
+
     if line.contains("}") {
         *indent -= 1;
         if *indent == 0 {
