@@ -97,6 +97,11 @@ pub fn format_rs_file(path: String) {
         let original = &sections[i].clone().to_string();
         sections[i] = rs_format::format_rs_file_group(original.to_owned());
     }
+    let result = sections.join("\n\n");
+    //todo: order functions public to private
+    //todo: write format_long_line()
+    //todo: order: traits, enums, structs, public functions; format funcs; then join by single space between them.
+    println!("Result:\n{}", result);
 }
 
 pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String]) {
