@@ -56,7 +56,7 @@ pub fn check_is_function_hoist(group: &String) -> bool {
 pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
     for opt in opts {
         let words = &line.split(" ").collect::<Vec<&str>>();
-        if line.trim().to_string().starts_with(opt) && opt.len() == words[0].len() {
+        if line.trim().to_string().starts_with(opt) && (opt.len() == words[0].len()) {
             return true;
         }
     }

@@ -38,19 +38,6 @@ pub fn format_c_file_group(group: String) -> String {
     return result;
 }
 
-pub fn join_c_file_groups(groups: Vec<String>) -> String {
-    let mut result;
-    let mut temp = Vec::<String>::new();
-    for group in groups 
-    {
-        let temp_group = group.trim_end();
-        temp.push(temp_group.to_string() + "\n");
-    }
-    result = temp.join("\n");
-    result = (result.trim_end().to_string() + "\n").to_string();
-    return result;
-}
-
 fn indent_c_function_group(group: String) -> String {
 
     if group.contains("#include") { return group; }
@@ -156,10 +143,12 @@ fn normalize_c_function_group(group: String) -> String
     let temp_result = group.clone();
 
     let mut result = String::new();
-    let mut lines = group
+    let mut lines = {
+        group
         .split("\n")
         .map(|x| x.to_string())
-        .collect::<Vec<String>>();
+        .collect::<Vec<String>>()
+    };
     let header = utils::extract_c_function_header(&group);
     result += (header + "\n" + "{" + "\n").as_str();
     lines = lines[1..].into_iter().map(|x| x.to_owned()).collect::<Vec<String>>();
@@ -182,10 +171,12 @@ fn format_preprocessor_group(group: String) -> String {
             .map(|line| line.trim_start_matches("#include "))
             .collect::<Vec<&str>>()
     };
-    names = names
+    names = {
+        names
         .into_iter()
         .filter(|x| !x.is_empty())
-        .collect::<Vec<&str>>();
+        .collect::<Vec<&str>>()
+    };
     names.sort_by(|a, b| {
         let a_slice = &a[1..];
         let b_slice = &b[1..];
@@ -250,7 +241,20 @@ fn format_non_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
     }
     *dest += (line.to_string() + "\n").as_str();
     if *no_brace_layers > 0 {
-        for layer in 0..*no_brace_layers { *dest += "}\n" }
+        for layer in 0..*no_brace_layers { *dest += "}\n"; }
     }
     *no_brace_layers = 0;
+}
+
+pub fn join_c_file_groups(groups: Vec<String>) -> String {
+    let mut result;
+    let mut temp = Vec::<String>::new();
+    for group in groups 
+    {
+        let temp_group = group.trim_end();
+        temp.push(temp_group.to_string() + "\n");
+    }
+    result = temp.join("\n");
+    result = (result.trim_end().to_string() + "\n").to_string();
+    return result;
 }
