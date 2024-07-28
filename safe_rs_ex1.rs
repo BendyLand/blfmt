@@ -25,7 +25,8 @@ pub fn format_c_file_group(group: String) -> String {
     let is_preprocessor = group.trim_start().starts_with("#include");
     let is_function_hoist = utils::check_is_function_hoist(&group);
     let mut result = String::new();
-    if is_preprocessor {
+    if is_preprocessor 
+    {
         result = format_preprocessor_group(group);
     } else if is_function_hoist {
         result += (group + "\n").as_str();
@@ -40,7 +41,8 @@ pub fn format_c_file_group(group: String) -> String {
 pub fn join_c_file_groups(groups: Vec<String>) -> String {
     let mut result;
     let mut temp = Vec::<String>::new();
-    for group in groups {
+    for group in groups 
+    {
         let temp_group = group.trim_end();
         temp.push(temp_group.to_string() + "\n");
     }

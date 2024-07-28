@@ -55,7 +55,8 @@ pub fn check_is_function_hoist(group: &String) -> bool {
 
 pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
     for opt in opts {
-        if line.trim().to_string().starts_with(opt) {
+        let words = &line.split(" ").collect::<Vec<&str>>();
+        if line.trim().to_string().starts_with(opt) && opt.len() == words[0].len() {
             return true;
         }
     }
@@ -130,10 +131,21 @@ pub fn write_file(path: String, contents: &[u8]) -> Result<(), Error> {
     return ok;
 }
 
+pub fn restore_example_rs_file() {
+    let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_rs_ex1.rs").unwrap().to_owned();
+    let good1 = temp1.as_bytes();
+    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/rs_ex1.rs").expect("Unable to get rs_ex1.rs");
+    let res1 = file1.write_all(good1);
+    match res1 {
+        Err(e) => println!("{}", e),
+        _ => (),
+    };
+}
+
 pub fn restore_example_cpp_file() {
     let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_cpp_example.cpp").unwrap().to_owned();
     let good1 = temp1.as_bytes();
-    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/example_file.cpp").expect("Unable to get example_file.c");
+    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/example_file.cpp").expect("Unable to get example_file.cpp");
     let res1 = file1.write_all(good1);
     match res1 {
         Err(e) => println!("{}", e),

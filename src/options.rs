@@ -26,7 +26,8 @@ pub fn check_restore_arg(args: &Vec<String>) -> usize {
     if contains_restore_arg {
         // utils::restore_example_txt_files();
         // utils::restore_example_c_file();
-        utils::restore_example_cpp_file();
+        // utils::restore_example_cpp_file();
+        utils::restore_example_rs_file();
         println!("Example file restored.");
         return 1; 
     }
