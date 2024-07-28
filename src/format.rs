@@ -66,7 +66,7 @@ pub fn format_cpp_file(path: String) {
         sections[i] = cpp_format::format_cpp_file_group(original.to_owned());
     }
     // c_file_groups should still work on cpp files
-    let result = c_format::join_c_file_groups(sections).trim_start().to_string(); 
+    let result = c_format::join_c_file_groups(sections).trim_start().to_string();
     let ok = utils::write_file(path.clone(), result.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path),
