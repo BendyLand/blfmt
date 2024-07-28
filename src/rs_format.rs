@@ -16,7 +16,7 @@ pub fn format_rs_file_group(section: String) -> String {
     };
     let result; 
     if utils::starts_with_any(&section, &top_lines) {
-        result = order_top_level(&section);
+        result = order_top_level(&section).trim_end().to_string();
     }
     else if utils::starts_with_any(&section, &mid_levels) {
         if Regex::new(r"(pub)*trait").unwrap().is_match(&section) {
@@ -32,7 +32,6 @@ pub fn format_rs_file_group(section: String) -> String {
             result = section;
         }
         else {
-            //todo: format public function
             result = format_rs_function(&section);
         }
     }

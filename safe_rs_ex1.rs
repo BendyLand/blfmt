@@ -1,3 +1,4 @@
+
 use crate::utils;
 use regex::Regex;
 
@@ -111,6 +112,7 @@ fn format_function_group(dest: &mut String, lines: &Vec<String>, i: usize,
     *dest += (line.to_string() + "\n").as_str();
 }
 
+
 fn indent_c_function(group: String) -> String 
 {
     let mut result = String::new();
@@ -136,6 +138,7 @@ fn indent_c_function(group: String) -> String
     result += "}\n";
     return result;
 }
+
 
 fn normalize_c_function_group(group: String) -> String 
 {
@@ -210,6 +213,7 @@ fn format_preprocessor_group(group: String) -> String {
     return result;
 }
 
+
 fn format_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
                        line: &mut String, lines: &Vec<String>, i: usize) {
     *line = line.trim().to_string();
@@ -230,6 +234,8 @@ fn format_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
         }
     }
 }
+
+
 
 fn format_non_keyword_line(dest: &mut String, no_brace_layers: &mut usize,
                            line: &mut String, lines: &Vec<String>, i: usize) {
