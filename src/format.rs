@@ -97,11 +97,16 @@ pub fn format_rs_file(path: String) {
         let original = &sections[i].clone().to_string();
         sections[i] = rs_format::format_rs_file_group(original.to_owned());
     }
-    let result = sections.join("\n\n");
+    let result = sections.join("\n\n").trim_start().to_string() + "\n";
+    //todo: ensure #![] directives stay put
     //todo: order functions public to private
     //todo: write format_long_line()
     //todo: order: traits, enums, structs, public functions; format funcs; then join by single space between them.
-    println!("Result:\n{}", result);
+    let ok = utils::write_file(path.clone(), result.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path),
+        Err(e) => println!("Error during `format_txt_file()`: {}", e),
+    };
 }
 
 pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String]) {
