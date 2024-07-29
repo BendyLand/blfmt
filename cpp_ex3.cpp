@@ -21,7 +21,6 @@ std::vector<std::string> strSplit(std::string text, std::string delim)
     std::string token;
     std::vector<std::string> result;
     while ((pos = text.find(delim)) != std::string::npos) {
-        if (1) printf("");
         token = text.substr(0, pos);
         result.push_back(token);
         text.erase(0, pos + delim.size());

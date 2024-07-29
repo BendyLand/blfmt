@@ -70,6 +70,10 @@ fn format_cpp_non_top_level_group(group: String) -> String {
             },
             1 => {
                 if line.trim_end().len() > 1 || !line.contains("{") {
+                    if line.trim() == "{}" {
+                        result += "{}\n";
+                        return result;
+                    }
                     result += "{\n";
                     let mut temp = line.clone().trim_end().to_string();
                     if utils::starts_with_any(&line, &one_liners) {
