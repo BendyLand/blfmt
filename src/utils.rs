@@ -145,7 +145,7 @@ pub fn restore_example_rs_file() {
 pub fn restore_example_cpp_file() {
     let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_cpp_example.cpp").unwrap().to_owned();
     let good1 = temp1.as_bytes();
-    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/example_file.cpp").expect("Unable to get example_file.cpp");
+    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/cpp_ex.cpp").expect("Unable to get example_file.cpp");
     let res1 = file1.write_all(good1);
     match res1 {
         Err(e) => println!("{}", e),
