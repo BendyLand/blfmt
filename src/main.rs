@@ -23,7 +23,6 @@ fn main() {
             None => (String::new(), Vec::<String>::new()),
         }
     };
-
     let help_arg = options::check_help_arg(&args);
     if help_arg == 1 { return; }
 
@@ -59,8 +58,4 @@ fn main() {
             }
         },
     };
-
-    // let mut s = String::new();
-    // println!("Run leaks now...");
-    // stdin().read_line(&mut s).expect("Error getting input");
 }
