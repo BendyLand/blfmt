@@ -62,6 +62,11 @@ fn format_cpp_non_top_level_group(group: String) -> String {
                 if !line.ends_with(")") {
                     let idx = line.rfind(")").unwrap_or(line.len()-1);
                     let temp = line.substring(0, idx+1);
+                    if line.ends_with("{}") {
+                        result += temp;
+                        result += "\n{}";
+                        break;
+                    }
                     result += (temp.to_string() + "\n").as_str();
                 }
                 else {

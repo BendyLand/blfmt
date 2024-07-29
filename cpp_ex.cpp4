@@ -1,8 +1,7 @@
 #include "utils.hpp" // "symbols.hpp" -> iostream, unordered_map, variant; string, fstream, vector
 
 //todo: Implement method to add a locally scoped Variables table
-SymbolTable::SymbolTable(Variables vars) : m_vars(vars) 
-{}
+SymbolTable::SymbolTable(Variables vars) : m_vars(vars) {}
 
 Variables SymbolTable::get_vars()
 {

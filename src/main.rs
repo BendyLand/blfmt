@@ -40,7 +40,7 @@ fn main() {
             format::format_go_file(filepath);
         },
         ".cpp" => {
-            // format::format_cpp_file(filepath); 
+            format::format_cpp_file(filepath); 
         },
         ".c" => {
             format::format_c_file(filepath);
