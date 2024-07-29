@@ -102,7 +102,12 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
     let mut top_level: bool;
     let mut is_function = false;
     let mut is_long_comment = false;
-    for line in lines.clone() {
+    let mut skip = false;
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        if skip {
+            skip = false;
+            continue;
+        }
         top_level = line.starts_with("#") || line.starts_with("using");
         is_function = Regex::new(r"^\w|\*+\s\w+\s*\(.*\)[^;]*").unwrap().is_match(&line) || is_function;
         is_long_comment = line.starts_with("/*") || is_long_comment;
@@ -110,12 +115,9 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
             temp += (line.clone() + "\n").as_str();
         }
         else if (line.trim_end() == "}" || line.contains("{}")) && is_function {
-            if line.contains("{}") {
+            if line.contains("{}") { // one-line class definition
                 result.push(temp);
-                let idx = line.rfind(")").unwrap_or(line.len());
-                temp = line.to_string().substring(0, idx).trim_end().to_string();
-                temp += "\n{}";
-                result.push(temp);
+                result.push(line);
                 is_function = false;
                 temp = "".to_string();
                 continue;
@@ -129,6 +131,11 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
             if temp.starts_with("#") || temp.starts_with("using") {
                 result.push(temp.trim_end().to_string());
                 temp = "".to_string();
+            }
+            if i < lines.len()-2 && lines[i+1].contains("{}") {
+                result.push(line.clone() + " {}");
+                skip = true;
+                continue;
             }
             temp += (line.clone() + "\n").as_str();
         }
