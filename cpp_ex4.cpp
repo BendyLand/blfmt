@@ -2,6 +2,9 @@
 //todo: Implement method to add a locally scoped Variables table
 
 SymbolTable::SymbolTable(Variables vars)
+{
+
+{}
 {}
 
 Variables SymbolTable::get_vars()
