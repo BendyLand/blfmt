@@ -20,12 +20,15 @@ fn format_cpp_top_level_group(group: String) -> String {
     lines.sort();
     result = lines.join("\n").to_string();
     result = c_format::swap_include_kind_locations(result);
-    if result.contains("#") && result.contains("using") {
+    if result.contains("#") && ((result.contains("using") || result.contains(";"))) {
         lines = result.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
         result = "".to_string();
         for line in lines {
             if line.starts_with("using") && !result.contains("using"){
                 result += "\n";
+            }
+            else if line.chars().nth(0).unwrap_or(' ') != ' ' && line.ends_with(";"){
+                result += "\n"
             }
             result += (line + "\n").as_str();
         }
@@ -68,7 +71,6 @@ fn format_cpp_non_top_level_group(group: String) -> String {
             },
             x if x == lines.len()-1 => result += "}",
             _ => {
-                //todo: refactor; there must be a better way to structure the logic in increments.
                 handle_fn_inside(&line, &mut result, &one_liners, &lines, &i, &is_one_liner, &mut skip, &mut open_braces, &in_function);
             }
         }
@@ -76,6 +78,32 @@ fn format_cpp_non_top_level_group(group: String) -> String {
     }
     result = result.trim_end().to_string();
     return result;
+}
+
+fn handle_fn_inside(line: &String, result: &mut String, one_liners: &Vec<String>, lines: &Vec<String>, i: &usize, is_one_liner: &bool, skip: &mut bool, open_braces: &mut i32, in_function: &bool) {
+    let mut temp = line.trim().to_string();
+    if utils::starts_with_any(&temp.to_string(), &one_liners) && !is_one_liner {
+        if !line.contains("{") && lines[i+1].contains("{") {
+            temp += " {";
+            *skip = true;
+        }
+    }
+    else if temp.starts_with("}") && temp.len() > 1 {
+        let temp2 = temp.clone();
+        let suffix = temp2.substring(1, temp.len()+1).trim();
+        temp = "}\n".to_string();
+        *open_braces -= 1;
+        for _ in 0..*open_braces { temp += "    "; }
+        temp += suffix;
+    }
+    let mut prefix = String::new();
+    let is_case = line.trim_start().starts_with("case");
+    if is_case { *open_braces -= 1; }
+    for _ in 0..*open_braces { prefix += "    "; }
+    if is_case { *open_braces += 1; }
+    if *in_function && prefix.is_empty() { prefix += "    "; }
+    let temp_str = prefix + temp.as_str();
+    *result += (temp_str + "\n").as_str();
 }
 
 fn handle_fn_def_line(line: &String, result: &mut String) -> bool {
@@ -118,25 +146,3 @@ fn handle_fn_second_line(line: &String, result: &mut String, one_liners: &Vec<St
     return (result.clone().to_string(), false);
 }
 
-fn handle_fn_inside(line: &String, result: &mut String, one_liners: &Vec<String>, lines: &Vec<String>, i: &usize, is_one_liner: &bool, skip: &mut bool, open_braces: &mut i32, in_function: &bool) {
-    let mut temp = line.trim().to_string();
-    if utils::starts_with_any(&temp.to_string(), &one_liners) && !is_one_liner {
-        if !line.contains("{") && lines[i+1].contains("{") {
-            temp += " {";
-            *skip = true;
-        }
-    }
-    else if temp.starts_with("}") && temp.len() > 1 {
-        let temp2 = temp.clone();
-        let suffix = temp2.substring(1, temp.len()+1).trim();
-        temp = "}\n".to_string();
-        *open_braces -= 1;
-        for _ in 0..*open_braces { temp += "    "; }
-        temp += suffix;
-    }
-    let mut prefix = String::new();
-    for _ in 0..*open_braces { prefix += "    "; }
-    if *in_function && prefix.is_empty() { prefix += "    "; }
-    let temp_str = prefix + temp.as_str();
-    *result += (temp_str + "\n").as_str();
-}
