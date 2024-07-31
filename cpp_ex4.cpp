@@ -29,7 +29,8 @@ void SymbolTable::display_vars()
 
 bool SymbolTable::contains_all(std::vector<std::string> found_vars)
 {
-    for (std::string var : found_vars) {
+    for (std::string var : found_vars)
+    {
         if (!contains_key(this->m_vars, var)) return false;
     }
     return true;
