@@ -5,15 +5,19 @@ pub fn swap_include_kind_locations(group: String) -> String {
     let lines = group.split("\n").collect::<Vec<&str>>();
     let mut lang_lines = String::new();
     let mut custom_lines = String::new();
+    let mut func_hoists = String::new();
     for line in lines {
-        if line.contains("<") && !line.contains("//") {
+        if line.contains("<") && !line.contains("//") && !line.contains(";") {
             lang_lines += (line.to_string() + "\n").as_str();
         }
-        else {
+        else if line.contains("\"") && !line.contains("//") {
             custom_lines += (line.to_string() + "\n").as_str();
         }
+        else {
+            func_hoists += (line.to_string() + "\n").as_str();
+        }
     }
-    let mut result = lang_lines + &custom_lines;
+    let mut result = lang_lines + &custom_lines + &func_hoists;
     result = result.trim_end().to_string();
     return result;
 }
