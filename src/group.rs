@@ -108,7 +108,7 @@ fn separate_cpp_file_sections(lines: Vec<String>) -> Vec<String> {
             skip = false;
             continue;
         }
-        top_level = line.starts_with("#") || line.starts_with("using");
+        top_level = line.starts_with("#") || line.starts_with("using") || (line.chars().nth(0).unwrap_or(' ') != ' ') && line.ends_with(";");
         is_function = Regex::new(r"^\w|\*+\s\w+\s*\(.*\)[^;]*").unwrap().is_match(&line) || is_function;
         is_long_comment = line.starts_with("/*") || is_long_comment;
         if top_level {
