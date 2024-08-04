@@ -97,7 +97,10 @@ fn handle_fn_inside(line: &String, result: &mut String, one_liners: &Vec<String>
         temp += suffix;
     }
     let mut prefix = String::new();
-    let is_case = line.trim_start().starts_with("case");
+    let is_case = {
+        line.trim_start().starts_with("case") || 
+        line.trim_start().starts_with("default")
+    };
     if is_case { *open_braces -= 1; }
     for _ in 0..*open_braces { prefix += "    "; }
     if is_case { *open_braces += 1; }

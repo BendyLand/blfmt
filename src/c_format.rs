@@ -143,7 +143,12 @@ fn indent_c_function(group: String) -> String {
     }
     let length = lines.len();
     for i in 2..length - 2 {
-        result += ("    ".to_string() + lines[i].clone().as_str() + "\n").as_str();
+        if lines[i].contains("case") || lines[i].contains("default") {
+            result += (lines[i].clone() + "\n").as_str();
+        }
+        else {
+            result += ("    ".to_string() + lines[i].clone().as_str() + "\n").as_str();
+        }
     }
     result += "}\n";
     return result;

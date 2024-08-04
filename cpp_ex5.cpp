@@ -81,6 +81,8 @@ void mainLoop(std::vector<std::string>& lines, SymbolTable& symbols)
                         symbols.pop_l_vars("for_"+std::to_string(num_for_scopes));
                         num_for_scopes--;
                         break;
+                    default:
+                        break;
                     }
                 }
             }
