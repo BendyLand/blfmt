@@ -1,4 +1,5 @@
-use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, rs_format, txt_format};
+use crate::c_format2::Token;
+use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, rs_format, txt_format, c_format2};
 use regex::Regex;
 use std::fs::{self, File};
 use std::io::Write;
@@ -38,20 +39,28 @@ pub fn basic_format(path: String) {
 pub fn format_c_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
-    let mut sections = group::group_c_file_into_sections(lines);
-    for i in 0..sections.len() {
-        if sections[i].is_empty() {
-            continue;
-        }
-        let original = &sections[i].clone().to_string();
-        sections[i] = c_format::format_c_file_group(original.to_owned());
+    let mut token_lines: Vec<Token> = vec![];
+    let mut prev_token = Token::Na;
+    for line in lines {
+        let (token, line) = c_format2::identify_line_token(line.to_string(), &prev_token);
+        prev_token = token;
+        token_lines.push(token);
+        println!("Token: {:?}, Line: {}", &token, &line);
     }
-    let result = c_format::join_c_file_groups(sections).trim_start().to_string();
-    let ok = utils::write_file(path.clone(), result.as_bytes());
-    match ok {
-        Ok(_) => println!("Successfully wrote: {}", path),
-        Err(e) => println!("Error during `format_c_file()`: {}", e),
-    };
+    // let mut sections = group::group_c_file_into_sections(lines);
+    // for i in 0..sections.len() {
+    //     if sections[i].is_empty() {
+    //         continue;
+    //     }
+    //     let original = &sections[i].clone().to_string();
+    //     sections[i] = c_format::format_c_file_group(original.to_owned());
+    // }
+    // let result = c_format::join_c_file_groups(sections).trim_start().to_string();
+    // let ok = utils::write_file(path.clone(), result.as_bytes());
+    // match ok {
+    //     Ok(_) => println!("Successfully wrote: {}", path),
+    //     Err(e) => println!("Error during `format_c_file()`: {}", e),
+    // };
 }
 
 pub fn format_cpp_file(path: String) {
