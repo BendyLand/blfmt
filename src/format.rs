@@ -1,5 +1,5 @@
 use crate::c_format2::Token;
-use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, rs_format, txt_format, c_format2};
+use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, rs_format, txt_format, c_format2, c_format2::*};
 use regex::Regex;
 use std::fs::{self, File};
 use std::io::Write;
@@ -39,13 +39,26 @@ pub fn basic_format(path: String) {
 pub fn format_c_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
-    let mut token_lines: Vec<Token> = vec![];
-    let mut prev_token = Token::Na;
+    let mut token_lines: Vec<(Token, String)> = Vec::new();
+    let mut state = LocationState{ prev: Token::Na, current: Token::Na };
     for line in lines {
-        let (token, line) = c_format2::identify_line_token(line.to_string(), &prev_token);
-        prev_token = token;
-        token_lines.push(token);
-        println!("Token: {:?}, Line: {}", &token, &line);
+        let token = c_format2::tokenize_first_pass(line.to_string());
+        token_lines.push((token, line.to_string().clone()));
+    }
+    let token_lines_loop = token_lines.clone();
+    token_lines.clear();
+    for (token, line) in token_lines_loop {
+        let new_token: Token;
+        if token == Token::Na {
+            new_token = c_format2::tokenize_second_pass(&line);
+        }
+        else {
+            new_token = token;
+        }
+        token_lines.push((new_token, line.to_string().clone()));
+    }
+    for line in token_lines {
+        println!("{:?}", line);
     }
     // let mut sections = group::group_c_file_into_sections(lines);
     // for i in 0..sections.len() {
