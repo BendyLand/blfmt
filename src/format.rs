@@ -48,17 +48,26 @@ pub fn format_c_file(path: String) {
     let token_lines_loop = token_lines.clone();
     token_lines.clear();
     for (token, line) in token_lines_loop {
-        let new_token: Token;
-        if token == Token::Na {
-            new_token = c_format2::tokenize_second_pass(&line);
-        }
-        else {
-            new_token = token;
-        }
+        let new_token = c_format2::tokenize_second_pass(&line, token);
+        token_lines.push((new_token, line.to_string().clone()));
+    }
+    let token_lines_loop = token_lines.clone();
+    token_lines.clear();
+    let mut in_function = false;
+    let mut in_comment = false;
+    for (token, line) in token_lines_loop {
+        match token {
+            Token::Function(FunctionKind::Definition) => in_function = true,
+            Token::EndBlock => in_function = false,
+            Token::Comment(CommentType::BlockStart) => in_comment = true,
+            Token::Comment(CommentType::BlockEnd) => in_comment = false,
+            _ => (),
+        };
+        let new_token = c_format2::tokenize_third_pass(&line, in_function, in_comment, token);
         token_lines.push((new_token, line.to_string().clone()));
     }
     for line in token_lines {
-        println!("{:?}", line);
+        println!("{:?}", &line);
     }
     // let mut sections = group::group_c_file_into_sections(lines);
     // for i in 0..sections.len() {

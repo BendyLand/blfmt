@@ -22,12 +22,14 @@ pub enum GlobalKind {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CommentType {
     Inline,
-    Block,
+    BlockStart,
+    BlockEnd,
+    BlockMiddle,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Token {
-    Preprocessor(MacroKind),
+    Macro(MacroKind),
     Comment(CommentType),
     Global(GlobalKind),
     Function(FunctionKind),
@@ -41,15 +43,15 @@ pub struct LocationState {
     pub current: Token,
 }
 
-// First pass will tokenize all preprocessor lines
+// First pass will tokenize all macro lines
 pub fn tokenize_first_pass(line: String) -> Token {
     let token: Token;
     if line.trim_start().starts_with('#') {
         if line.contains("include") {
-            token = Token::Preprocessor(MacroKind::Includes);
+            token = Token::Macro(MacroKind::Includes);
         }
         else {
-            token = Token::Preprocessor(MacroKind::Other);
+            token = Token::Macro(MacroKind::Other);
         }
     }
     else {
@@ -58,9 +60,10 @@ pub fn tokenize_first_pass(line: String) -> Token {
     return token;
 }
 
-// Second pass will identify starts to functions and their corresponding end blocks
-pub fn tokenize_second_pass(line: &String) -> Token {
-    let re = Regex::new(r"^[\w\*]+\s+[\w\*]+\(.*\)\s*\{?\s*$").unwrap();
+// Second pass will identify function starts and their corresponding end blocks, 
+// and single-line comments or block comment starts and ends
+pub fn tokenize_second_pass(line: &String, prev_token: Token) -> Token {
+    let re = Regex::new(r"^([\w\*]+\s+)+[\w\*]+\(.*\)\s*\{?\s*$").unwrap();
     let token: Token;
     if re.is_match(&line) {
         token = Token::Function(FunctionKind::Definition);
@@ -68,13 +71,46 @@ pub fn tokenize_second_pass(line: &String) -> Token {
     else if line == "}" {
         token = Token::EndBlock;
     }
+    else if line.trim_start().starts_with("/*") {
+        token = Token::Comment(CommentType::BlockStart);
+    }
+    else if line.contains("*/") {
+        token = Token::Comment(CommentType::BlockEnd);
+    }
+    else if line.trim_start().starts_with("//") {
+        token = Token::Comment(CommentType::Inline);
+    }
     else {
-        token = Token::Na;
+        token = prev_token;
     }
     return token;
 }
 
-//? idea: multi pass tokenization. first pass can label function starts and ends, second can do something else, third...
+pub fn tokenize_third_pass(line: &String, in_func: bool, in_comment: bool, prev_token: Token) -> Token {
+    let re = Regex::new(r"^([\w\*]+\s+)+[\w\*]+\(.*\)\s*;\s*$").unwrap();
+    let token: Token;
+    if in_comment {
+        if prev_token == Token::Na {
+            token = Token::Comment(CommentType::BlockMiddle);
+        }
+        else {
+            token = prev_token;
+        }
+    }
+    else if re.is_match(line) {
+        if !in_func {
+            token = Token::Function(FunctionKind::Prototype);
+        }
+        else {
+            token = Token::Na;
+        }
+    }
+    else {
+        token = prev_token;
+    }
+    return token;
+}
+
 /*  
 States:
 preprocessor - starts with '#'
