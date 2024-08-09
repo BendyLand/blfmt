@@ -59,11 +59,24 @@ pub fn format_c_file(path: String) {
         match token {
             Token::Function(FunctionKind::Definition) => in_function = true,
             Token::EndBlock => in_function = false,
-            Token::Comment(CommentType::BlockStart) => in_comment = true,
-            Token::Comment(CommentType::BlockEnd) => in_comment = false,
+            Token::Comment(CommentKind::BlockStart) => in_comment = true,
+            Token::Comment(CommentKind::BlockEnd) => in_comment = false,
             _ => (),
         };
         let new_token = c_format2::tokenize_third_pass(&line, in_function, in_comment, token);
+        token_lines.push((new_token, line.to_string().clone()));
+    }
+    let token_lines_loop = token_lines.clone();
+    token_lines.clear();
+    for (token, line) in token_lines_loop {
+        match token {
+            Token::Function(FunctionKind::Definition) => in_function = true,
+            Token::EndBlock => in_function = false,
+            Token::Comment(CommentKind::BlockStart) => in_comment = true,
+            Token::Comment(CommentKind::BlockEnd) => in_comment = false,
+            _ => (),
+        };
+        let new_token = c_format2::tokenize_fourth_pass(&line, in_function, in_comment, token);
         token_lines.push((new_token, line.to_string().clone()));
     }
     for line in token_lines {
