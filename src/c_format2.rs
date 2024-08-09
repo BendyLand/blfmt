@@ -5,6 +5,7 @@ use regex::Regex;
 pub enum FunctionKind {
     Prototype,
     Definition,
+    Body,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -20,7 +21,7 @@ pub enum GlobalKind {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum CommentType {
+pub enum CommentKind {
     Inline,
     BlockStart,
     BlockEnd,
@@ -30,7 +31,7 @@ pub enum CommentType {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Token {
     Macro(MacroKind),
-    Comment(CommentType),
+    Comment(CommentKind),
     Global(GlobalKind),
     Function(FunctionKind),
     EndBlock,
@@ -43,7 +44,7 @@ pub struct LocationState {
     pub current: Token,
 }
 
-// First pass will tokenize all macro lines
+// First pass will tokenize all macro lines.
 pub fn tokenize_first_pass(line: String) -> Token {
     let token: Token;
     if line.trim_start().starts_with('#') {
@@ -61,40 +62,29 @@ pub fn tokenize_first_pass(line: String) -> Token {
 }
 
 // Second pass will identify function starts and their corresponding end blocks, 
-// and single-line comments or block comment starts and ends
+// and single-line comments or block comment starts and ends.
 pub fn tokenize_second_pass(line: &String, prev_token: Token) -> Token {
     let re = Regex::new(r"^([\w\*]+\s+)+[\w\*]+\(.*\)\s*\{?\s*$").unwrap();
     let token: Token;
-    if re.is_match(&line) {
-        token = Token::Function(FunctionKind::Definition);
-    }
-    else if line == "}" {
-        token = Token::EndBlock;
-    }
-    else if line.trim_start().starts_with("/*") {
-        token = Token::Comment(CommentType::BlockStart);
-    }
-    else if line.contains("*/") {
-        token = Token::Comment(CommentType::BlockEnd);
-    }
-    else if line.trim_start().starts_with("//") {
-        token = Token::Comment(CommentType::Inline);
-    }
-    else {
-        token = prev_token;
+    match line.as_str() {
+        x if re.is_match(&x)                  => token = Token::Function(FunctionKind::Definition),
+        "}"                                   => token = Token::EndBlock,
+        x if x.trim_start().starts_with("/*") => token = Token::Comment(CommentKind::BlockStart),
+        x if x.contains("*/")                 => token = Token::Comment(CommentKind::BlockEnd),
+        x if x.trim_start().starts_with("//") => token = Token::Comment(CommentKind::Inline),
+        _ => token = prev_token,
     }
     return token;
 }
 
+// Third pass will identify comment block contents and function prototypes.
 pub fn tokenize_third_pass(line: &String, in_func: bool, in_comment: bool, prev_token: Token) -> Token {
     let re = Regex::new(r"^([\w\*]+\s+)+[\w\*]+\(.*\)\s*;\s*$").unwrap();
     let token: Token;
     if in_comment {
-        if prev_token == Token::Na {
-            token = Token::Comment(CommentType::BlockMiddle);
-        }
-        else {
-            token = prev_token;
+        match prev_token {
+            Token::Na => token = Token::Comment(CommentKind::BlockMiddle),
+            _         => token = prev_token,
         }
     }
     else if re.is_match(line) {
@@ -109,6 +99,30 @@ pub fn tokenize_third_pass(line: &String, in_func: bool, in_comment: bool, prev_
         token = prev_token;
     }
     return token;
+}
+
+// Fourth pass will identify function bodies. 
+pub fn tokenize_fourth_pass(line: &String, in_func: bool, in_comment: bool, prev_token: Token) -> Token {
+    if line.trim() == "{" { return Token::Na; }
+    let result: Token;
+    if in_func {
+        if !in_comment {
+            match prev_token {
+                Token::Na => result = Token::Function(FunctionKind::Body),
+                _         => result = prev_token,
+            }
+        }
+        else {
+            match prev_token {
+                Token::Comment(_) => result = prev_token,
+                _                 => result = Token::Na,
+            }
+        }
+    }
+    else {
+        result = prev_token;
+    }
+    return result;
 }
 
 /*  
