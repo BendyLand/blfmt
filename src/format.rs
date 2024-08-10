@@ -40,7 +40,6 @@ pub fn format_c_file(path: String) {
     let contents = fs::read_to_string(path.clone()).unwrap();
     let lines = contents.split("\n").collect::<Vec<&str>>();
     let mut token_lines: Vec<(Token, String)> = Vec::new();
-    let mut state = LocationState{ prev: Token::Na, current: Token::Na };
     for line in lines {
         let token = c_format2::tokenize_first_pass(line.to_string());
         token_lines.push((token, line.to_string().clone()));
@@ -69,6 +68,8 @@ pub fn format_c_file(path: String) {
     let token_lines_loop = token_lines.clone();
     token_lines.clear();
     for (token, line) in token_lines_loop {
+        let new_token = c_format2::tokenize_fourth_pass(&line, in_function, in_comment, token);
+        token_lines.push((new_token, line.to_string().clone()));
         match token {
             Token::Function(FunctionKind::Definition) => in_function = true,
             Token::EndBlock => in_function = false,
@@ -76,12 +77,23 @@ pub fn format_c_file(path: String) {
             Token::Comment(CommentKind::BlockEnd) => in_comment = false,
             _ => (),
         };
-        let new_token = c_format2::tokenize_fourth_pass(&line, in_function, in_comment, token);
-        token_lines.push((new_token, line.to_string().clone()));
     }
-    for line in token_lines {
-        println!("{:?}", &line);
+    let groups = c_format2::group_c_file_sections(&token_lines);
+    let mut formatted_groups: Vec<Vec<(Token, String)>> = Vec::new();
+    for group in groups {
+        match group.0 {
+            Section::Macro => formatted_groups.push(c_format2::format_macros(group.1)),
+            Section::Comment => formatted_groups.push(c_format2::format_comments(group.1)),
+            Section::Function => formatted_groups.push(c_format2::format_functions(group.1)),
+            Section::Na => formatted_groups.push(c_format2::format_extras(group.1)),
+        }
     }
+    //todo: group into macros, functions, and comments.
+    //todo: format each kind of group independently.
+    //todo: arrange the groups and join them together.
+
+    
+
     // let mut sections = group::group_c_file_into_sections(lines);
     // for i in 0..sections.len() {
     //     if sections[i].is_empty() {
