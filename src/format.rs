@@ -83,9 +83,9 @@ pub fn format_c_file(path: String) {
     for group in groups {
         match group.0 {
             Section::Macro => formatted_groups.push(c_format2::format_macros(group.1)),
-            Section::Comment => formatted_groups.push(c_format2::format_comments(group.1)),
+            Section::Comment => formatted_groups.push(group.1.clone()),
             Section::Function => formatted_groups.push(c_format2::format_functions(group.1)),
-            Section::Na => formatted_groups.push(c_format2::format_extras(group.1)),
+            Section::Na => (),
         }
     }
     // for vec in formatted_groups {

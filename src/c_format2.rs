@@ -212,31 +212,49 @@ pub fn format_macros(macros: Vec<(Token, String)>) -> Vec<(Token, String)> {
     return result;
 }
 
-pub fn format_comments(comments: Vec<(Token, String)>) -> Vec<(Token, String)> {
-    let mut result: Vec<(Token, String)> = Vec::new();
-    // println!("Formatting comments...");
-    // for (token, comment) in comments {
-    //     println!("Token: {:?}, Comment:\n{}\n", token, comment);
-    // }
-    // println!();
-    return result;
-}
-
 pub fn format_functions(functions: Vec<(Token, String)>) -> Vec<(Token, String)> {
     let mut result: Vec<(Token, String)> = Vec::new();
-    // println!("Formatting functions...");
-    // for (token, function) in functions {
-    //     println!("Token: {:?}, Function:\n{}\n", token, function);
-    // }
-    // println!();
+    let mut prototypes: Vec<(Token, String)> = functions.clone().into_iter().filter(|x| x.0 == Token::Function(FunctionKind::Prototype)).collect();
+    prototypes.sort();
+    result.extend(prototypes);
+    for (token, function) in functions {
+        match token {
+            Token::Function(FunctionKind::Prototype) => continue,
+            _ => {
+                let f_func = format_c_function(function);
+            },
+        };
+        println!();
+    }
     return result;
 }
 
-pub fn format_extras(extras: Vec<(Token, String)>) -> Vec<(Token, String)> {
-    let mut result: Vec<(Token, String)> = Vec::new();
-    // println!("Formatting functions...");
-    // println!("Extras length: {}", extras.len());
-    // println!();
+fn format_c_function(func: String) -> String {
+    let mut result = String::new();
+    let lines: Vec<&str> = func.split("\n").collect();
+    let mut f_lines = Vec::<String>::new();
+    for (i, line) in lines.into_iter().enumerate() {
+        match i {
+            0 => {
+                if utils::line_ends_with_curly_brace(&line.to_string()) {
+                    let temp = line.trim_end_matches("{");
+                    f_lines.push(temp.to_string());
+                    f_lines.push("{".to_string());
+                }
+            },
+            1 => {
+                if utils::line_ends_with_curly_brace(&line.to_string()) { 
+                    continue; 
+                }
+                else {
+                    //todo: handle by line logic
+                }
+            },
+            _ => {
+                //todo: handle by line logic
+            },
+        };
+    }
     return result;
 }
 
