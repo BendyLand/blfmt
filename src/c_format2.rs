@@ -4,7 +4,7 @@ use crate::utils;
 use regex::Regex;
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum FunctionKind {
     Prototype,
     Definition,
@@ -12,19 +12,19 @@ pub enum FunctionKind {
     Full,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum MacroKind {
     Includes,
     Other,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum GlobalKind {
     Variable,
     DataStructure,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum CommentKind {
     Inline,
     BlockStart,
@@ -33,7 +33,7 @@ pub enum CommentKind {
     FullBlock
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum Token {
     Macro(MacroKind),
     Comment(CommentKind),
@@ -43,7 +43,7 @@ pub enum Token {
     Na,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum Section {
     Macro,
     Comment,
@@ -184,39 +184,59 @@ pub fn group_c_file_sections(token_lines: &Vec<(Token, String)>) -> Vec<(Section
 
 pub fn format_macros(macros: Vec<(Token, String)>) -> Vec<(Token, String)> {
     let mut result: Vec<(Token, String)> = Vec::new();
-    println!("Formatting macros...");
+    let mut lang_includes = Vec::<(Token, String)>::new();
+    let mut custom_includes = Vec::<(Token, String)>::new();
+    let mut others = Vec::<(Token, String)>::new();
     for (tok, mac) in macros {
-        println!("Token: {:?}, Macro:\n{}\n", tok, mac);
+        let line = mac.clone();
+        let token_clone = tok.clone();
+        match tok {
+            Token::Macro(MacroKind::Includes) => {
+                if mac.contains("\"") {
+                    custom_includes.push((token_clone, line));
+                }
+                else {
+                    lang_includes.push((token_clone, line));
+                }
+            },
+            Token::Macro(MacroKind::Other) => others.push((token_clone, line)),
+            _ => (),
+        };
     }
-    println!();
+    lang_includes.sort();
+    custom_includes.sort();
+    others.sort();
+    result.extend(lang_includes);
+    result.extend(custom_includes);
+    result.extend(others);
     return result;
 }
 
 pub fn format_comments(comments: Vec<(Token, String)>) -> Vec<(Token, String)> {
     let mut result: Vec<(Token, String)> = Vec::new();
-    println!("Formatting comments...");
-    for (token, comment) in comments {
-        println!("Token: {:?}, Comment:\n{}\n", token, comment);
-    }
-    println!();
+    // println!("Formatting comments...");
+    // for (token, comment) in comments {
+    //     println!("Token: {:?}, Comment:\n{}\n", token, comment);
+    // }
+    // println!();
     return result;
 }
 
 pub fn format_functions(functions: Vec<(Token, String)>) -> Vec<(Token, String)> {
     let mut result: Vec<(Token, String)> = Vec::new();
-    println!("Formatting functions...");
-    for (token, function) in functions {
-        println!("Token: {:?}, Function:\n{}\n", token, function);
-    }
-    println!();
+    // println!("Formatting functions...");
+    // for (token, function) in functions {
+    //     println!("Token: {:?}, Function:\n{}\n", token, function);
+    // }
+    // println!();
     return result;
 }
 
 pub fn format_extras(extras: Vec<(Token, String)>) -> Vec<(Token, String)> {
     let mut result: Vec<(Token, String)> = Vec::new();
-    println!("Formatting functions...");
-    println!("Extras length: {}", extras.len());
-    println!();
+    // println!("Formatting functions...");
+    // println!("Extras length: {}", extras.len());
+    // println!();
     return result;
 }
 
