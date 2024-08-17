@@ -250,6 +250,10 @@ pub fn check_for_even_line_length(lines: &Vec<&str>) -> bool {
     return count == 0;
 }
 
+pub fn line_ends_with_curly_brace(line: &String) -> bool {
+    return line.trim_end().ends_with("{");
+}
+
 pub fn infer_file_type(filepath: &String) -> String {
     let supported_types = get_file_extensions_list();
     for item in supported_types {
