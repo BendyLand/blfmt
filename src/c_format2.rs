@@ -51,6 +51,22 @@ pub enum Section {
     Na,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+pub enum LineToken {
+    Var(String, String, String),
+    Const(String, String, String),
+    If(String, String),
+    ElseIf(String, String),
+    Else,
+    Switch(String, String),
+    For(String, String),
+    While(String, String),
+    Comment(String),
+    FunctionCall(String),
+    Return(String),
+    Na(String),
+}
+
 // First pass will tokenize all macro lines.
 pub fn tokenize_first_pass(line: String) -> Token {
     let token: Token;
@@ -68,7 +84,7 @@ pub fn tokenize_first_pass(line: String) -> Token {
     return token;
 }
 
-// Second pass will identify function starts and their corresponding end blocks, 
+// Second pass will identify function starts and their corresponding end blocks,
 // and single-line comments or block comment starts and ends.
 pub fn tokenize_second_pass(line: &String, prev_token: Token) -> Token {
     let re = Regex::new(r"^([\w\*]+\s+)+[\w\*]+\(.*\)\s*\{?\s*$").unwrap();
@@ -108,7 +124,7 @@ pub fn tokenize_third_pass(line: &String, in_func: bool, in_comment: bool, prev_
     return token;
 }
 
-// Fourth pass will identify function bodies. 
+// Fourth pass will identify function bodies.
 pub fn tokenize_fourth_pass(line: &String, in_func: bool, in_comment: bool, prev_token: Token) -> Token {
     if line.trim() == "{" { return Token::Na; }
     let result: Token;
@@ -243,26 +259,128 @@ fn format_c_function(func: String) -> String {
                 }
             },
             1 => {
-                if utils::line_ends_with_curly_brace(&line.to_string()) { 
-                    continue; 
+                if utils::line_ends_with_curly_brace(&line.to_string()) {
+                    continue;
                 }
                 else {
-                    //todo: handle by line logic
+                    let line_token = tokenize_c_fn_line(&line.to_string());
+                    println!("{:?}", line_token);
                 }
             },
             _ => {
-                //todo: handle by line logic
+                let line_token = tokenize_c_fn_line(&line.to_string());
+                println!("{:?}", line_token);
             },
         };
     }
     return result;
 }
 
-/*  
+fn tokenize_c_fn_line(line: &String) -> LineToken {
+    let mut result = LineToken::Na("".to_string());
+    let pat = Regex::new(r"\((.*)\)").unwrap();
+    match line.clone() {
+        x if x.contains("else if") => {
+            let condition = pat.captures(&line).unwrap();
+            let end_token = extract_end_token(&line);
+            result = LineToken::ElseIf(condition.get(1).unwrap().as_str().to_string(), end_token);
+        },
+        x if x.trim_start().starts_with("if") => {
+            let condition = pat.captures(&line).unwrap();
+            let end_token = extract_end_token(&line);
+            result = LineToken::If(condition.get(1).unwrap().as_str().to_string(), end_token);
+        },
+        x if x.contains("else") => {
+            result = LineToken::Else;
+        },
+        x if x.trim_start().starts_with("for") => {
+            let condition = pat.captures(&line).unwrap();
+            let end_token = extract_end_token(&line);
+            result = LineToken::For(condition.get(1).unwrap().as_str().to_string(), end_token);
+        },
+        x if x.trim_start().starts_with("while") => {
+            let condition = pat.captures(&line).unwrap();
+            let end_token = extract_end_token(&line);
+            result = LineToken::While(condition.get(1).unwrap().as_str().to_string(), end_token);
+        },
+        x if x.trim_start().starts_with("switch") => {
+            let condition = pat.captures(&line).unwrap();
+            let end_token = extract_end_token(&line);
+            result = LineToken::Switch(condition.get(1).unwrap().as_str().to_string(), end_token);
+        },
+        x if x.trim_start().starts_with("const") => {
+            let line_clone = line.clone().trim_start().to_string();
+            let words: Vec::<&str> = line_clone.split(" ").collect();
+            if words.len() >= 3 {
+                let const_type = words[1].to_string();
+                let name = words[2].to_string();
+                let start_idx = line.find("=").unwrap();
+                let val = line[start_idx+1..].trim_start().to_string();
+                result = LineToken::Const(const_type, name, val);
+            }
+            else {
+                dbg!("Something weird happened during parsing and I shouldn't be here!");
+            }
+        },
+        x if x.trim_start().starts_with("return") => {
+            let line_clone = line.clone().trim_start().to_string();
+            let start_idx = line_clone.find(" ").unwrap();
+            let value = line_clone[start_idx+1..].to_string();
+            result = LineToken::Return(value);
+        },
+        x if x.split(" ").collect::<Vec<&str>>().len() >= 2 && 
+        x.chars().filter(|x| *x == '=').count() > 0         && 
+        x.trim_end().ends_with(";") => {
+            let line_clone = line.clone().trim_start().to_string();
+            let words: Vec::<&str> = line_clone.split(" ").collect();
+            if words.len() >= 2 {
+                let var_type; 
+                let name; 
+                let start_idx; 
+                let val; 
+                if words.iter().position(|x| *x == "=").unwrap_or_default() == 1 {
+                    var_type = "".to_string();
+                    name = words[0].to_string();
+                }
+                else {
+                    var_type = words[0].to_string();
+                    name = words[1].to_string();
+                }
+                start_idx = line.find("=").unwrap();
+                val = line[start_idx+1..].trim_start().to_string();
+                result = LineToken::Var(var_type, name, val);
+            }
+            else {
+                dbg!("Something weird happened during parsing and I shouldn't be here!");
+            }
+        }
+        _ => {
+            result = LineToken::Na(line.clone());
+        },
+    }
+    return result;
+}
+
+fn extract_end_token(line: &String) -> String {
+    let end_token: String;
+    if line.trim_end().ends_with("{") {
+        end_token = "{".to_string();
+    }
+    else if line.trim_end().ends_with(")") {
+        end_token = "".to_string();
+    }
+    else {
+        let idx = line.rfind(")").unwrap();
+        end_token = line[idx+1..].trim_start().to_string();
+    }
+    return end_token;
+}
+
+/*
 States:
 preprocessor - starts with '#'
 comment - line contains // or /+* and comment delim isn't in a string.
-global - 
+global -
     var - not in function, line contains '=' and ';', and (opt?) line starts with data type.
     data - ", and line starts with data structure name or "typedef".
 function -
