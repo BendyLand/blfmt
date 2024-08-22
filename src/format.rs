@@ -88,11 +88,6 @@ pub fn format_c_file(path: String) {
             Section::Na => (),
         }
     }
-    // for vec in formatted_groups {
-    //     let lines: Vec<String> = vec.iter().map(|x| x.1.clone()).collect();
-    //     let temp = lines.join("\n");
-    //     println!("Temp:\n{}", temp);
-    // }
     //todo: group into macros, functions, and comments.
     //todo: format each kind of group independently.
     //todo: arrange the groups and join them together.
