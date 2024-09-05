@@ -1,6 +1,5 @@
-use std::result;
-
 use crate::utils;
+use std::result;
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -63,6 +62,7 @@ pub enum LineToken {
     While(String, String),
     Comment(String),
     FunctionCall(String),
+    Operation(String),
     Return(String),
     Na(String),
 }
@@ -353,7 +353,8 @@ fn tokenize_c_fn_line(line: &String) -> LineToken {
             else {
                 dbg!("Something weird happened during parsing and I shouldn't be here!");
             }
-        }
+        },
+        //todo: implement for FunctionCall(String), Comment(String), and Operation(String)
         _ => {
             result = LineToken::Na(line.clone());
         },
@@ -361,6 +362,7 @@ fn tokenize_c_fn_line(line: &String) -> LineToken {
     return result;
 }
 
+/// Extracts the trailing token from a line containing parenthesis.
 fn extract_end_token(line: &String) -> String {
     let end_token: String;
     if line.trim_end().ends_with("{") {
@@ -370,7 +372,7 @@ fn extract_end_token(line: &String) -> String {
         end_token = "".to_string();
     }
     else {
-        let idx = line.rfind(")").unwrap();
+        let idx = line.rfind(")").unwrap_or(line.len()-1);
         end_token = line[idx+1..].trim_start().to_string();
     }
     return end_token;

@@ -130,8 +130,15 @@ pub fn format_cpp_file(path: String) {
     };
 }
 
+pub fn format_py_file(path: String) {
+    let command = utils::sanitize(format!("black {}", path));
+    let res = Command::new("sh").arg("-c").arg(command).output().unwrap();
+    let res = String::from_utf8(res.stderr).unwrap_or_default();
+    println!("{}", res);
+}
+
 pub fn format_go_file(path: String) {
-    let command = format!("gofmt -w {}", path);
+    let command = utils::sanitize(format!("gofmt -w {}", path));
     let res = Command::new("sh").arg("-c").arg(command).output().unwrap();
     let err = String::from_utf8(res.stderr).unwrap_or_default();
     if err.as_str() != "" {

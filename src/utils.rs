@@ -48,6 +48,13 @@ impl StringUtils for str {
     }
 }
 
+pub fn sanitize(input: String) -> String {
+    let allowed_chars = Regex::new(r"[a-zA-Z0-9.\-_\+\=/\s]+").unwrap();
+    let captures = allowed_chars.captures(&input).unwrap();
+    let result = captures.get(0).unwrap().as_str().to_string();
+    return result;
+}
+
 pub fn check_is_function_hoist(group: &String) -> bool {
     let re = Regex::new(r"^\s*\w+.*\)\s*;\s*(\n\s*\w+.*\)\s*;\s*)*$").unwrap();
     return re.is_match(&group);
@@ -266,7 +273,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 
 pub fn get_file_extensions_list() -> Vec<String> {
     let exts = {
-        vec![".cpp", ".c", ".go", ".rs", ".swift", ".txt"]
+        vec![".cpp", ".c", ".go", ".rs", ".swift", ".txt", ".py"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()

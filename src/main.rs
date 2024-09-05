@@ -48,6 +48,9 @@ fn main() {
         ".rs" => {
             format::format_rs_file(filepath);
         },
+        ".py" => {
+            format::format_py_file(filepath);
+        },
         _ => {
             if utils::check_valid_file_ext(&filepath) {
                 format::basic_format(filepath);
