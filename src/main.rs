@@ -4,6 +4,8 @@
 #![allow(unused_mut)]
 
 use std::io::stdin;
+use tree_sitter::{Parser, Language};
+extern "C" { pub fn tree_sitter_c() -> Language; }
 
 mod parser;
 mod format;
@@ -11,9 +13,7 @@ mod group;
 mod utils;
 mod options;
 mod c_format;
-mod c_format2;
-mod cpp_format;
-mod rs_format;
+mod ast;
 mod txt_format;
 
 fn main() {
@@ -40,26 +40,21 @@ fn main() {
             format::format_go_file(filepath);
         },
         ".cpp" => {
-            format::format_cpp_file(filepath); 
+            // format::format_cpp_file(filepath); 
         },
         ".c" => {
-            format::format_c_file(filepath);
+            let test = c_format::format_c_file(filepath);
         },
         ".rs" => {
-            format::format_rs_file(filepath);
+            // format::format_rs_file(filepath);
         },
         ".py" => {
             format::format_py_file(filepath);
         },
         _ => {
-            if utils::check_valid_file_ext(&filepath) {
-                format::basic_format(filepath);
-            }
-            else {
-                println!("Unknown file type");
-                println!("Valid file types are:");
-                utils::display_file_extensions();
-            }
+            println!("Unknown file type");
+            println!("Valid file types are:");
+            utils::display_file_extensions();
         },
     };
 }
