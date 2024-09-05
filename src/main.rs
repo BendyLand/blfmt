@@ -41,12 +41,15 @@ fn main() {
         },
         ".cpp" => {
             // format::format_cpp_file(filepath); 
+            println!("C++ files currently unsupported.");
         },
         ".c" => {
             let test = c_format::format_c_file(filepath);
+            println!("C files currently unsupported.");
         },
         ".rs" => {
             // format::format_rs_file(filepath);
+            println!("Rust files currently unsupported.");
         },
         ".py" => {
             format::format_py_file(filepath);
