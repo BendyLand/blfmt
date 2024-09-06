@@ -40,7 +40,7 @@ fn main() {
             format::format_go_file(filepath);
         },
         ".cpp" => {
-            // format::format_cpp_file(filepath); 
+            // format::format_cpp_file(filepath);
             println!("C++ files currently unsupported.");
         },
         ".c" => {
