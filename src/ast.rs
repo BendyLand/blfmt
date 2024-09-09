@@ -7,7 +7,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
         match child.grammar_name() {
             "preproc_include" => {
                 let line = handle_preproc_include(child, src.clone());
-                println!("Includes: {}\n", line);
+                println!("Finished includes: {}\n", line);
             },
             "preproc_ifdef" => handle_preproc_ifdef(child, src.clone()),
             "preproc_if" => handle_preproc_if(child, src.clone()),
@@ -19,7 +19,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
             "struct_specifier" => handle_struct_specifier(child, src.clone()),
             "declaration" => {
                 let line = handle_declaration(child, src.clone());
-                println!("Declaration: {}\n", line);
+                println!("Finished declaration: {}\n", line);
             },
             ";" => println!("Add a semicolon..."),
             "function_definition" => handle_function_definition(child, src.clone()),
@@ -28,17 +28,18 @@ pub fn traverse_ast(ast: Tree, src: String) {
             "if_statement" => handle_if_statement(child, src.clone()),
             "switch_statement" => handle_switch_statement(child, src.clone()),
             "continue_statement" => handle_continue_statement(child, src.clone()),
-            "break_statement" => handle_break_statement(child, src.clone()),
+            "break_statemet" => handle_break_statement(child, src.clone()),
+            "using_declaration" => handle_using_declaration(child, src.clone()),
             "return_statement" => {
                 let return_statement = handle_return_statement(child, src.clone());
-                println!("Return: {}\n", return_statement);
+                println!("Finished return: {}\n", return_statement);
             },
             "comment" => {
                 let comment = handle_comment(child, src.clone());
-                println!("Comment:\n{}", comment);
+                println!("Finished comment:\n{}", comment);
             },
             "ERROR" => handle_error(child, src.clone()),
-            _ => println!("Unknown grammar name 1."),
+            _ => println!("Unknown grammar name 1: {}", &child.grammar_name()),
         }
     }
 }
@@ -49,7 +50,7 @@ fn handle_compound_statement(root: Node, src: String) {
         match node.grammar_name() {
             "preproc_include" => {
                 let line = handle_preproc_include(node, src.clone());
-                println!("Includes: {}\n", line);
+                println!("Finished includes: {}\n", line);
             },
             "preproc_ifdef" => handle_preproc_ifdef(node, src.clone()),
             "preproc_if" => handle_preproc_if(node, src.clone()),
@@ -61,7 +62,7 @@ fn handle_compound_statement(root: Node, src: String) {
             "struct_specifier" => handle_struct_specifier(node, src.clone()),
             "declaration" => {
                 let line = handle_declaration(node, src.clone());
-                println!("Declaration: {}\n", line);
+                println!("Finished declaration: {}\n", line);
             },
             ";" => println!("Add a semicolon..."),
             "function_definition" => handle_function_definition(node, src.clone()),
@@ -71,6 +72,7 @@ fn handle_compound_statement(root: Node, src: String) {
             "switch_statement" => handle_switch_statement(node, src.clone()),
             "case_statement" => handle_case_statement(node, src.clone()),
             "for_statement" => handle_for_statement(node, src.clone()),
+            "for_range_loop" => handle_for_range_loop(node, src.clone()),
             "while_statement" => handle_while_statement(node, src.clone()),
             "do_statement" => handle_do_statement(node, src.clone()),
             "labeled_statement" => handle_labeled_statement(node, src.clone()),
@@ -79,11 +81,11 @@ fn handle_compound_statement(root: Node, src: String) {
             "goto_statement" => handle_goto_statement(node, src.clone()),
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
-                println!("Return: {}\n", return_statement);
+                println!("Finished return: {}\n", return_statement);
             },
             "comment" => {
                 let comment = handle_comment(node, src.clone());
-                println!("Comment:\n{}", comment);
+                println!("Finished comment:\n{}", comment);
             },
             "{" => println!("Handle open brace..."),
             "}" => println!("Handle closing brace..."),
@@ -173,6 +175,17 @@ fn handle_type_definition(root: Node, src: String) {
 }
 
 fn handle_identifier(root: Node, src: String) {
+    println!("{}", root.grammar_name());
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    println!("");
+}
+
+fn handle_using_declaration(root: Node, src: String) {
     println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
@@ -276,6 +289,17 @@ fn handle_case_statement(root: Node, src: String) {
 }
 
 fn handle_for_statement(root: Node, src: String) {
+    println!("{}", root.grammar_name());
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    println!("");
+}
+
+fn handle_for_range_loop(root: Node, src: String) {
     println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {

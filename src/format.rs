@@ -1,8 +1,22 @@
-use crate::{group, options, utils, utils::StringUtils, c_format, txt_format};
+use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, txt_format, ast};
 use regex::Regex;
 use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command;
+
+pub fn format_c_file(path: String) {
+    let ast = c_format::parse_c_file(path.clone());
+    let contents = std::fs::read_to_string(path).unwrap();
+    // print_tree(ast.root_node(), &contents, 0);
+    ast::traverse_ast(ast, contents);
+}
+
+pub fn format_cpp_file(path: String) {
+    let ast = cpp_format::parse_cpp_file(path.clone());
+    let contents = std::fs::read_to_string(path).unwrap();
+    // print_tree(ast.root_node(), &contents, 0);
+    ast::traverse_ast(ast, contents);
+}
 
 pub fn format_py_file(path: String) {
     let command = utils::sanitize(format!("black {}", path));
