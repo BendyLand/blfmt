@@ -46,5 +46,8 @@
         "unordered_map": "cpp",
         "variant": "cpp",
         "vector": "cpp"
+    },
+    "files.watcherExclude": {
+        "**/target": true
     }
 }

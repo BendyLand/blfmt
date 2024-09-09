@@ -1,5 +1,5 @@
 use tree_sitter::{Tree, Node};
-use crate::c_format;
+use crate::{c_format, utils::{self, add_leading_whitespace}};
 
 pub fn traverse_ast(ast: Tree, src: String) {
     let root = ast.root_node();
@@ -21,7 +21,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
                 let line = handle_declaration(child, src.clone());
                 println!("Finished declaration: {}\n", line);
             },
-            ";" => println!("Add a semicolon..."),
+            ";" => println!("Add a semicolon here.\n"),
             "function_definition" => handle_function_definition(child, src.clone()),
             "expression_statement" => handle_expression_statement(child, src.clone()),
             "compound_statement" => handle_compound_statement(child, src.clone()),
@@ -36,17 +36,16 @@ pub fn traverse_ast(ast: Tree, src: String) {
             },
             "comment" => {
                 let comment = handle_comment(child, src.clone());
-                println!("Finished comment:\n{}", comment);
+                println!("Finished comment:\n{}\n", comment);
             },
             "ERROR" => handle_error(child, src.clone()),
-            _ => println!("Unknown grammar name 1: {}", &child.grammar_name()),
+            _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
     }
 }
 
 fn handle_compound_statement(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
-        dbg!(&node.grammar_name());
         match node.grammar_name() {
             "preproc_include" => {
                 let line = handle_preproc_include(node, src.clone());
@@ -64,7 +63,7 @@ fn handle_compound_statement(root: Node, src: String) {
                 let line = handle_declaration(node, src.clone());
                 println!("Finished declaration: {}\n", line);
             },
-            ";" => println!("Add a semicolon..."),
+            ";" => println!("Add a semicolon here.\n"),
             "function_definition" => handle_function_definition(node, src.clone()),
             "expression_statement" => handle_expression_statement(node, src.clone()),
             "compound_statement" => handle_compound_statement(node, src.clone()),
@@ -78,6 +77,7 @@ fn handle_compound_statement(root: Node, src: String) {
             "labeled_statement" => handle_labeled_statement(node, src.clone()),
             "continue_statement" => handle_continue_statement(node, src.clone()),
             "break_statement" => handle_break_statement(node, src.clone()),
+            "parameter_list" => handle_parameter_list(node, src.clone()),
             "goto_statement" => handle_goto_statement(node, src.clone()),
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
@@ -87,13 +87,12 @@ fn handle_compound_statement(root: Node, src: String) {
                 let comment = handle_comment(node, src.clone());
                 println!("Finished comment:\n{}", comment);
             },
-            "{" => println!("Handle open brace..."),
-            "}" => println!("Handle closing brace..."),
+            "{" => println!("Add an open brace here.\n"),
+            "}" => println!("Add a closing brace here.\n"),
             "ERROR" => handle_error(node, src.clone()),
-            _ => println!("Unknown grammar name 2."),
+            _ => println!("Unknown grammar name 2.\n"),
         }
     }
-    println!("");
 }
 
 fn handle_preproc_include(root: Node, src: String) -> String {
@@ -109,102 +108,93 @@ fn handle_preproc_include(root: Node, src: String) -> String {
 }
 
 fn handle_preproc_ifdef(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
+}
+
+fn handle_parameter_list(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
 }
 
 fn handle_preproc_if(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_preproc_def(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_preproc_function_def(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_preproc_call(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_type_definition(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_identifier(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_using_declaration(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_struct_specifier(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_declaration(root: Node, src: String) -> String {
@@ -234,135 +224,189 @@ fn handle_declaration(root: Node, src: String) -> String {
 }
 
 fn handle_function_definition(root: Node, src: String) {
-    println!("{}", root.grammar_name());
+    for node in root.children(&mut root.walk()) {
+        // All branches accounted for.
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            "primitive_type" => handle_primitive_type(node.clone(), src.clone()),
+            "function_declarator" => handle_function_declarator(node.clone(), src.clone()),
+            "pointer_declarator" => handle_pointer_declarator(node.clone(), src.clone()),
+            "identifier" => {
+                handle_identifier(node.clone(), src.clone());
+            },
+            _ => { dbg!("You shouldn't be here.\n"); },
+        }
+    }
+}
+
+fn handle_primitive_type(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
+}
+
+fn handle_function_declarator(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+}
+
+fn handle_pointer_declarator(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
 }
 
 fn handle_expression_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
+    for node in root.children(&mut root.walk()) {
+        // All branches accounted for.
+        match node.grammar_name() {
+            "assignment_expression" => handle_assignment_expression(root.clone(), src.clone()), 
+            "update_expression" => handle_update_expression(root.clone(), src.clone()),
+            "call_expression" => handle_call_expression(root.clone(), src.clone()),
+            ";" => println!("Add a semicolon...\n"),
+            _ => { dbg!("You shouldn't be here.\n"); },
+        }
+    }
+}
+
+fn handle_assignment_expression(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
+}
+
+fn handle_update_expression(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+}
+
+fn handle_call_expression(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
 }
 
 fn handle_if_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_switch_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_case_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_for_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_for_range_loop(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_labeled_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_goto_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_continue_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_break_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_while_statement(root: Node, src: String) {
-    println!("{}", root.grammar_name());
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "while" => handle_while(node.clone(), src.clone()),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
+}
+
+fn handle_while(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
+            "while" => {
+                println!("Handling while keyword.\n");
+            },
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
 }
 
 fn handle_do_statement(root: Node, src: String) {
@@ -370,10 +414,9 @@ fn handle_do_statement(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }
 
 fn handle_return_statement(root: Node, src: String) -> String {
@@ -393,8 +436,19 @@ fn handle_return_statement(root: Node, src: String) -> String {
 }
 
 fn handle_comment(root: Node, src: String) -> String {
-    let result = root.utf8_text(src.as_bytes()).unwrap();
-    return result.to_string();
+    let mut result = root.utf8_text(src.as_bytes()).unwrap().to_string();
+    let mut lines: Vec<&str> = result.split("\n").collect();
+    if lines.len() > 1 {
+        if lines[1].starts_with(" ") && !lines[0].starts_with(" ") {
+            let num_whitespace = utils::count_leading_whitespace(lines[1].to_string(), ' ');
+            dbg!(&num_whitespace);
+            let temp = utils::add_leading_whitespace(lines[0].to_string(), num_whitespace);
+            dbg!(&temp);
+            lines[0] = temp.as_str();
+            result = lines.join("\n");
+        }
+    }
+    return result;
 }
 
 fn handle_error(root: Node, src: String) {
@@ -402,8 +456,7 @@ fn handle_error(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => handle_compound_statement(node.clone(), src.clone()),
-            _ => println!("{}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    println!("");
 }

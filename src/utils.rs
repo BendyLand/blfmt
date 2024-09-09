@@ -48,6 +48,23 @@ impl StringUtils for str {
     }
 }
 
+pub fn add_leading_whitespace(src: String, amount: usize) -> String {
+    let mut prefix: String = "".to_string();
+    for _ in 0..amount { prefix += " " };
+    return format!("{}{}", prefix, src);
+}
+
+pub fn count_leading_whitespace(src: String, target: char) -> usize {
+    let mut count = 0;
+    for c in src.chars() {
+        if c != target {
+            break;
+        }
+        count += 1;
+    }
+    return count;
+}
+
 pub fn sanitize(input: String) -> String {
     let allowed_chars = Regex::new(r"[a-zA-Z0-9.\-_\+\=/\s]+").unwrap();
     let captures = allowed_chars.captures(&input).unwrap();
