@@ -13,6 +13,7 @@ mod group;
 mod utils;
 mod options;
 mod c_format;
+mod cpp_format;
 mod ast;
 mod txt_format;
 
@@ -40,12 +41,12 @@ fn main() {
             format::format_go_file(filepath);
         },
         ".cpp" => {
-            // format::format_cpp_file(filepath);
-            println!("C++ files currently unsupported.");
+            let test = format::format_cpp_file(filepath);
+            // println!("C++ files currently unsupported.");
         },
         ".c" => {
-            let test = c_format::format_c_file(filepath);
-            println!("C files currently unsupported.");
+            let test = format::format_c_file(filepath);
+            // println!("C files currently unsupported.");
         },
         ".rs" => {
             // format::format_rs_file(filepath);
