@@ -441,9 +441,7 @@ fn handle_comment(root: Node, src: String) -> String {
     if lines.len() > 1 {
         if lines[1].starts_with(" ") && !lines[0].starts_with(" ") {
             let num_whitespace = utils::count_leading_whitespace(lines[1].to_string(), ' ');
-            dbg!(&num_whitespace);
             let temp = utils::add_leading_whitespace(lines[0].to_string(), num_whitespace);
-            dbg!(&temp);
             lines[0] = temp.as_str();
             result = lines.join("\n");
         }

@@ -13,4 +13,3 @@ word="$2"
 # Use grep to filter lines containing the word, then sort and remove duplicates
 grep "$word" "$file" | sort | cut -d':' -f1 | uniq > "temp_output.txt"
 mv "temp_output.txt" "output.txt"
-
