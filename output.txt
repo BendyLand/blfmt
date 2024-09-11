@@ -12,427 +12,570 @@ Finished declaration: void strAppend(string* original, const char* suffix);
 
 Finished declaration: string** strSplit(string* original, const char delim);
 
-function_definition
-primitive_type: size_t
-function_declarator: strArrLen(string** strArr)
-Handle open brace...
+identifier: strArrLen
+
+parameter_list: (string** strArr)
+
+Add an open brace here.
+
 Finished declaration: size_t result = 0;
 
-while_statement
-while: while
 parenthesized_expression: (strArr[result] != NULL)
+
 expression_statement: result++;
 
 Finished return: return result;
 
-Handle closing brace...
+Add a closing brace here.
 
+*: *
 
-function_definition
-identifier: string
-pointer_declarator: * strArrJoin(string** arr, const char* delim)
-Handle open brace...
+function_declarator: strArrJoin(string** arr, const char* delim)
+
+Add an open brace here.
+
 Finished declaration: size_t len = 0;
 
-while_statement
-while: while
 parenthesized_expression: (arr[len] != NULL)
+
 expression_statement: len++;
 
 Finished declaration: string* result = str("");
 
-for_statement
 for: for
+
 (: (
+
 declaration: size_t i = 0;
+
 binary_expression: i < len
+
 ;: ;
+
 update_expression: i ++
+
 ): )
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: strAppend(result, arr[i]->data)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: strAppend(result, delim)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
 Finished return: return result;
 
-Handle closing brace...
-
+Add a closing brace here.
 
 Finished comment:
 /*
 This is a test
 of having a block comment
 */
-function_definition
-primitive_type: void
-function_declarator: strAppend(string* original, const char* suffix)
-Handle open brace...
+
+identifier: strAppend
+
+parameter_list: (string* original, const char* suffix)
+
+Add an open brace here.
+
 Finished declaration: size_t newLen = original->length + strlen(suffix) + 1;
 
 Finished declaration: char* newData = (char*)realloc(original->data, newLen);
 
-if_statement
 if: if
+
 parenthesized_expression: (!newData)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: perror("Failed to reallocate memory for new string.")
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: exit(EXIT_FAILURE)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-expression_statement
 call_expression: strcat(newData, suffix)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+assignment_expression: original->data = newData
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+assignment_expression: original->length = newLen
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
 Finished comment:
 /* This is another,
 slightly harder test */
-function_definition
-identifier: string
-pointer_declarator: ** strSplit(string* original, const char delim)
-Handle open brace...
+
+*: *
+
+pointer_declarator: * strSplit(string* original, const char delim)
+
+Add an open brace here.
+
 Finished declaration: string** result;
 
 Finished declaration: size_t len = 0;
 
-for_statement
 for: for
+
 (: (
+
 declaration: size_t i = 0;
+
 binary_expression: i < original->length
+
 ;: ;
+
 update_expression: i++
+
 ): )
-Handle open brace...
-if_statement
+
+Add an open brace here.
+
 if: if
+
 parenthesized_expression: (original->data[i] == delim)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
+update_expression: len++
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-Handle closing brace...
+Add a closing brace here.
 
+assignment_expression: result = (string**)malloc(sizeof(string*) * (len + 2))
 
-expression_statement
 ;: ;
+
+Add a semicolon...
 
 Finished declaration: size_t n = 0;
 
 Finished declaration: char* c = (char*)malloc(2);
 
-expression_statement
+assignment_expression: c[1] = '\0'
+
 ;: ;
+
+Add a semicolon...
 
 Finished declaration: string* temp = str("");
 
 Finished comment:
-/*
+    /*
     And this is a block comment inside a function!
     */
-for_statement
 for: for
+
 (: (
+
 declaration: size_t i = 0;
+
 binary_expression: i < original->length
+
 ;: ;
+
 update_expression: i++
+
 ): )
-Handle open brace...
-if_statement
+
+Add an open brace here.
+
 if: if
+
 parenthesized_expression: (original->data[i] == delim)
-Handle open brace...
+
+Add an open brace here.
+
 Finished declaration: string* template = strCopy(temp);
 
-expression_statement
+assignment_expression: result[n] = template
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: strClear(temp)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+update_expression: n++
+
 ;: ;
 
-continue_statement
+Add a semicolon...
+
 continue: continue
+
 ;: ;
 
-Handle closing brace...
+Add a closing brace here.
 
+assignment_expression: c[0] = original->data[i]
 
-expression_statement
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: strAppend(temp, c)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-if_statement
 if: if
+
 parenthesized_expression: (strcmp(temp->data, "") != 0)
-Handle open brace...
+
+Add an open brace here.
+
 Finished declaration: string* template = strCopy(temp);
 
-expression_statement
+assignment_expression: result[n] = template
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+update_expression: n++
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-expression_statement
+assignment_expression: result[n] = NULL
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: free(c)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: strFree(temp)
+
 ;: ;
+
+Add a semicolon...
 
 Finished return: return result;
 
-Handle closing brace...
+Add a closing brace here.
 
+identifier: strArrFree
 
-function_definition
-primitive_type: void
-function_declarator: strArrFree(string** original)
-Handle open brace...
+parameter_list: (string** original)
+
+Add an open brace here.
+
 Finished declaration: const int test = 5;
 
-if_statement
 if: if
+
 parenthesized_expression: (original)
-Handle open brace...
+
+Add an open brace here.
+
 Finished declaration: size_t i = 0;
 
-while_statement
-while: while
 parenthesized_expression: (original[i] != NULL)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: strFree(original[i])
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+update_expression: i++
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-expression_statement
 call_expression: free(original)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-Handle closing brace...
+Add a closing brace here.
 
+*: *
 
-function_definition
-identifier: string
-pointer_declarator: * strCopy(string* original)
-Handle open brace...
+function_declarator: strCopy(string* original)
+
+Add an open brace here.
+
 Finished return: return str(original->data);
 
-Handle closing brace...
+Add a closing brace here.
 
+*: *
 
-function_definition
-identifier: string
-pointer_declarator: * substr(string* original, size_t start, size_t end)
-Handle open brace...
+function_declarator: substr(string* original, size_t start, size_t end)
+
+Add an open brace here.
+
 Finished declaration: size_t len = end - start;
 
 Finished declaration: char* temp = (char*)malloc(len+1);
 
-expression_statement
 call_expression: strncpy(temp, original->data+start, len)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+assignment_expression: temp[len] = '\0'
+
 ;: ;
+
+Add a semicolon...
 
 Finished declaration: string* result;
 
-expression_statement
+assignment_expression: result = str(temp)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: free(temp)
+
 ;: ;
+
+Add a semicolon...
 
 Finished return: return result;
 
-Handle closing brace...
+Add a closing brace here.
 
+identifier: strIsEmpty
 
-function_definition
-primitive_type: bool
-function_declarator: strIsEmpty(string* str)
-Handle open brace...
-if_statement
+parameter_list: (string* str)
+
+Add an open brace here.
+
 if: if
+
 parenthesized_expression: (str->length == 0 || strlen(str->data) < 1)
-Handle open brace...
+
+Add an open brace here.
+
 Finished return: return true;
 
-Handle closing brace...
+Add a closing brace here.
 
 else_clause: else
     {
         return false;
     }
 
-Handle closing brace...
+Add a closing brace here.
 
+*: *
 
-function_definition
-identifier: string
-pointer_declarator: * str(const char* text)
-Handle open brace...
+function_declarator: str(const char* text)
+
+Add an open brace here.
+
 Finished declaration: string* result = (string*)malloc(sizeof(string));
 
-if_statement
 if: if
+
 parenthesized_expression: (!result)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: perror("Failed to allocate memory for string\n")
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: exit(EXIT_FAILURE)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-expression_statement
+assignment_expression: result->length = strlen(text)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+assignment_expression: result->data = (char*)malloc(result->length + 1)
+
 ;: ;
 
-if_statement
+Add a semicolon...
+
 if: if
+
 parenthesized_expression: (!result->data)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: perror("Failed to allocate memory for string data\n")
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: free(result)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: exit(EXIT_FAILURE)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-expression_statement
 call_expression: strcpy(result->data, text)
+
 ;: ;
+
+Add a semicolon...
 
 Finished return: return result;
 
-Handle closing brace...
+Add a closing brace here.
 
+identifier: strFree
 
-function_definition
-primitive_type: void
-function_declarator: strFree(string* str)
-Handle open brace...
-if_statement
+parameter_list: (string* str)
+
+Add an open brace here.
+
 if: if
+
 parenthesized_expression: (str)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: free(str->data)
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: free(str)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
+
+Add a closing brace here.
 
 else_clause: else {
         // nothing happens
     }
 
-Handle closing brace...
+Add a closing brace here.
 
+identifier: strClear
 
-function_definition
-primitive_type: void
-function_declarator: strClear(string* str)
-Handle open brace...
+parameter_list: (string* str)
+
+Add an open brace here.
+
 Finished declaration: char* newData = (char*)realloc(str->data, 1);
 
-if_statement
 if: if
+
 parenthesized_expression: (!newData)
-Handle open brace...
-expression_statement
+
+Add an open brace here.
+
 call_expression: perror("Failed to reallocate memory for cleared string.")
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
 call_expression: exit(EXIT_FAILURE)
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
-expression_statement
+assignment_expression: newData[0] = '\0'
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+assignment_expression: str->data = newData
+
 ;: ;
 
-expression_statement
+Add a semicolon...
+
+assignment_expression: str->length = 0
+
 ;: ;
 
-Handle closing brace...
+Add a semicolon...
 
+Add a closing brace here.
 
