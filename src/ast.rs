@@ -85,7 +85,7 @@ fn handle_compound_statement(root: Node, src: String) {
             },
             "comment" => {
                 let comment = handle_comment(node, src.clone());
-                println!("Finished comment:\n{}", comment);
+                println!("Finished comment:\n{}\n", comment);
             },
             "{" => (),
             "}" => (),
@@ -198,7 +198,7 @@ fn handle_declaration(root: Node, src: String) -> String {
                 let line = node.utf8_text(src.as_bytes()).unwrap_or("");
                 if line != ";" {
                     vec.push(line.to_string());
-                    if line.starts_with("*") {
+                    if line.starts_with("*") && line.trim_start_matches("*").starts_with(" ") {
                         remove_ptr_space = true;
                     }
                 }
@@ -207,8 +207,8 @@ fn handle_declaration(root: Node, src: String) -> String {
     }
     result = (vec.join(" ") + ";").to_string();
     if remove_ptr_space {
-        let idx = result.chars().position(|x| x == ' ').unwrap();
-        result.remove(idx);
+        let idx = result.chars().position(|x| x == '*').unwrap();
+        result.remove(idx-1);
     }
     if result.contains(",") { result = remove_whitespace_before_commas(result); }
     return result;
