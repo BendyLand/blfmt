@@ -10,8 +10,8 @@ void strAppend(string* original, const char* suffix);
 
 string** strSplit(string* original, const char delim);
 
-
 size_t strArrLen(string** strArr) {
+    int a, b;
     size_t result = 0;
 
     while (strArr[result] != NULL) result++;
@@ -116,7 +116,7 @@ string* substr(string* original, size_t start, size_t end)
     size_t len = end - start;
     char* temp = (char*)malloc(len+1);
     strncpy(temp, original->data+start, len);
-    temp[len] = '\0';
+    temp[len]  = '\0';
     string* result;
     result = str(temp);
     free(temp);

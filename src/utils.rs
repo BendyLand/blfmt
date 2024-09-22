@@ -48,6 +48,17 @@ impl StringUtils for str {
     }
 }
 
+pub fn remove_whitespace_before_commas(line: String) -> String {
+    let mut result = "".to_string();
+    for (i, c) in line.chars().enumerate() {
+        if i < line.len()-1 {
+            if c == ' ' && line.chars().nth(i+1) == Some(',') { continue; }
+        }
+        result += c.to_string().as_str();
+    }
+    return result;
+}
+
 pub fn add_leading_whitespace(src: String, amount: usize) -> String {
     let mut prefix: String = "".to_string();
     for _ in 0..amount { prefix += " " };
