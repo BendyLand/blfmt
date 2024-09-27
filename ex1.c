@@ -42,7 +42,7 @@ void strAppend(string* original, const char* suffix)
 {
     size_t newLen = original->length + strlen(suffix) + 1;
     char* newData = (char*)realloc(original->data, newLen);
-    if (!newData) {
+    if ( !newData) {
         perror("Failed to reallocate memory for new string.");
         exit(EXIT_FAILURE);
     }
@@ -72,7 +72,8 @@ string** strSplit(string* original, const char delim)
     And this is a block comment inside a function!
     */
     for (size_t i = 0; i < original->length; i++) {
-        if (original->data[i] == delim) {
+        if (original->data[i] == delim) 
+        {
             string* template = strCopy(temp);
             result[n] = template;
             strClear(temp);
@@ -82,10 +83,10 @@ string** strSplit(string* original, const char delim)
         c[0] = original->data[i];
         strAppend(temp, c);
     }
-    if (strcmp(temp->data, "") != 0) {
+    if (strcmp(temp->data , "")  != 0 ) {
         string* template = strCopy(temp);
         result[n] = template;
-        n++;
+        n ++ ;
     }
     result[n] = NULL;
     free(c);
@@ -125,7 +126,7 @@ string* substr(string* original, size_t start, size_t end)
 
 bool strIsEmpty(string* str)
 {
-    if (str->length == 0 || strlen(str->data) < 1) {
+    if ( str->length == 0 ||strlen( str->data)  < 1 ) {
         return true;
     }
     else
