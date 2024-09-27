@@ -93,7 +93,9 @@ fn handle_compound_statement(root: Node, src: String) -> String {
             "continue_statement" => handle_continue_statement(node, src.clone()),
             "break_statement" => handle_break_statement(node, src.clone()),
             "parameter_list" => handle_parameter_list(node, src.clone()),
-            "goto_statement" => handle_goto_statement(node, src.clone()),
+            "goto_statement" => {
+                result = handle_goto_statement(node, src.clone());
+            },
             "init_declarator" => handle_init_declarator(node, src.clone()),
             "primitive_type" => handle_primitive_type(node, src.clone()),
             "while" => handle_while(node, src.clone()),
@@ -237,7 +239,11 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
                 result += "\t";
                 result += (return_statement + "\n").as_str();
             },
-            "goto_statement" => handle_goto_statement(node, src.clone()),
+            "goto_statement" => {
+                let goto_statement = handle_goto_statement(node, src.clone());
+                result += "\t";
+                result += (goto_statement + "\n").as_str();
+            },
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
                 result += "\t";
@@ -399,12 +405,20 @@ fn handle_labeled_statement(root: Node, src: String) {
     }
 }
 
-fn handle_goto_statement(root: Node, src: String) {
+fn handle_goto_statement(root: Node, src: String) -> String {
+    let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            ";" => {
+                result = result.trim_end().to_string();
+                result += ";";
+            },
+            _ => {
+                result += (node.utf8_text(src.as_bytes()).unwrap_or("UNABLE TO UNWRAP goto_statement").to_string() + " ").as_str();
+            },
         }
     }
+    return result;
 }
 
 fn handle_continue_statement(root: Node, src: String) {
