@@ -7,6 +7,7 @@ use std::io::stdin;
 use tree_sitter::{Parser, Language};
 extern "C" { pub fn tree_sitter_c() -> Language; }
 
+mod restore;
 mod parser;
 mod format;
 mod group;
