@@ -66,6 +66,16 @@ impl StringUtils for str {
     }
 }
 
+pub fn add_all_leading_tabs(text: String) -> String {
+    let lines: Vec<&str> = text.split("\n").collect();
+    let mut temp_vec = Vec::<String>::new();
+    for line in lines {
+        let temp_str = "\t".to_string() + line;
+        temp_vec.push(temp_str);
+    }
+    return temp_vec.join("\n");
+}
+
 pub fn remove_all_spaces(line: String) -> String {
     let chars: Vec<char> = line.chars().filter(|c| *c != ' ').collect();
     let mut result = String::new();
@@ -201,13 +211,8 @@ pub fn extract_c_function_header(group: &String) -> String {
 }
 
 pub fn remove_empty_lines(lines: Vec<&str>) -> String {
-    let mut result = String::new();
-    for line in lines {
-        if !line.is_empty() {
-            result += (line.to_string() + "\n").as_str();
-        }
-    }
-    return result;
+    let result: Vec<&str> = lines.into_iter().filter(|line| !line.is_empty()).collect();
+    return result.join("\n");
 }
 
 pub fn write_file(path: String, contents: &[u8]) -> Result<(), Error> {

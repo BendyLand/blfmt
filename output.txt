@@ -1,581 +1,583 @@
-Finished includes: #include <string.h>
-
-Finished includes: #include "example_header.h" // stdio.h, stdlib.h, string.h, stdbool.h
-
-Finished includes: #include <stdio.h>
-
-Finished includes: #include <stdlib.h>
-
-Finished includes: #include <stdbool.h>
-
-Finished declaration: void strAppend(string* original, const char* suffix);
-
-Finished declaration: string** strSplit(string* original, const char delim);
-
-identifier: strArrLen
-
-parameter_list: (string** strArr)
-
-Add an open brace here.
-
-Finished declaration: size_t result = 0;
-
-parenthesized_expression: (strArr[result] != NULL)
-
-expression_statement: result++;
-
-Finished return: return result;
-
-Add a closing brace here.
-
-*: *
-
-function_declarator: strArrJoin(string** arr, const char* delim)
-
-Add an open brace here.
-
-Finished declaration: size_t len = 0;
-
-parenthesized_expression: (arr[len] != NULL)
-
-expression_statement: len++;
-
-Finished declaration: string* result = str("");
-
-for: for
-
-(: (
-
-declaration: size_t i = 0;
-
-binary_expression: i < len
-
-;: ;
-
-update_expression: i ++
-
-): )
-
-Add an open brace here.
-
-call_expression: strAppend(result, arr[i]->data)
-
-;: ;
-
-Add a semicolon...
-
-call_expression: strAppend(result, delim)
-
-;: ;
-
-Add a semicolon...
-
-Add a closing brace here.
-
-Finished return: return result;
-
-Add a closing brace here.
+Finished comment:
+// /* bone.c -- The Bone Lisp interpreter.
 
 Finished comment:
-/*
-This is a test
-of having a block comment
-*/
-
-identifier: strAppend
-
-parameter_list: (string* original, const char* suffix)
-
-Add an open brace here.
-
-Finished declaration: size_t newLen = original->length + strlen(suffix) + 1;
-
-Finished declaration: char* newData = (char*)realloc(original->data, newLen);
-
-if: if
-
-parenthesized_expression: (!newData)
-
-Add an open brace here.
-
-call_expression: perror("Failed to reallocate memory for new string.")
-
-;: ;
-
-Add a semicolon...
-
-call_expression: exit(EXIT_FAILURE)
-
-;: ;
-
-Add a semicolon...
-
-Add a closing brace here.
-
-call_expression: strcat(newData, suffix)
-
-;: ;
-
-Add a semicolon...
-
-assignment_expression: original->data = newData
-
-;: ;
-
-Add a semicolon...
-
-assignment_expression: original->length = newLen
-
-;: ;
-
-Add a semicolon...
-
-Add a closing brace here.
+//  * Copyright (C) 2016 Wolfgang Jaehrling
 
 Finished comment:
-/* This is another,
-slightly harder test */
-
-*: *
-
-pointer_declarator: * strSplit(string* original, const char delim)
-
-Add an open brace here.
-
-Finished declaration: string** result;
-
-Finished declaration: size_t len = 0;
-
-for: for
-
-(: (
-
-declaration: size_t i = 0;
-
-binary_expression: i < original->length
-
-;: ;
-
-update_expression: i++
-
-): )
-
-Add an open brace here.
-
-if: if
-
-parenthesized_expression: (original->data[i] == delim)
-
-Add an open brace here.
-
-update_expression: len++
-
-;: ;
-
-Add a semicolon...
-
-Add a closing brace here.
-
-Add a closing brace here.
-
-assignment_expression: result = (string**)malloc(sizeof(string*) * (len + 2))
-
-;: ;
-
-Add a semicolon...
-
-Finished declaration: size_t n = 0;
-
-Finished declaration: char* c = (char*)malloc(2);
-
-assignment_expression: c[1] = '\0'
-
-;: ;
-
-Add a semicolon...
-
-Finished declaration: string* temp = str("");
+//  *
 
 Finished comment:
-    /*
-    And this is a block comment inside a function!
-    */
-for: for
+//  * Permission to use, copy, modify, and/or distribute this software for any
 
-(: (
+Finished comment:
+//  * purpose with or without fee is hereby granted, provided that the above
 
-declaration: size_t i = 0;
+Finished comment:
+//  * copyright notice and this permission notice appear in all copies.
 
-binary_expression: i < original->length
+Finished comment:
+//  *
 
-;: ;
+Finished comment:
+//  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 
-update_expression: i++
+Finished comment:
+//  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
 
-): )
+Finished comment:
+//  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
 
-Add an open brace here.
+Finished comment:
+//  * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 
-if: if
+Finished comment:
+//  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 
-parenthesized_expression: (original->data[i] == delim)
+Finished comment:
+//  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 
-Add an open brace here.
+Finished comment:
+//  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Finished declaration: string* template = strCopy(temp);
+Finished comment:
+//  */
 
-assignment_expression: result[n] = template
+Finished includes:
+#include <assert.h>
 
-;: ;
+Finished includes:
+#include <inttypes.h>
 
-Add a semicolon...
+Finished includes:
+#include <math.h>
 
-call_expression: strClear(temp)
+Finished includes:
+#include <stdarg.h>
 
-;: ;
+Finished includes:
+#include <stdbool.h>
 
-Add a semicolon...
+Finished includes:
+#include <stdint.h>
 
-update_expression: n++
+Finished includes:
+#include <stdio.h>
 
-;: ;
+Finished includes:
+#include <stdlib.h>
 
-Add a semicolon...
+Finished includes:
+#include <string.h>
 
-continue: continue
+Finished includes:
+#include <sys/mman.h>
 
-;: ;
+Finished includes:
+#include <unistd.h>
 
-Add a closing brace here.
+Finished includes:
+#include "bone.h"
 
-assignment_expression: c[0] = original->data[i]
+Finished declaration:
+static any last_value;
 
-;: ;
+Finished comment:
+// FIXME: thread-local
 
-Add a semicolon...
+Finished declaration:
+static bool silence_errors = false;
 
-call_expression: strAppend(temp, c)
+Finished comment:
+// FIXME: thread-local?
 
-;: ;
+Finished identifier: va_start
 
-Add a semicolon...
+Finished argument list: (args, fmt)
 
-Add a closing brace here.
+Finished identifier: vfprintf
 
-if: if
+Finished argument list: (stderr, fmt, args)
 
-parenthesized_expression: (strcmp(temp->data, "") != 0)
+Finished identifier: va_end
 
-Add an open brace here.
+Finished argument list: (args)
 
-Finished declaration: string* template = strCopy(temp);
+Finished comment:
+//static void eprint(any); static any L(any x) { eprint(x); puts(""); return x; } // for debugging
 
-assignment_expression: result[n] = template
+Finished identifier: eprintf
 
-;: ;
+Finished argument list: ("%s\n", msg)
 
-Add a semicolon...
+Finished identifier: exit
 
-update_expression: n++
+Finished argument list: (1)
 
-;: ;
+Finished identifier: abort
 
-Add a semicolon...
+Finished argument list: ()
 
-Add a closing brace here.
+Compound statement:
+{
+	case t_cons:
+	return "cons";
+	
+	case t_sym:
+	return "sym";
+	
+	case t_str:
+	return "str";
+	
+	case t_sub:
+	return "sub";
+	
+	case t_num:
+	return "num";
+	
+	case t_other:
+	
+	default:
+		abort();
+	
+	// never called with t_other
+}
+Finished declaration:
+static void eprint(any x);
 
-assignment_expression: result[n] = NULL
+Finished declaration:
+static void backtrace();
 
-;: ;
+Finished identifier: eprintf
 
-Add a semicolon...
+Finished argument list: ("ERR: ")
 
-call_expression: free(c)
+Finished identifier: va_start
 
-;: ;
+Finished argument list: (args, fmt)
 
-Add a semicolon...
+Finished identifier: vfprintf
 
-call_expression: strFree(temp)
+Finished argument list: (stderr, fmt, args)
 
-;: ;
+Finished identifier: va_end
 
-Add a semicolon...
+Finished argument list: (args)
 
-Finished return: return result;
+Finished identifier: eprintf
 
-Add a closing brace here.
+Finished argument list: ("\n")
 
-identifier: strArrFree
+Finished identifier: backtrace
 
-parameter_list: (string** original)
+Finished argument list: ()
 
-Add an open brace here.
+Finished identifier: throw
 
-Finished declaration: const int test = 5;
+Finished argument list: ()
 
-if: if
+Finished identifier: eprintf
 
-parenthesized_expression: (original)
+Finished argument list: ("ERR: %s: ", msg)
 
-Add an open brace here.
+Finished identifier: eprint
 
-Finished declaration: size_t i = 0;
+Finished argument list: (x)
 
-parenthesized_expression: (original[i] != NULL)
+Finished identifier: eprintf
 
-Add an open brace here.
+Finished argument list: ("\n")
 
-call_expression: strFree(original[i])
+Finished identifier: backtrace
 
-;: ;
+Finished argument list: ()
 
-Add a semicolon...
+Finished identifier: throw
 
-update_expression: i++
+Finished argument list: ()
 
-;: ;
+Finished identifier: eprintf
 
-Add a semicolon...
+Finished argument list: ("ERR: typecheck failed: (%s? ", type_name(t))
 
-Add a closing brace here.
+Finished identifier: eprint
 
-call_expression: free(original)
+Finished argument list: (x)
 
-;: ;
+Finished identifier: eprintf
 
-Add a semicolon...
+Finished argument list: (")\n")
 
-Add a closing brace here.
+Finished identifier: backtrace
 
-Add a closing brace here.
+Finished argument list: ()
 
-*: *
+Finished identifier: throw
 
-function_declarator: strCopy(string* original)
+Finished argument list: ()
 
-Add an open brace here.
+expression_statement: type_error(x, t);
 
-Finished return: return str(original->data);
+Finished identifier: check
 
-Add a closing brace here.
+Finished argument list: (x, t)
 
-*: *
+Finished identifier: check
 
-function_declarator: substr(string* original, size_t start, size_t end)
+Finished argument list: (x, t_num)
 
-Add an open brace here.
+expression_statement: generic_error("ERR: expected integer type", x);
 
-Finished declaration: size_t len = end - start;
+expression_statement: basic_error("ERR: integer out of allowed range: %" PRId64, n);
 
-Finished declaration: char* temp = (char*)malloc(len+1);
+expression_statement: generic_error("ERR: expected float type", x);
 
-call_expression: strncpy(temp, original->data+start, len)
+Finished identifier: abort
 
-;: ;
+Finished argument list: ()
 
-Add a semicolon...
+Compound statement:
+{
+	case t_num_int:
+	return (float)any2int(x);
+	
+	case t_num_float:
+	return any2float(x);
+	
+	default:
+		abort();
+	
+}
+Finished comment:
+//////////////// regions ////////////////
 
-assignment_expression: temp[len] = '\0'
+Finished declaration:
+static size_t blocksize;
 
-;: ;
+Finished comment:
+// in bytes
 
-Add a semicolon...
+Finished declaration:
+static size_t blockwords;
 
-Finished declaration: string* result;
+Finished comment:
+// words per block
 
-assignment_expression: result = str(temp)
+Finished declaration:
+static any blockmask;
 
-;: ;
+Finished comment:
+// to get the block an `any` belongs to; is not actually an object!
 
-Add a semicolon...
+Finished declaration:
+static any **free_block;
 
-call_expression: free(temp)
+Finished comment:
+// A block begins with a pointer to the previous block that belongs to the region.
 
-;: ;
+Finished comment:
+// The metadata of a region (i.e. this struct) is stored in its first block.
 
-Add a semicolon...
+Finished comment:
+// This code is in FORTH-style.
 
-Finished return: return result;
+Finished comment:
+// get ptr to start of block that x belongs to.
 
-Add a closing brace here.
+Finished identifier: blocks_init
 
-identifier: strIsEmpty
+Finished argument list: (p, ALLOC_BLOCKS_AT_ONCE)
 
-parameter_list: (string* str)
+expression_statement: free_block = fresh_blocks();
 
-Add an open brace here.
+Finished identifier: ensure_free_block
 
-if: if
+Finished argument list: ()
 
-parenthesized_expression: (str->length == 0 || strlen(str->data) < 1)
+Finished identifier: reg_init
 
-Add an open brace here.
+Finished argument list: (r, b)
 
-Finished return: return true;
+return_statement: return;
 
-Add a closing brace here.
+Finished identifier: munmap
 
-else_clause: else
-    {
-        return false;
-    }
+Finished argument list: (b, blocksize)
 
-Add a closing brace here.
+Finished identifier: blocks_sysfree
 
-*: *
+Finished argument list: (next)
 
-function_declarator: str(const char* text)
+Finished identifier: blocks_sysfree
 
-Add an open brace here.
+Finished argument list: (r->current_block)
 
-Finished declaration: string* result = (string*)malloc(sizeof(string));
+Finished declaration:
+static reg permanent_reg;
 
-if: if
+Finished comment:
+// FIXME: thread-local
 
-parenthesized_expression: (!result)
+Finished declaration:
+static reg *reg_stack;
 
-Add an open brace here.
+Finished declaration:
+static int reg_pos, reg_allocated;
 
-call_expression: perror("Failed to allocate memory for string\n")
+Finished declaration:
+static any **allocp, **current_block;
 
-;: ;
+Finished comment:
+// from currently used reg.
 
-Add a semicolon...
+Finished identifier: store_reg
 
-call_expression: exit(EXIT_FAILURE)
+Finished argument list: (curr_reg)
 
-;: ;
+Finished identifier: inc_regs
 
-Add a semicolon...
+Finished argument list: ()
 
-Add a closing brace here.
+Finished identifier: load_reg
 
-assignment_expression: result->length = strlen(text)
+Finished argument list: (curr_reg)
 
-;: ;
+Finished identifier: store_reg
 
-Add a semicolon...
+Finished argument list: (curr_reg)
 
-assignment_expression: result->data = (char*)malloc(result->length + 1)
+Finished identifier: load_reg
 
-;: ;
+Finished argument list: (curr_reg)
 
-Add a semicolon...
+Finished identifier: reg_push
 
-if: if
+Finished argument list: (permanent_reg)
 
-parenthesized_expression: (!result->data)
+Finished identifier: reg_push
 
-Add an open brace here.
+Finished argument list: (reg_new())
 
-call_expression: perror("Failed to allocate memory for string data\n")
+Finished identifier: reg_free
 
-;: ;
+Finished argument list: (reg_pop())
 
-Add a semicolon...
+return_statement: return res;
 
-call_expression: free(result)
+Finished declaration:
+static any copy(any x);
 
-;: ;
+Finished identifier: reg_push
 
-Add a semicolon...
+Finished argument list: (reg_stack[reg_pos-1])
 
-call_expression: exit(EXIT_FAILURE)
+Finished identifier: reg_pop
 
-;: ;
+Finished argument list: ()
 
-Add a semicolon...
+Finished comment:
+//////////////// exceptions ////////////////
 
-Add a closing brace here.
+Finished comment:
+// FIXME: thread-local
 
-call_expression: strcpy(result->data, text)
+Finished declaration:
+static struct exc_buf {
+  jmp_buf buf;
+  int reg_pos;
+} *exc_bufs;
 
-;: ;
+Finished declaration:
+static int exc_num;
 
-Add a semicolon...
+Finished declaration:
+static int exc_allocated;
 
-Finished return: return result;
+expression_statement: fail("internal error: throw/catch mismatch");
 
-Add a closing brace here.
+Finished identifier: exc_buf_nonempty
 
-identifier: strFree
+Finished argument list: ()
 
-parameter_list: (string* str)
+Finished identifier: rollback_reg_sp
 
-Add an open brace here.
+Finished argument list: (exc_bufs[exc_num].reg_pos)
 
-if: if
+Finished identifier: exc_buf_nonempty
 
-parenthesized_expression: (str)
+Finished argument list: ()
 
-Add an open brace here.
+Finished comment:
+//////////////// conses / lists ////////////////
 
-call_expression: free(str->data)
+Finished comment:
+// no tag() needed as t_cons==0
 
-;: ;
+Finished comment:
+// fast, no typecheck
 
-Add a semicolon...
+Finished comment:
+// likewise
 
-call_expression: free(str)
+Finished identifier: check
 
-;: ;
+Finished argument list: (x, t_cons)
 
-Add a semicolon...
+Finished identifier: check
 
-Add a closing brace here.
+Finished argument list: (x, t_cons)
 
-else_clause: else {
-        // nothing happens
-    }
+Finished identifier: reg_permanent
 
-Add a closing brace here.
+Finished argument list: ()
 
-identifier: strClear
+Finished identifier: reg_pop
 
-parameter_list: (string* str)
+Finished argument list: ()
 
-Add an open brace here.
+Finished identifier: reg_permanent
 
-Finished declaration: char* newData = (char*)realloc(str->data, 1);
+Finished argument list: ()
 
-if: if
+Finished identifier: reg_pop
 
-parenthesized_expression: (!newData)
+Finished argument list: ()
 
-Add an open brace here.
+expression_statement: lg->xs = lg->last = single(x);
 
-call_expression: perror("Failed to reallocate memory for cleared string.")
+Finished identifier: set_fdr
 
-;: ;
+Finished argument list: (lg->last, new)
 
-Add a semicolon...
+Else clause inner compound statement:
+{
+	any new = single(x);
+	set_fdr(lg->last, new);
+	lg->last = new;
+}
 
-call_expression: exit(EXIT_FAILURE)
+Finished identifier: foreach
 
-;: ;
+Finished argument list: (x, xs)
 
-Add a semicolon...
+Finished identifier: listgen_add
 
-Add a closing brace here.
+Finished argument list: (lg, x)
 
-assignment_expression: newData[0] = '\0'
+expression_statement: lg->xs = lg->last = x;
 
-;: ;
+Finished identifier: set_fdr
 
-Add a semicolon...
+Finished argument list: (lg->last, x)
 
-assignment_expression: str->data = newData
+Else clause expression statement: set_fdr(lg->last, x);
 
-;: ;
+Finished identifier: listgen_add_list
 
-Add a semicolon...
+Finished argument list: (&lg, xs)
 
-assignment_expression: str->length = 0
+Finished identifier: foreach
 
-;: ;
+Finished argument list: (x, xs)
 
-Add a semicolon...
+return_statement: return true;
 
-Add a closing brace here.
+Finished identifier: foreach
+
+Finished argument list: (x, xs)
+
+return_statement: return fdr(x);
+
+Finished identifier: foreach
+
+Finished argument list: (x, xs)
+
+return_statement: return x;
+
+return_statement: return b;
+
+Finished identifier: foreach
+
+Finished argument list: (x, a)
+
+Finished identifier: listgen_add
+
+Finished argument list: (&lg, x)
+
+Finished identifier: listgen_set_tail
+
+Finished argument list: (&lg, b)
+
+return_statement: return far(xs);
+
+Finished identifier: foreach_cons
+
+Finished argument list: (pair, xs)
+
+Finished identifier: set_fdr
+
+Finished argument list: (pair, far(fdr(pair)))
+
+return_statement: return NIL;
+
+expression_statement: from_p = false;
+
+expression_statement: from_p = true;
+
+Finished identifier: call2
+
+Finished argument list: (bigger_p, far(p), far(q))
+
+Else clause inner compound statement:
+{
+	call2(bigger_p, far(p), far(q));
+	from_p = !is(last_value);
+}
+
+Else if: else if (len_of_q == 0 ||)
+
+
+Else clause inner compound statement:
+{
+	len_of_q--;
+	e = q;
+	q = fdr(q);
+}
+
+expression_statement: set_fdr(tl, e);
+
+Else clause expression statement: hd = e;
+
+Finished identifier: set_fdr
+
+Finished argument list: (tl, NIL)
+
+return_statement: return hd;
+
+Finished identifier: abort
+
+Finished argument list: ()
+
+Compound statement:
+{
+	case t_num_int:
+	return any2int(x) == 0;
+	
+	case t_num_float:
+	return any2float(x) == 0.0;
+	
+	default:
+		abort();
+	
+}
+Finished comment:
+//////////////// strs ////////////////
+
+Finished comment:
+// FIXME: for short strings only
+
+ERROR
+Handling ERROR:
+name: {
+text: {
 
