@@ -1,6 +1,8 @@
 use std::{fs, fs::File, io::Write, io::Error};
 use crate::utils;
 
+//* THESE PATHS ARE PROBABLY ALL WRONG
+
 pub fn restore_example_rs_file() {
     let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_rs_ex1.rs").unwrap().to_owned();
     let good1 = temp1.as_bytes();

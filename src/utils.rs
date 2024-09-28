@@ -87,7 +87,7 @@ pub fn remove_all_spaces(line: String) -> String {
 
 pub fn remove_unnecessary_spaces(line: String) -> String {
     let leading_tokens = vec!['(', '[', ' ', '!'];
-    let ending_tokens = vec![')', ']', ' ', ','];
+    let ending_tokens = vec![')', ']', ' ', ',', ';'];
     let mut result = String::new();
     let mut skip = false;
     for (i, c) in line.char_indices() {
