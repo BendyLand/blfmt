@@ -848,7 +848,7 @@ my void set_dyn_val(any name, any x) {
   any n = get_dyn(name);
   check_dyn_bound(n, name);
 
-  dynamic_vals[any2int(n)] = x;  
+  dynamic_vals[any2int(n)] = x;
 }
 
 my void create_dyn(any name, any x) {
@@ -1223,7 +1223,7 @@ my void parse_error(const char *text) {
   eprint(dynamic_vals[dyn_src]);
   eprintf(": parse error: %s\n", text);
   throw();
-} 
+}
 
 // These can be used for syms in s-exprs
 // Disallowed are the first 32 and "#'(),@:;[]`{}|
@@ -1232,7 +1232,7 @@ my bool allowed_chars[] = {
   0,1,0,0,1,1,1,0,0,0,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,
   0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,1,
   0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,0
-}; 
+};
 
 my bool is_symchar(int c) {
   return (c >= 0 && c < 256) ? allowed_chars[c] : c != EOF;
