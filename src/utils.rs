@@ -105,7 +105,7 @@ pub fn remove_unnecessary_spaces(line: String) -> String {
         }
         result += c.to_string().as_str();
     }
-    return result;
+    return result.trim().to_string();
 }
 
 pub fn remove_whitespace_before_commas(line: String) -> String {
