@@ -16,7 +16,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
             "function_definition" => {
                 let function_definition = handle_function_definition(child, src.clone());
                 //* this one's a little messy right now:
-                // println!("Finished function definition:\n{}\n", function_definition);
+                println!("Finished function definition:\n{}\n", function_definition);
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(child, src.clone());
@@ -48,6 +48,10 @@ pub fn traverse_ast(ast: Tree, src: String) {
                 let comment = handle_comment(child, src.clone());
                 println!("Finished comment:\n{}\n", comment);
             },
+            "ERROR" => {
+                let error = handle_error(child, src.clone());
+                println!("Finished ERROR:\n{}\n", error);
+            },
             ";" => (),
             // "preproc_ifdef" => handle_preproc_ifdef(child, src.clone()),
             // "preproc_if" => handle_preproc_if(child, src.clone()),
@@ -57,7 +61,6 @@ pub fn traverse_ast(ast: Tree, src: String) {
             // "type_definition" => handle_type_definition(child, src.clone()),
             // "struct_specifier" => handle_struct_specifier(child, src.clone()),
             // "sized_type_specifier" => handle_sized_type_specifier(child, src.clone()),
-            // "ERROR" => handle_error(child, src.clone()),
             _ => (), // println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
     }
@@ -115,12 +118,21 @@ fn handle_compound_statement(root: Node, src: String) -> String {
             "comment" => {
                 result = handle_comment(node, src.clone());
             },
-            ";" => (),
-            "return" => (),
-            "true" => (),
-            "false" => (),
-            "{" => (),
-            "}" => (),
+            "labeled_statement" => {
+                result = handle_labeled_statement(node, src.clone());
+            },
+            "while_statement" => {
+                result = handle_while_statement(node, src.clone());
+            },
+            "for_statement" => {
+                result = handle_for_statement(node, src.clone());
+            },
+            ";" => result = ";".to_string(),
+            "return" => result = "return".to_string(),
+            "true" => result = "true".to_string(),
+            "false" => result = "false".to_string(),
+            "{" => result = "{".to_string(),
+            "}" => result = "}".to_string(),
             // "preproc_ifdef" => handle_preproc_ifdef(node, src.clone()),
             // "preproc_if" => handle_preproc_if(node, src.clone()),
             // "preproc_def" => handle_preproc_def(node, src.clone()),
@@ -128,16 +140,13 @@ fn handle_compound_statement(root: Node, src: String) -> String {
             // "preproc_call" => handle_preproc_call(node, src.clone()),
             // "type_definition" => handle_type_definition(node, src.clone()),
             // "struct_specifier" => handle_struct_specifier(node, src.clone()),
-            // "for_statement" => handle_for_statement(node, src.clone()),
             // "for_range_loop" => handle_for_range_loop(node, src.clone()),
-            // "while_statement" => handle_while_statement(node, src.clone()),
             // "do_statement" => handle_do_statement(node, src.clone()),
-            // "labeled_statement" => handle_labeled_statement(node, src.clone()),
             // "parameter_list" => handle_parameter_list(node, src.clone()),
             // "init_declarator" => handle_init_declarator(node, src.clone()),
             // "while" => handle_while(node, src.clone()),
             // "ERROR" => handle_error(node, src.clone()),
-            _ => (), // println!("Unknown grammar name 2: {}\n", node.grammar_name()),
+            _ => println!("Unknown grammar name 2: {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -194,7 +203,7 @@ fn handle_declaration(root: Node, src: String) -> String {
             },
             "array_declarator" => {
                 let array_declarator = handle_array_declarator(node, src.clone());
-                // parts.push(array_declarator);
+                parts.push(array_declarator);
             },
             "storage_class_specifier" => {
                 let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
@@ -203,6 +212,10 @@ fn handle_declaration(root: Node, src: String) -> String {
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
                 // parts.push(struct_specifier);
+            },
+            "sized_type_specifier" => {
+                let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
+                // parts.push(sized_type_specifier);
             },
             ";" => parts.push(";".to_string()),
             "," => parts.push(",".to_string()),
@@ -220,40 +233,47 @@ fn handle_function_definition(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => {
-                let compound_statement = handle_compound_statement(node.clone(), src.clone());
+                let compound_statement = handle_compound_statement(node, src.clone());
                 result += format!("{}\n", compound_statement).as_str();
             },
             "primitive_type" => {
-                let primitive_type = handle_primitive_type(node.clone(), src.clone());
+                let primitive_type = handle_primitive_type(node, src.clone());
                 result += format!("{} ", primitive_type).as_str();
             },
-            "identifier" => {
-                let identifier = handle_identifier(node.clone(), src.clone());
-                result += format!("{}\n", identifier).as_str();
-            },
-            "function_declarator" => {
-                let function_declarator = handle_function_declarator(node.clone(), src.clone());
-                result += format!("{}\n", function_declarator).as_str();
-            },
-            "pointer_declarator" => {
-                let pointer_declarator = handle_pointer_declarator(node.clone(), src.clone());
-                result += format!("{}\n", pointer_declarator).as_str();
-            },
-            "parenthesized_declarator" => {
-                let parenthesized_declarator = handle_parenthesized_declarator(node.clone(), src.clone());
-                result += format!("{}\n", parenthesized_declarator).as_str();
-            },
-            "ERROR" => {
-                let error = handle_error(node.clone(), src.clone());
-                result += format!("{}\n", error).as_str();
-            },
             "type_qualifier" => {
-                let type_qualifier = handle_type_qualifier(node.clone(), src.clone());
+                let type_qualifier = handle_type_qualifier(node, src.clone());
                 result += format!("{} ", type_qualifier).as_str();
             },
-            // "storage_class_specifier" => handle_storage_class_specifier(node.clone(), src.clone()),
-            // "struct_specifier" => handle_struct_specifier(node.clone(), src.clone()),
-            // "sized_type_specifier" => handle_sized_type_specifier(node.clone(), src.clone()),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += format!("{} ", identifier).as_str();
+            },
+            "ERROR" => {
+                // Usually unknown specifier, like a custom alias for static.
+                let error = handle_error(node, src.clone());
+                result += format!("{} ", error).as_str();
+            },
+            "function_declarator" => {
+                let function_declarator = handle_function_declarator(node, src.clone());
+                result += format!("{}\n{{\n", function_declarator).as_str();
+            },
+            "pointer_declarator" => {
+                let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                result += format!("{}\n{{\n", pointer_declarator).as_str();
+            },
+            "parenthesized_declarator" => {
+                let parenthesized_declarator = handle_parenthesized_declarator(node, src.clone());
+                result += format!("{}\n{{\n", parenthesized_declarator).as_str();
+            },
+            "storage_class_specifier" => {
+                let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
+            },
+            "sized_type_specifier" => {
+                let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
+            },
+            "struct_specifier" => {
+                let struct_specifier = handle_struct_specifier(node.clone(), src.clone());
+            },
             _ => println!("You shouldn't be here (function_definition): {}\n", node.grammar_name()),
         }
     }
@@ -319,6 +339,14 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
                 let field_expression = handle_field_expression(node, src.clone());
                 parts.push(field_expression);
             },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                parts.push(number_literal);
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node, src.clone());
+                parts.push(char_literal);
+            },
             _ => println!("You shouldn't be here (assignment_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
     }
@@ -349,7 +377,7 @@ fn handle_inner_assignment_expression(root: Node, src: String) -> String {
             },
             "conditional_expression" => {
                 let conditional_expression = handle_conditional_expression(node, src.clone());
-                // dbg!(conditional_expression);
+                parts.push(conditional_expression);
             },
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
@@ -373,7 +401,7 @@ fn handle_inner_assignment_expression(root: Node, src: String) -> String {
             },
             "unary_expression" => {
                 let unary_expression = handle_unary_expression(node, src.clone());
-                // dbg!(unary_expression);
+                parts.push(unary_expression);
             },
             "cast_expression" => {
                 let cast_expression = handle_cast_expression(node, src.clone());
@@ -398,6 +426,8 @@ fn handle_inner_assignment_expression(root: Node, src: String) -> String {
             "%=" => parts.push("=".to_string()),
             "|=" => parts.push("=".to_string()),
             "&=" => parts.push("=".to_string()),
+            ">>=" => parts.push("=".to_string()),
+            "<<=" => parts.push("=".to_string()),
             _ => println!("You shouldn't be here (inner_assignment_expression): {}\n", node.grammar_name()),
         }
     }
@@ -522,6 +552,10 @@ fn handle_call_expression(root: Node, src: String) -> String {
                 let argument_list = handle_argument_list(node, src.clone());
                 result += argument_list.as_str();
             },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
+            },
             ";" => result += ";",
             _ => println!("You shouldn't be here (call_expression): {}\n", node.grammar_name()),
         }
@@ -568,6 +602,9 @@ fn handle_if_statement(root: Node, src: String) -> String {
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 parts.push(parenthesized_expression);
+            },
+            "break_statement" => {
+                parts.push("break;".to_string());
             },
             _ => println!("You shouldn't be here (if_statement): {}\n", node.grammar_name()),
         }
@@ -633,7 +670,7 @@ fn handle_switch_statement(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => {
-                let compound_statement = handle_inner_compound_statement(node, src.clone());
+                let compound_statement = handle_compound_statement(node, src.clone());
                 result += compound_statement.as_str();
             },
             "switch" => {
@@ -641,7 +678,7 @@ fn handle_switch_statement(root: Node, src: String) -> String {
             },
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
-                result += parenthesized_expression.as_str();
+                result += format!("{} ", parenthesized_expression).as_str();
             },
             _ => println!("You shouldn't be here (switch_statement): {}\n", node.grammar_name()),
         }
@@ -655,31 +692,29 @@ fn handle_case_statement(root: Node, src: String) -> String {
         match node.grammar_name() {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
-                result += "\t";
-                result += (expression_statement + "\n").as_str();
+                result += format!("\t{}\n", expression_statement).as_str();
             },
             "compound_statement" => {
                 let compound_statement = handle_inner_compound_statement(node, src.clone());
-                result += "\t";
-                result += (compound_statement + "\n").as_str();
+                result += format!("{}\n", compound_statement).as_str();
             },
             "case" => {
                 result += "case ";
             },
             "break_statement" => {
-                result += "\tbreak;";
+                result += "break;";
             },
             "declaration" => {
                 let declaration = handle_declaration(node, src.clone());
-                result += (declaration + "\n").as_str();
+                result += format!("{}\n", declaration).as_str();
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
-                result += (return_statement + "\n").as_str();
+                result += format!("{}\n", return_statement).as_str();
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
-                result += (if_statement + "\n").as_str();
+                result += format!("{}\n", if_statement).as_str();
             },
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
@@ -687,22 +722,22 @@ fn handle_case_statement(root: Node, src: String) -> String {
             },
             "switch_statement" => {
                 let switch_statement = handle_switch_statement(node, src.clone());
-                result += (switch_statement + "\n").as_str();
+                result += format!("{}\n", switch_statement).as_str();
             },
             "default" => {
                 result += "default"
             },
             "number_literal" => {
-                let number_literal = node.utf8_text(src.as_bytes()).unwrap();
-                result += number_literal;
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
             },
             "char_literal" => {
-                let char_literal = node.utf8_text(src.as_bytes()).unwrap();
-                result += char_literal;
+                let char_literal = handle_char_literal(node, src.clone());
+                result += char_literal.as_str();
             },
             ":" => {
                 result = result.trim_end().to_string();
-                result += ":\n"
+                result += ": "
             },
             _ => println!("You shouldn't be here (case_statement): {}\n", node.grammar_name()),
         }
@@ -816,29 +851,33 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let update_expression = handle_update_expression(node, src.clone());
                 result += update_expression.as_str();
             },
-            "conditional_expression" => {
-                let conditional_expression = handle_conditional_expression(node, src.clone());
-                // result += string_literal.as_str();
-            },
-            "string_literal" => {
-                let string_literal = handle_string_literal(node, src.clone());
-                // result += string_literal.as_str();
-            },
-            "unary_expression" => {
-                let unary_expression = handle_unary_expression(node, src.clone());
-                // result += unary_expression.as_str();
-            },
-            "concatenated_string" => {
-                let concatenated_string = handle_concatenated_string(node, src.clone());
-                // result += concatenated_string.as_str();
-            },
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
-                // result += number_literal.as_str();
+                result += number_literal.as_str();
             },
             "char_literal" => {
                 let char_literal = handle_char_literal(node, src.clone());
-                // result += char_literal.as_str();
+                result += char_literal.as_str();
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
+            },
+            "conditional_expression" => {
+                let conditional_expression = handle_conditional_expression(node, src.clone());
+                result += conditional_expression.as_str();
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node, src.clone());
+                result += unary_expression.as_str();
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                result += string_literal.as_str();
+            },
+            "concatenated_string" => {
+                let concatenated_string = handle_concatenated_string(node, src.clone());
+                result += concatenated_string.as_str();
             },
             _ => println!("You shouldn't be here (argument_list): {}\n", node.grammar_name()),
         }
@@ -847,20 +886,73 @@ fn handle_argument_list(root: Node, src: String) -> String {
 }
 
 fn handle_return_statement(root: Node, src: String) -> String {
-    let result: String;
-    let mut vec = Vec::<String>::new();
+    let mut result: String;
+    let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(node.clone(), src.clone());
+                parts.push(compound_statement);
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node.clone(), src.clone());
+                parts.push(call_expression);
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node.clone(), src.clone());
+                parts.push(binary_expression);
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node.clone(), src.clone());
+                parts.push(unary_expression);
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node.clone(), src.clone());
+                parts.push(identifier);
+            },
+            "conditional_expression" => {
+                let conditional_expression = handle_conditional_expression(node.clone(), src.clone());
+                parts.push(conditional_expression);
+            },
+            "field_expression" => {
+                let field_expression = handle_field_expression(node.clone(), src.clone());
+                parts.push(field_expression);
+            },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node.clone(), src.clone());
+                parts.push(cast_expression);
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node.clone(), src.clone());
+                parts.push(number_literal);
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node.clone(), src.clone());
+                parts.push(char_literal);
+            },
+            "return" => {
+                parts.push("return".to_string());
+            },
+            "false" => {
+                parts.push("false".to_string());
+            },
+            "true" => {
+                parts.push("true".to_string());
+            },
+            ";" => {
+                parts.push(";".to_string());
             },
             _ => {
-                let line = node.utf8_text(src.as_bytes()).unwrap_or("");
-                if line != ";" { vec.push(line.to_string()); }
+                println!("You shouldn't be here (return statement): {}\n", node.grammar_name());
             },
+            // _ => {
+            //     let line = node.utf8_text(src.as_bytes()).unwrap_or("");
+            //     if line != ";" { vec.push(line.to_string()); }
+            // },
         }
     }
-    result = (vec.join(" ") + ";").to_string();
+    result = parts.join(" ");
+    result = utils::remove_unnecessary_spaces(result);
     return result;
 }
 
@@ -907,7 +999,7 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                     },
                     "variadic_parameter" => {
                         let variadic_parameter = handle_variadic_parameter(subnode, src.clone());
-                        // dbg!(parameter_declaration)
+                        // dbg!(variadic_parameter)
                     },
                     _ => println!("You shouldn't be here (function_declarator): {}\n", subnode.grammar_name()),
                 }
@@ -957,7 +1049,7 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
                                         },
                                         "parameter_list" => {
                                             let parameter_list = handle_parameter_list(inner_subnode, src.clone());
-                                            temp += parameter_list.as_str();
+                                            // temp += parameter_list.as_str();
                                         },
                                         _ => println!("You shouldn't be here (inside of pointer_declarator): {}\n", inner_subnode.grammar_name()),
                                     }
@@ -979,7 +1071,7 @@ fn handle_identifier(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "identifier" => {
-                result = root.utf8_text(src.as_bytes()).unwrap().to_string();
+                result = handle_identifier(node, src.clone());
             },
             "expression_statement" => {
                 result = handle_expression_statement(root, src.clone());
@@ -997,22 +1089,23 @@ fn handle_identifier(root: Node, src: String) -> String {
 }
 
 fn handle_nested_inner_compound_statement(root: Node, src: String) -> String {
-    let mut result = String::new();
+    let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
-                result += format!("\t{}\n", expression_statement).as_str();
+                parts.push(expression_statement);
             }
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
-                result += format!("\t{}\n", if_statement).as_str();
+                parts.push(if_statement);
             }
-            "{" => result += "{\n",
-            "}" => result += "}",
+            "{" => parts.push("{".to_string()),
+            "}" => parts.push("}".to_string()),
             _ => println!("You shouldn't be here (nested_inner_compound_statement): {}\n", node.grammar_name()),
         }
     }
+    let result = parts.join("\n");
     return result;
 }
 
@@ -1068,13 +1161,15 @@ fn handle_binary_expression(root: Node, src: String) -> String {
                 let pointer_expression = handle_pointer_expression(node, src.clone());
                 parts.push(pointer_expression);
             },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                parts.push(cast_expression);
+            },
             "unary_expression" => {
                 let unary_expression = handle_unary_expression(node, src.clone());
-                // parts.push(unary_expression);
+                parts.push(unary_expression);
             },
             "null" => parts.push("NULL".to_string()),
-            "!=" => parts.push("!=".to_string()),
-            "==" => parts.push("==".to_string()),
             "+" => parts.push("+".to_string()),
             "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
@@ -1082,6 +1177,10 @@ fn handle_binary_expression(root: Node, src: String) -> String {
             "%" => parts.push("%".to_string()),
             ">" => parts.push(">".to_string()),
             "<" => parts.push("<".to_string()),
+            ">=" => parts.push(">=".to_string()),
+            "<=" => parts.push("<=".to_string()),
+            "!=" => parts.push("!=".to_string()),
+            "==" => parts.push("==".to_string()),
             ">>" => parts.push(">>".to_string()),
             "<<" => parts.push("<<".to_string()),
             "|" => parts.push("|".to_string()),
@@ -1131,14 +1230,35 @@ fn handle_inner_binary_expression(root: Node, src: String) -> String {
             },
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
-                // parts.push(number_literal);
+                parts.push(number_literal);
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node, src.clone());
+                parts.push(char_literal);
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                parts.push(binary_expression);
             },
             "+" => parts.push("+".to_string()),
+            "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
-            "|" => parts.push("|".to_string()),
+            "/" => parts.push("/".to_string()),
+            "%" => parts.push("%".to_string()),
             ">" => parts.push(">".to_string()),
             "<" => parts.push("<".to_string()),
+            ">=" => parts.push(">=".to_string()),
+            "<=" => parts.push("<=".to_string()),
+            "!=" => parts.push("!=".to_string()),
             "==" => parts.push("==".to_string()),
+            ">>" => parts.push(">>".to_string()),
+            "<<" => parts.push("<<".to_string()),
+            "|" => parts.push("|".to_string()),
+            "||" => parts.push("||".to_string()),
+            "&" => parts.push("&".to_string()),
+            "&&" => parts.push("&&".to_string()),
+            "^" => parts.push("^".to_string()),
+            ";" => parts.push(";".to_string()),
             _ => println!("You shouldn't be here (inner_binary_expression): {}\n", node.grammar_name()),
         }
     }
@@ -1195,13 +1315,37 @@ fn handle_parenthesized_expression(root: Node, src: String) -> String {
                 let cast_expression = handle_cast_expression(node, src.clone());
                 result += cast_expression.as_str();
             },
+            "field_expression" => {
+                let field_expression = handle_field_expression(node, src.clone());
+                result += field_expression.as_str();
+            },
             "unary_expression" => {
                 let unary_expression = handle_unary_expression(node, src.clone());
-                // result += unary_expression.as_str();
+                result += unary_expression.as_str();
+            },
+            "conditional_expression" => {
+                let conditional_expression = handle_conditional_expression(node, src.clone());
+                result += conditional_expression.as_str();
+            },
+            "concatenated_string" => {
+                let concatenated_string = handle_concatenated_string(node, src.clone());
+                result += concatenated_string.as_str();
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node, src.clone());
+                result += char_literal.as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
+            },
+            "update_expression" => {
+                let update_expression = handle_update_expression(node, src.clone());
+                result += update_expression.as_str();
             },
             "(" => result += "(",
             ")" => result += ")",
-            _ => println!("You shouldn't be here parenthesized_expression: {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (parenthesized_expression): {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -1230,6 +1374,10 @@ fn handle_pointer_expression(root: Node, src: String) -> String {
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 result += parenthesized_expression.as_str();
+            },
+            "field_expression" => {
+                let field_expression = handle_field_expression(node, src.clone());
+                result += field_expression.as_str();
             },
             "*" => result += "* ",
             "&" => result += "&",
@@ -1280,6 +1428,10 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
                 let abstract_array_declarator = handle_abstract_array_declarator(node, src.clone());
                 // parts.push(abstract_array_declarator);
             },
+            "sized_type_specifier" => {
+                let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
+                // parts.push(sized_type_specifier);
+            },
             _ => println!("You shouldn't be here (parameter_declaration): {}\n", node.grammar_name()),
         }
     }
@@ -1318,9 +1470,17 @@ fn handle_subscript_expression(root: Node, src: String) -> String {
                 let call_expression = handle_call_expression(node, src.clone());
                 result += call_expression.as_str();
             },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                result += cast_expression.as_str();
+            },
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 result += parenthesized_expression.as_str();
+            },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                result += subscript_expression.as_str();
             },
             _ => println!("You shouldn't be here (subscript_expression): {}\n", node.grammar_name()),
         }
@@ -1381,6 +1541,7 @@ fn handle_error(root: Node, src: String) -> String {
                 result = node.utf8_text(src.as_bytes()).unwrap().to_string();
             },
             "{" => result = "{".to_string(),
+            "}" => result = "}".to_string(),
             ";" => result = ";".to_string(),
             "=" => result = "=".to_string(),
             _ => println!("You shouldn't be here (ERROR): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
@@ -1419,6 +1580,10 @@ fn handle_cast_expression(root: Node, src: String) -> String {
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
                 result += field_expression.as_str();
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
             },
             _ => println!("You shouldn't be here (cast_expression): {}\n", node.grammar_name()),
         }
@@ -1468,12 +1633,19 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             },
             "initializer_list" => {
                 let initializer_list = handle_initializer_list(node, src.clone());
-                println!("Finished initializer list: {}\n", initializer_list);
-                // parts.push(initializer_list);
+                parts.push(initializer_list);
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node, src.clone());
+                parts.push(unary_expression);
             },
             "conditional_expression" => {
                 let conditional_expression = handle_conditional_expression(node, src.clone());
-                // parts.push(conditional_expression);
+                parts.push(conditional_expression);
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                parts.push(parenthesized_expression);
             },
             "array_declarator" => {
                 let array_declarator = handle_array_declarator(node, src.clone());
@@ -1483,7 +1655,7 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "false" => parts.push("false".to_string()),
             "true" => parts.push("true".to_string()),
             "null" => parts.push("NULL".to_string()),
-            _ => println!("Init declarator: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("You shouldn't be here (init_declarator): {}\n", node.grammar_name()),
         }
     }
     let result = parts.join(" ");
@@ -1510,6 +1682,10 @@ fn handle_type_descriptor(root: Node, src: String) -> String {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
                 // result += struct_specifier.as_str();
             }
+            "sized_type_specifier" => {
+                let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
+                // result += sized_type_specifier.as_str();
+            }
             _ => println!("You shouldn't be here (type_descriptor): {}", node.grammar_name()),
         }
     }
@@ -1531,6 +1707,18 @@ fn handle_initializer_list(root: Node, src: String) -> String {
             "char_literal" => {
                 let char_literal = handle_char_literal(node, src.clone());
                 result += char_literal.as_str();
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                result += comment.as_str();
+            },
+            "initializer_list" => {
+                let initializer_list = handle_initializer_list(node, src.clone());
+                result += initializer_list.as_str();
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                // result += string_literal.as_str();
             },
             "{" => result += "{",
             "}" => result += "}",
@@ -1587,27 +1775,225 @@ fn handle_abstract_pointer_declarator(root: Node, src: String) -> String {
     return result;
 }
 
-fn handle_array_declarator(root: Node, src: String) {
+fn handle_conditional_expression(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                parts.push(identifier);
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                parts.push(call_expression);
+            },
+            "field_expression" => {
+                let field_expression = handle_field_expression(node, src.clone());
+                parts.push(field_expression);
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                parts.push(binary_expression);
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node, src.clone());
+                parts.push(unary_expression);
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                parts.push(parenthesized_expression);
+            },
+            ":" => parts.push(":".to_string()),
+            "?" => parts.push("?".to_string()),
+            _ => println!("Conditional expression: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
+    let result = parts.join(" ");
+    return result;
 }
 
-fn handle_sized_type_specifier(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
+fn handle_char_literal(root: Node, src: String) -> String {
+    let result = root.utf8_text(src.as_bytes()).unwrap().to_string();
+    return result;
 }
 
-fn handle_parameter_list(root: Node, src: String) -> String {
+fn handle_number_literal(root: Node, src: String) -> String {
+    let result = root.utf8_text(src.as_bytes()).unwrap().to_string();
+    return result;
+}
+
+fn handle_unary_expression(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => (), // println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                result += call_expression.as_str();
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
+            },
+            "field_expression" => {
+                let field_expression = handle_field_expression(node, src.clone());
+                result += field_expression.as_str();
+            },
+            "!" => result += "!",
+            "~" => result += "~",
+            "-" => result += "-",
+            _ => println!("You shouldn't be here (unary_expression): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_array_declarator(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                parts.push(number_literal);
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node, src.clone());
+                parts.push(char_literal);
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                parts.push(identifier);
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                parts.push(binary_expression);
+            },
+            "[" => parts.push("[".to_string()),
+            "]" => parts.push("]".to_string()),
+            _ => println!("You shouldn't be here (array_declarator): {}\n", node.grammar_name()),
+        }
+    }
+    let result = parts.join("");
+    return result;
+}
+
+fn handle_string_literal(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "string_content" => {
+                parts.push(node.utf8_text(src.as_bytes()).unwrap().to_string());
+            },
+            "escape_sequence" => {
+                parts.push(node.utf8_text(src.as_bytes()).unwrap().to_string());
+            },
+            "\"" => parts.push("\"".to_string()),
+            _ => println!("You shouldn't be here (string_literal): {}\n", node.grammar_name()),
+        }
+    }
+    let result = parts.join("");
+    return result;
+}
+
+fn handle_concatenated_string(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                parts.push(string_literal);
+            }
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                parts.push(identifier);
+            }
+            _ => println!("You shouldn't be here (concatenated_string): {}\n", node.grammar_name()),
+        }
+    }
+    let result = parts.join(" ");
+    return result;
+}
+
+fn handle_labeled_statement(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "return_statement" => {
+                let return_statement = handle_return_statement(node, src.clone());
+                result += return_statement.as_str();
+            },
+            "if_statement" => {
+                let if_statement = handle_if_statement(node, src.clone());
+                result += if_statement.as_str();
+            },
+            ":" => result += ":",
+            _ => println!("You shouldn't be here (labeled_statement): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_for_statement(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "compound_statement" => {
+                let compound_statement = handle_compound_statement(node, src.clone());
+                result += compound_statement.as_str();
+            },
+            "if_statement" => {
+                let if_statement = handle_if_statement(node, src.clone());
+                result += if_statement.as_str();
+            },
+            "update_expression" => {
+                let update_expression = handle_update_expression(node, src.clone());
+                result += update_expression.as_str();
+            },
+            "assignment_expression" => {
+                let assignment_expression = handle_assignment_expression(node, src.clone());
+                result += assignment_expression.as_str();
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                result += binary_expression.as_str();
+            },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                result += declaration.as_str();
+            },
+            ";" => result += "; ",
+            "(" => result += "(",
+            ")" => result += ")",
+            "for" => result += "for ",
+            _ => println!("You shouldn't be here (for_statement): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_struct_specifier(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+}
+
+fn handle_abstract_array_declarator(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1661,7 +2047,7 @@ fn handle_do_statement(root: Node, src: String) {
     }
 }
 
-fn handle_conditional_expression(root: Node, src: String) {
+fn handle_sized_type_specifier(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
@@ -1669,7 +2055,15 @@ fn handle_conditional_expression(root: Node, src: String) {
     }
 }
 
-fn handle_struct_specifier(root: Node, src: String) {
+fn handle_parameter_list(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => (), // println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+}
+
+fn handle_preproc_ifdef(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
@@ -1677,19 +2071,12 @@ fn handle_struct_specifier(root: Node, src: String) {
     }
 }
 
-fn handle_abstract_array_declarator(root: Node, src: String) -> String {
-    let mut result = String::new();
+fn handle_continue_statement(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    return result;
-}
-
-fn handle_char_literal(root: Node, src: String) -> String {
-    let result = root.utf8_text(src.as_bytes()).unwrap().to_string();
-    return result;
 }
 
 fn handle_variadic_parameter(root: Node, src: String) {
@@ -1716,68 +2103,7 @@ fn handle_using_declaration(root: Node, src: String) {
     }
 }
 
-fn handle_for_statement(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("For statement: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_number_literal(root: Node, src: String) -> String {
-    let result = root.utf8_text(src.as_bytes()).unwrap().to_string();
-    return result;
-}
-
 fn handle_for_range_loop(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_labeled_statement(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_continue_statement(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_unary_expression(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_preproc_ifdef(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_string_literal(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_concatenated_string(root: Node, src: String) {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),

@@ -76,6 +76,19 @@ pub fn add_all_leading_tabs(text: String) -> String {
     return temp_vec.join("\n");
 }
 
+pub fn remove_pointer_spaces(line: &mut String) -> String {
+    let mut result = String::new();
+    for (i, c) in line.char_indices() {
+        if i < line.len()-2 {
+            if c == ' ' && line.chars().nth(i+1) == Some('*') {
+                continue;
+            }
+        }
+        result += c.to_string().as_str();
+    }
+    return result;
+}
+
 pub fn remove_all_spaces(line: String) -> String {
     let chars: Vec<char> = line.chars().filter(|c| *c != ' ').collect();
     let mut result = String::new();
