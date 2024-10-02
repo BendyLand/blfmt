@@ -1791,7 +1791,7 @@ my any mac_expand(any x) {
   }
 }
 
-typedef struct compile_state {
+typedef struct {
   any dst;
   int pos;
   int max_locals;
