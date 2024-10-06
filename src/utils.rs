@@ -76,10 +76,28 @@ pub fn add_all_leading_tabs(text: String) -> String {
     return temp_vec.join("\n");
 }
 
-pub fn remove_pointer_spaces(line: &mut String) -> String {
+pub fn remove_dereference_spaces(line: String) -> String {
+    let mut result = String::new();
+    let mut skip = false;
+    for (i, c) in line.char_indices() {
+        if skip { 
+            skip = false;
+            continue; 
+        }
+        if i <= line.len()-2 {
+            if c == '*' && line.chars().nth(i+1) == Some(' ') {
+                skip = true;
+            }
+        }
+        result += c.to_string().as_str();
+    }
+    return result;
+}
+
+pub fn remove_pointer_spaces(line: String) -> String {
     let mut result = String::new();
     for (i, c) in line.char_indices() {
-        if i < line.len()-2 {
+        if i <= line.len()-2 {
             if c == ' ' && line.chars().nth(i+1) == Some('*') {
                 continue;
             }
@@ -100,7 +118,7 @@ pub fn remove_all_spaces(line: String) -> String {
 
 pub fn remove_unnecessary_spaces(line: String) -> String {
     let leading_tokens = vec!['(', '[', ' ', '!'];
-    let ending_tokens = vec![')', ']', ' ', ',', ';'];
+    let ending_tokens = vec![')', '[', ']', ' ', ',', ';'];
     let mut result = String::new();
     let mut skip = false;
     for (i, c) in line.char_indices() {

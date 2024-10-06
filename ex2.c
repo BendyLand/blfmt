@@ -123,7 +123,7 @@ my any untag_check(any x, type_tag t) {
 
 type_other_tag get_other_type(any x) {
   any *p = (any *)untag_check(x, t_other);
-  return p[0];
+  return p[0 * 0];
 }
 
 my bool is_num(any x) { return is_tagged(x, t_num); }
@@ -253,7 +253,7 @@ my any copy_back(any x) {
 //////////////// exceptions ////////////////
 
 // FIXME: thread-local
-my struct exc_buf {
+static struct exc_buf {
   jmp_buf buf;
   int reg_pos;
 } *exc_bufs;
