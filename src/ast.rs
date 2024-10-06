@@ -1,37 +1,53 @@
+use std::cmp::Ordering;
+
 use tree_sitter::{Tree, Node};
 use crate::{c_format, utils::{self, add_all_leading_tabs, add_leading_whitespace, remove_all_spaces, remove_empty_lines, remove_unnecessary_spaces, remove_whitespace_before_commas, StringUtils}};
 
 pub fn traverse_ast(ast: Tree, src: String) {
     let root = ast.root_node();
+    let mut includes = Vec::<String>::new();
+    let mut declarations = Vec::<String>::new();
+    let mut function_defs = Vec::<String>::new();
+    let mut expression_states = Vec::<String>::new();
+    let mut compound_states = Vec::<String>::new();
+    let mut if_states = Vec::<String>::new();
+    let mut switch_states = Vec::<String>::new();
+    let mut return_states = Vec::<String>::new();
+    let mut comments = Vec::<String>::new();
+    let mut errors = Vec::<String>::new();
+    let mut type_defs = Vec::<String>::new();
+    let mut struct_specs = Vec::<String>::new();
+    let mut preproc_defs = Vec::<String>::new();
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
                 let preproc_include = handle_preproc_include(child, src.clone());
-                println!("Finished includes:\n{}\n", preproc_include);
+                includes.push(preproc_include);
             },
             "declaration" => {
+                //* needs to add space between } and typedef name when is a pointer.
                 let declaration = handle_declaration(child, src.clone());
-                println!("Finished declaration:\n{}\n", declaration);
+                declarations.push(declaration);
             },
             "function_definition" => {
                 let function_definition = handle_function_definition(child, src.clone());
-                println!("Finished function definition:\n{}\n", function_definition);
+                function_defs.push(function_definition);
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(child, src.clone());
-                println!("Finished expression statement:\n{}\n", expression_statement);
+                expression_states.push(expression_statement);
             },
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(child, src.clone());
-                println!("Finished compound statement:\n{}\n", compound_statement);
+                compound_states.push(compound_statement);
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(child, src.clone());
-                println!("Finished if statement:\n{}\n", if_statement);
+                if_states.push(if_statement);
             },
             "switch_statement" => {
                 let switch_statement = handle_switch_statement(child, src.clone());
-                println!("Finished switch statement:\n{}\n", switch_statement);
+                switch_states.push(switch_statement);
             },
             "continue_statement" => {
                 let continue_statement = "continue;\n";
@@ -41,27 +57,27 @@ pub fn traverse_ast(ast: Tree, src: String) {
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(child, src.clone());
-                println!("Finished return:\n{}\n", return_statement);
+                return_states.push(return_statement);
             },
             "comment" => {
                 let comment = handle_comment(child, src.clone());
-                println!("Finished comment:\n{}\n", comment);
+                comments.push(comment);
             },
             "ERROR" => {
                 let error = handle_error(child, src.clone());
-                println!("Finished ERROR:\n{}\n", error);
+                errors.push(error);
             },
             "type_definition" => {
                 let type_definition = handle_type_definition(child, src.clone());
-                println!("Finished type definition:\n{}\n", type_definition);
+                type_defs.push(type_definition);
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(child, src.clone());
-                println!("Finished struct specifier:\n{}\n", struct_specifier);
+                struct_specs.push(struct_specifier);
             },
             "preproc_def" => {
                 let preproc_def = handle_preproc_def(child, src.clone());
-                println!("Finished preproc def:\n{}\n", preproc_def);
+                preproc_defs.push(preproc_def);
             },
             ";" => (),
             // "preproc_ifdef" => handle_preproc_ifdef(child, src.clone()),
@@ -72,6 +88,34 @@ pub fn traverse_ast(ast: Tree, src: String) {
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
     }
+    sort_includes(&mut includes);
+    let mut finished_includes = includes.join("\n");
+    let mut finished_declarations = declarations.join("\n");
+    let mut finished_function_defs = function_defs.join("\n\n");
+    let mut finished_expression_states = expression_states.join("\n\n");
+    let mut finished_compound_states = compound_states.join("\n\n");
+    let mut finished_if_states = if_states.join("\n\n");
+    let mut finished_switch_states = switch_states.join("\n\n");
+    let mut finished_return_states = return_states.join("\n\n");
+    let mut finished_comments = comments.join("\n\n");
+    let mut finished_errors = errors.join("\n\n");
+    let mut finished_type_defs = type_defs.join("\n\n");
+    let mut finished_struct_specs = struct_specs.join("\n\n");
+    let mut finished_preproc_defs = preproc_defs.join("\n");
+
+    println!("Finished includes:\n{}\n", finished_includes);
+    println!("Finished declarations:\n{}\n", finished_declarations);
+    println!("Finished functions definitions:\n{}\n", finished_function_defs);
+    println!("Finished expression statements:\n{}\n", finished_expression_states);
+    println!("Finished compound statements:\n{}\n", finished_compound_states);
+    println!("Finished if statements:\n{}\n", finished_if_states);
+    println!("Finished switch statemnets:\n{}\n", finished_switch_states);
+    println!("Finished return statements:\n{}\n", finished_return_states);
+    println!("Finished comments:\n{}\n", finished_comments);
+    println!("Finished errors:\n{}\n", finished_errors);
+    println!("Finished type definitions:\n{}\n", finished_type_defs);
+    println!("Finished struct specifiers:\n{}\n", finished_struct_specs);
+    println!("Finished preproc definitions:\n{}\n", finished_preproc_defs);
 }
 
 fn handle_compound_statement(root: Node, src: String) -> String {
@@ -191,6 +235,7 @@ fn handle_declaration(root: Node, src: String) -> String {
         match node.grammar_name() {
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(node.clone(), src.clone());
+                dbg!(&compound_statement);
                 parts.push(compound_statement);
             },
             "init_declarator" => {
@@ -206,7 +251,8 @@ fn handle_declaration(root: Node, src: String) -> String {
                 parts.push(identifier);
             },
             "function_declarator" => {
-                let function_declarator = handle_function_declarator(node, src.clone());
+                let mut function_declarator = handle_function_declarator(node, src.clone());
+                function_declarator = utils::remove_unnecessary_spaces(function_declarator);
                 parts.push(function_declarator);
             },
             "type_qualifier" => {
@@ -218,7 +264,8 @@ fn handle_declaration(root: Node, src: String) -> String {
                 parts.push(error);
             },
             "pointer_declarator" => {
-                let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                let mut pointer_declarator = handle_pointer_declarator(node, src.clone());
+                pointer_declarator = utils::remove_dereference_spaces(pointer_declarator);
                 parts.push(pointer_declarator);
             },
             "array_declarator" => {
@@ -227,15 +274,15 @@ fn handle_declaration(root: Node, src: String) -> String {
             },
             "storage_class_specifier" => {
                 let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
-                // parts.push(storage_class_specifier);
+                parts.push(storage_class_specifier);
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
-                // parts.push(struct_specifier);
+                parts.push(struct_specifier);
             },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
-                // parts.push(sized_type_specifier);
+                parts.push(sized_type_specifier);
             },
             ";" => parts.push(";".to_string()),
             "," => parts.push(",".to_string()),
@@ -243,8 +290,14 @@ fn handle_declaration(root: Node, src: String) -> String {
         }
     }
     result = parts.join(" ");
-    if result.contains(",") { result = remove_whitespace_before_commas(result); }
+    if result.contains(",") { result = utils::remove_whitespace_before_commas(result); }
     result = utils::remove_unnecessary_spaces(result);
+    if result.starts_with("*") {
+        result = utils::remove_dereference_spaces(result);
+    }
+    else {
+        result = utils::remove_pointer_spaces(result);
+    }
     return result;
 }
 
@@ -279,6 +332,7 @@ fn handle_function_definition(root: Node, src: String) -> String {
             },
             "pointer_declarator" => {
                 let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                result = result.trim_end().to_string();
                 result += format!("{}\n{{\n", pointer_declarator).as_str();
             },
             "parenthesized_declarator" => {
@@ -290,14 +344,16 @@ fn handle_function_definition(root: Node, src: String) -> String {
                 result += format!("{}\n", struct_specifier).as_str();
             },
             "storage_class_specifier" => {
-                // let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
+                let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
             },
             "sized_type_specifier" => {
-                // let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
+                let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
+                result += format!("{} ", sized_type_specifier).as_str();
             },
             _ => println!("You shouldn't be here (function_definition): {}\n", node.grammar_name()),
         }
     }
+    result = utils::remove_pointer_spaces(result);
     return result;
 }
 
@@ -559,6 +615,10 @@ fn handle_call_expression(root: Node, src: String) -> String {
                             let argument_list = handle_argument_list(subnode, src.clone());
                             temp += argument_list.as_str();
                         },
+                        "parenthesized_expression" => {
+                            let parenthesized_expression = handle_parenthesized_expression(subnode, src.clone());
+                            temp += parenthesized_expression.as_str();
+                        },
                         _ => println!("You shouldn't be here (middle of call_expression): {}\n", subnode.grammar_name()),
                     }
                 }
@@ -622,6 +682,10 @@ fn handle_if_statement(root: Node, src: String) -> String {
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 parts.push(parenthesized_expression);
+            },
+            "switch_statement" => {
+                let switch_statement = handle_switch_statement(node, src.clone());
+                parts.push(switch_statement);
             },
             "break_statement" => {
                 parts.push("break;".to_string());
@@ -731,6 +795,10 @@ fn handle_case_statement(root: Node, src: String) -> String {
                 let if_statement = handle_if_statement(node, src.clone());
                 result += format!("{}\n", if_statement).as_str();
             },
+            "goto_statement" => {
+                let goto_statement = handle_goto_statement(node, src.clone());
+                result += format!("{}\n", goto_statement).as_str();
+            },
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
@@ -800,6 +868,10 @@ fn handle_while_statement(root: Node, src: String) -> String {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
                 parts.push(expression_statement);
+            },
+            "switch_statement" => {
+                let switch_statement = handle_switch_statement(node, src.clone());
+                parts.push(switch_statement);
             },
             _ => println!("You shouldn't be here (while_statement): {}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
@@ -891,6 +963,10 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let unary_expression = handle_unary_expression(node, src.clone());
                 result += unary_expression.as_str();
             },
+            "assignment_expression" => {
+                let assignment_expression = handle_assignment_expression(node, src.clone());
+                result += assignment_expression.as_str();
+            },
             "string_literal" => {
                 let string_literal = handle_string_literal(node, src.clone());
                 result += string_literal.as_str();
@@ -950,6 +1026,22 @@ fn handle_return_statement(root: Node, src: String) -> String {
                 let char_literal = handle_char_literal(node.clone(), src.clone());
                 parts.push(char_literal);
             },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node.clone(), src.clone());
+                parts.push(string_literal);
+            },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node.clone(), src.clone());
+                parts.push(subscript_expression);
+            },
+            "pointer_expression" => {
+                let pointer_expression = handle_pointer_expression(node.clone(), src.clone());
+                parts.push(pointer_expression);
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node.clone(), src.clone());
+                parts.push(parenthesized_expression);
+            },
             "return" => {
                 parts.push("return".to_string());
             },
@@ -1005,8 +1097,13 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                     "," => temp += ", ",
                     "(" => temp += "(",
                     ")" => temp += ")",
+                    "pointer_declarator" => {
+                        let pointer_declarator = handle_pointer_declarator(subnode, src.clone());
+                        temp += pointer_declarator.as_str();
+                    },
                     "parameter_declaration" => {
-                        let parameter_declaration = handle_parameter_declaration(subnode, src.clone());
+                        let mut parameter_declaration = handle_parameter_declaration(subnode, src.clone());
+                        parameter_declaration = utils::remove_pointer_spaces(parameter_declaration);
                         temp += parameter_declaration.as_str();
                     },
                     "identifier" => {
@@ -1082,6 +1179,7 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
 
 fn handle_identifier(root: Node, src: String) -> String {
     let mut result = String::new();
+    let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "identifier" => {
@@ -1090,7 +1188,9 @@ fn handle_identifier(root: Node, src: String) -> String {
             "expression_statement" => {
                 result = handle_expression_statement(root, src.clone());
             },
-            ";" => result = ";".to_string(),
+            ";" => {
+                result = ";".to_string();
+            },
             _ => println!("You shouldn't be here (identifier): {}\n", root.grammar_name()),
         }
     }
@@ -1391,6 +1491,10 @@ fn handle_pointer_expression(root: Node, src: String) -> String {
                 let field_expression = handle_field_expression(node, src.clone());
                 result += field_expression.as_str();
             },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                result += cast_expression.as_str();
+            },
             "*" => result += "* ",
             "&" => result += "&",
             ";" => result += ";",
@@ -1434,15 +1538,15 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
-                // parts.push(struct_specifier);
+                parts.push(struct_specifier);
             },
             "abstract_array_declarator" => {
                 let abstract_array_declarator = handle_abstract_array_declarator(node, src.clone());
-                // parts.push(abstract_array_declarator);
+                parts.push(abstract_array_declarator);
             },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
-                // parts.push(sized_type_specifier);
+                parts.push(sized_type_specifier);
             },
             _ => println!("You shouldn't be here (parameter_declaration): {}\n", node.grammar_name()),
         }
@@ -1494,10 +1598,14 @@ fn handle_subscript_expression(root: Node, src: String) -> String {
                 let subscript_expression = handle_subscript_expression(node, src.clone());
                 result += subscript_expression.as_str();
             },
+            "pointer_expression" => {
+                let pointer_expression = handle_pointer_expression(node, src.clone());
+                result += pointer_expression.as_str();
+            },
             _ => println!("You shouldn't be here (subscript_expression): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_all_spaces(result);
     return result;
 }
 
@@ -1603,6 +1711,7 @@ fn handle_cast_expression(root: Node, src: String) -> String {
     return result;
 }
 
+//* doesn't handle double pointers properly
 fn handle_init_declarator(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
@@ -1661,7 +1770,7 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             },
             "array_declarator" => {
                 let array_declarator = handle_array_declarator(node, src.clone());
-                // parts.push(array_declarator);
+                parts.push(array_declarator);
             },
             "=" => parts.push("=".to_string()),
             "false" => parts.push("false".to_string()),
@@ -1670,7 +1779,7 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (init_declarator): {}\n", node.grammar_name()),
         }
     }
-    let result = parts.join(" ");
+    let mut result = parts.join(" ");
     return result;
 }
 
@@ -1681,23 +1790,23 @@ fn handle_type_descriptor(root: Node, src: String) -> String {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
-            }
+            },
             "primitive_type" => {
                 let primitive_type = handle_primitive_type(node, src.clone());
                 result += primitive_type.as_str();
-            }
+            },
             "abstract_pointer_declarator" => {
                 let abstract_pointer_declaration = handle_abstract_pointer_declarator(node, src.clone());
                 result += format!("{} ", abstract_pointer_declaration).as_str();
-            }
+            },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
-                // result += struct_specifier.as_str();
-            }
+                result += struct_specifier.as_str();
+            },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
-                // result += sized_type_specifier.as_str();
-            }
+                result += sized_type_specifier.as_str();
+            },
             _ => println!("You shouldn't be here (type_descriptor): {}", node.grammar_name()),
         }
     }
@@ -1749,7 +1858,8 @@ fn handle_sizeof_expression(root: Node, src: String) -> String {
             "(" => result += "(",
             ")" => result += ")",
             "parenthesized_expression" => {
-                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                let mut parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                parenthesized_expression = utils::remove_all_spaces(parenthesized_expression);
                 result += parenthesized_expression.as_str();
             },
             "type_descriptor" => {
@@ -1853,6 +1963,14 @@ fn handle_unary_expression(root: Node, src: String) -> String {
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
                 result += field_expression.as_str();
+            },
+            "pointer_expression" => {
+                let pointer_expression = handle_pointer_expression(node, src.clone());
+                result += pointer_expression.as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
             },
             "!" => result += "!",
             "~" => result += "~",
@@ -1983,6 +2101,10 @@ fn handle_for_statement(root: Node, src: String) -> String {
                 let declaration = handle_declaration(node, src.clone());
                 result += declaration.as_str();
             },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                result += expression_statement.as_str();
+            },
             ";" => result += "; ",
             "(" => result += "(",
             ")" => result += ")",
@@ -1999,7 +2121,7 @@ fn handle_struct_specifier(root: Node, src: String) -> String {
         match node.grammar_name() {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
-                result += format!("{}\n", identifier).as_str();
+                result += format!("{} ", identifier).as_str();
             },
             "field_declaration_list" => {
                 let field_declaration_list = handle_field_declaration_list(node, src.clone());
@@ -2030,9 +2152,30 @@ fn handle_type_definition(root: Node, src: String) -> String {
             "typedef" => {
                 result += "typedef ";
             },
+            "primitive_type" => {
+                let primitive_type = handle_primitive_type(node, src.clone());
+                result += primitive_type.as_str();
+            },
+            "function_declarator" => {
+                let function_declarator = handle_function_declarator(node, src.clone());
+                result += function_declarator.as_str();
+            },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
                 result += struct_specifier.as_str();
+            },
+            "union_specifier" => {
+                let union_specifier = handle_union_specifier(node, src.clone());
+                result += union_specifier.as_str();
+            },
+            "pointer_declarator" => {
+                let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                result = result.trim_end().to_string();
+                result += format!(" {}", pointer_declarator).as_str();
+            },
+            "enum_specifier" => {
+                let enum_specifier = handle_enum_specifier(node, src.clone());
+                // result += enum_specifier.as_str();
             },
             ";" => result += ";",
             _ => println!("You shouldn't be here (type_definition): {}\n", node.grammar_name()),
@@ -2043,16 +2186,34 @@ fn handle_type_definition(root: Node, src: String) -> String {
 
 fn handle_field_declaration_list(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
+    let mut temp = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "field_declaration" => {
                 let field_declaration = handle_field_declaration(node, src.clone());
-                parts.push(format!("\t{}", field_declaration));
+                if temp.len() > 0 {
+                    parts.push(temp);
+                    temp = String::new();
+                }
+                else {
+                    temp += format!("\t{}", field_declaration).as_str();
+                }
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                temp += format!("\t{}", comment).as_str();
+                parts.push(temp);
+                temp = String::new();
             },
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
             _ => println!("You shouldn't be here (field_declaration_list): {}\n", node.grammar_name()),
         }
+    }
+    if temp.len() > 0 {
+        parts.remove(parts.len()-1);
+        parts.push(temp);
+        parts.push("}".to_string());
     }
     let result = parts.join("\n");
     return result;
@@ -2074,7 +2235,12 @@ fn handle_field_declaration(root: Node, src: String) -> String {
                 let array_declarator = handle_array_declarator(node, src.clone());
                 result += format!("{} ", array_declarator).as_str();
             },
+            "pointer_declarator" => {
+                let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                result += format!("{} ", pointer_declarator).as_str();
+            },
             ";" => result += ";",
+            "," => result += ", ",
             _ => println!("You shouldn't be here (field_declaration): {}\n", node.grammar_name()),
         }
     }
@@ -2097,6 +2263,22 @@ fn handle_preproc_def(root: Node, src: String) -> String {
         }
     }
     let result = parts.join(" ");
+    return result;
+}
+
+fn handle_abstract_array_declarator(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
+            },
+            "[" => result += "[",
+            "]" => result += "]",
+            _ => println!("You shouldn't be here (abstract_array_declarator): {}\n", node.grammar_name()),
+        }
+    }
     return result;
 }
 
@@ -2124,20 +2306,21 @@ fn handle_do_statement(root: Node, src: String) {
     }
 }
 
-fn handle_sized_type_specifier(root: Node, src: String) {
+fn handle_sized_type_specifier(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "primitive_type" => {
+                let primitive_type = handle_primitive_type(node, src.clone());
+                parts.push(primitive_type);
+            },
+            "long" => parts.push("long".to_string()),
+            "unsigned" => parts.push("unsigned".to_string()),
+            _ => println!("You shouldn't be here (sized_type_specifier): {}\n", node.grammar_name()),
         }
     }
-}
-
-fn handle_parameter_list(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
+    let result = parts.join(" ");
+    return result;
 }
 
 fn handle_preproc_ifdef(root: Node, src: String) {
@@ -2164,35 +2347,12 @@ fn handle_variadic_parameter(root: Node, src: String) {
     }
 }
 
-fn handle_storage_class_specifier(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_using_declaration(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_for_range_loop(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_abstract_array_declarator(root: Node, src: String) -> String {
+fn handle_storage_class_specifier(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "static" => result += "static",
+            _ => println!("You shouldn't be here (storage_class_specifier): {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -2204,4 +2364,114 @@ fn handle_preproc_if(root: Node, src: String) {
             _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
+}
+
+fn handle_enum_specifier(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += format!("{} ", identifier).as_str();
+            },
+            "enumerator_list" => {
+                let enumerator_list = handle_enumerator_list(node, src.clone());
+                // result += format!("{} ", identifier).as_str();
+            },
+            "field_declaration_list" => {
+                let field_declaration_list = handle_field_declaration_list(node, src.clone());
+                // This adds a newline before the curly brace.
+                if result.contains("\n") {
+                    result += field_declaration_list.as_str();
+                }
+                else {
+                    result += format!("\n{}", field_declaration_list).as_str();
+                }
+            },
+            "enum" => result += "enum ",
+            _ => println!("You shouldn't be here (enum_specifier): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_union_specifier(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += format!("{} ", identifier).as_str();
+            },
+            "field_declaration_list" => {
+                let field_declaration_list = handle_field_declaration_list(node, src.clone());
+                // This adds a newline before the curly brace.
+                if result.contains("\n") {
+                    result += field_declaration_list.as_str();
+                }
+                else {
+                    result += format!("\n{}", field_declaration_list).as_str();
+                }
+            },
+            "union" => result += "union ",
+            _ => println!("You shouldn't be here (union_specifier): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_parameter_list(root: Node, src: String) {
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+}
+
+fn handle_enumerator_list(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    let mut temp = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "enumerator" => {
+                temp += format!("\t{}", node.utf8_text(src.as_bytes()).unwrap()).as_str();
+            },
+            "," => {
+                temp += ",";
+                parts.push(temp);
+                temp = String::new();
+            },
+            "{" => parts.push("{".to_string()),
+            "}" => parts.push("}".to_string()),
+            _ => println!("Enumerator list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    if temp.len() > 0 { 
+        parts.remove(parts.len()-1);
+        parts.push(temp); 
+        parts.push("}".to_string());
+    }
+    let result = parts.join("\n");
+    println!("Result:\n{}\n", &result);
+    return result;
+}
+
+fn sort_includes(includes: &mut Vec<String>) {
+    includes.sort_by(|a, b| {
+        if a.contains("\"") && b.contains("\"") {
+            if a < b { Ordering::Less }
+            else if a > b { Ordering::Greater }
+            else { Ordering::Equal }
+        }
+        else if a.contains(">") && b.contains(">") {
+            if a < b { Ordering::Less }
+            else if a > b { Ordering::Greater }
+            else { Ordering::Equal }
+        }
+        else {
+            if a.contains("\"") && !b.contains("\"") { Ordering::Greater }
+            else if !a.contains("\"") && b.contains("\"") { Ordering::Less }
+            else { Ordering::Equal }
+        }
+    });
 }

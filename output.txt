@@ -1,583 +1,2071 @@
-Finished comment:
-// /* bone.c -- The Bone Lisp interpreter.
+Unknown grammar name 1: preproc_ifdef
 
-Finished comment:
-//  * Copyright (C) 2016 Wolfgang Jaehrling
+Unknown grammar name 2: preproc_if
 
-Finished comment:
-//  *
+Unknown grammar name 1: preproc_call
 
-Finished comment:
-//  * Permission to use, copy, modify, and/or distribute this software for any
+Conditional expression: subscript_expression: h->vals[pos]
 
-Finished comment:
-//  * purpose with or without fee is hereby granted, provided that the above
+Unknown grammar name 1: preproc_if
 
-Finished comment:
-//  * copyright notice and this permission notice appear in all copies.
+Unknown grammar name 1: preproc_function_def
 
-Finished comment:
-//  *
+Unknown grammar name 1: preproc_call
 
-Finished comment:
-//  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+Unknown grammar name 1: preproc_function_def
 
-Finished comment:
-//  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+Unknown grammar name 2: preproc_function_def
 
-Finished comment:
-//  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+Unknown grammar name 2: preproc_call
 
-Finished comment:
-//  * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+Unknown grammar name 2: preproc_function_def
 
-Finished comment:
-//  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+Unknown grammar name 2: preproc_function_def
 
-Finished comment:
-//  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+Unknown grammar name 2: preproc_call
 
-Finished comment:
-//  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+Unknown grammar name 2: preproc_call
 
-Finished comment:
-//  */
+Conditional expression: subscript_expression: allowed_chars[c]
+
+Unknown grammar name 2: do_statement
+
+Conditional expression: number_literal: -1
+
+Result:
+{
+	OP_CONST = 1,
+	OP_GET_ENV,
+	OP_GET_ARG,
+	OP_SET_LOCAL,
+	OP_WRAP,
+	OP_PREPARE_CALL,
+	OP_PREPARE_DIRECT_CALL,
+	OP_CALL,
+	OP_TAILCALL,
+	OP_ADD_ARG,
+	OP_ADD_NONREST_ARG,
+	OP_ADD_FIRST_REST_ARG,
+	OP_ADD_ANOTHER_REST_ARG,
+	OP_JMP_IFN,
+	OP_JMP,
+	OP_RET,
+	OP_PREPARE_SUB,
+	OP_ADD_ENV,
+	OP_MAKE_SUB_NAMED,
+	OP_MAKE_SUB,
+	OP_MAKE_RECURSIVE,
+	OP_DYN,
+	OP_INSERT_DECLARED
+}
 
 Finished includes:
 #include <assert.h>
-
-Finished includes:
 #include <inttypes.h>
-
-Finished includes:
 #include <math.h>
-
-Finished includes:
 #include <stdarg.h>
-
-Finished includes:
 #include <stdbool.h>
-
-Finished includes:
 #include <stdint.h>
-
-Finished includes:
 #include <stdio.h>
-
-Finished includes:
 #include <stdlib.h>
-
-Finished includes:
 #include <string.h>
-
-Finished includes:
 #include <sys/mman.h>
-
-Finished includes:
 #include <unistd.h>
-
-Finished includes:
 #include "bone.h"
 
-Finished declaration:
-static any last_value;
+Finished declarations:
+my any last_value;
+my bool silence_errors = false;
+my void eprint(any x);
+my void backtrace();
+my size_t blocksize;
+my size_t blockwords;
+my any blockmask;
+my any*;
+my reg permanent_reg;
+my reg*reg_stack;
+my int reg_pos, reg_allocated;
+my any*,*;
+my any copy(any x);
+static struct exc_buf 
+{
+	jmp_buf buf;
+}*exc_bufs;
+my int exc_num;
+my int exc_allocated;
+my void hash_set(hash h, any key, any val);
+my hash sym_ht;
+my any s_quote, s_quasiquote, s_unquote, s_unquote_splicing, s_lambda, s_with, s_if, s_list, s_cat, s_dot, s_do, s_arg, s_env;
+my char*sub_allocp;
+my size_t sub_alloc_left;
+my any get_dyn_val(any name);
+my hash bindings;
+my hash macros;
+my hash readers;
+my hash dynamics;
+my any dynamic_vals[256];
+my int dyn_cnt = 0;
+my int dyn_src, dyn_dst;
+my void print(any x);
+my bool allowed_chars[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0};
+my any reader();
+my any* locals_stack = NULL;
+my size_t locals_allocated;
+my size_t locals_pos;
+struct call_stack_entry 
+{
+	sub subr;
+	int tail_calls;
+}*call_stack;
+my size_t call_stack_allocated;
+my size_t call_stack_pos;
+my struct;
+upcoming_call*upcoming_calls;
+my size_t upcoming_calls_allocated;
+my size_t next_call_pos;
+my struct;
+my any compile_expr(any e, any env, bool tail_context, compile_state* state);
+my sub_code compile2sub_code(any expr, any env, int argc, int take_rest, int env_size);
+my any quasiquote(any x);
 
-Finished comment:
+Finished functions definitions:
+my void eprintf(const char* fmt, )
+{
+}
+
+
+my void fail(const char* msg)
+{
+}
+
+
+my size_t bytes2words(size_t n)
+{
+}
+
+
+my const char* type_name(type_tag tag)
+{
+}
+
+
+bool is_nil(any x)
+{
+}
+
+
+bool is(any x)
+{
+}
+
+
+any to_bool(bool x)
+{
+}
+
+
+my void basic_error(const char* fmt, )
+{
+}
+
+
+my void generic_error(const char* msg, any x)
+{
+}
+
+
+my void type_error(any x, type_tag t)
+{
+}
+
+
+my type_tag tag_of(any x)
+{
+}
+
+
+my bool is_tagged(any x, type_tag t)
+{
+}
+
+
+void check(any x, type_tag t)
+{
+}
+
+
+my any tag(any x, type_tag t)
+{
+}
+
+
+my any untag(any x)
+{
+}
+
+
+my any untag_check(any x, type_tag t)
+{
+}
+
+
+type_other_tag get_other_type(any x)
+{
+}
+
+
+my bool is_num(any x)
+{
+}
+
+
+my type_num_tag get_num_type(any x)
+{
+}
+
+
+int64_t any2int(any x)
+{
+}
+
+
+any int2any(int64_t n)
+{
+}
+
+
+float any2float(any x)
+{
+}
+
+
+any float2any(float f)
+{
+}
+
+
+my float anynum2float(any x)
+{
+}
+
+
+my any* 
+{
+}
+
+
+my any* 
+{
+}
+
+
+my void block_point_to_next(any*, int i)
+{
+}
+
+
+my void blocks_init(any*, int n)
+{
+}
+
+
+my any* 
+{
+}
+
+
+my void ensure_free_block()
+{
+}
+
+
+my any* 
+{
+}
+
+
+my void reg_init(reg r, any*)
+{
+}
+
+
+my reg reg_new()
+{
+}
+
+
+my void reg_free(reg r)
+{
+}
+
+
+my void blocks_sysfree(any*)
+{
+}
+
+
+my void reg_sysfree(reg r)
+{
+}
+
+
+my void load_reg(reg r)
+{
+}
+
+
+my void store_reg(reg r)
+{
+}
+
+
+my void inc_regs()
+{
+}
+
+
+my void reg_push(reg r)
+{
+}
+
+
+my reg reg_pop()
+{
+}
+
+
+my void reg_permanent()
+{
+}
+
+
+my void in_reg()
+{
+}
+
+
+my void end_in_reg()
+{
+}
+
+
+my void rollback_reg_sp(int pos)
+{
+}
+
+
+any* reg_alloc(int n)
+{
+}
+
+
+my any copy_back(any x)
+{
+}
+
+
+jmp_buf* begin_try_()
+{
+}
+
+
+my void exc_buf_nonempty()
+{
+}
+
+
+jmp_buf* throw_()
+{
+}
+
+
+void end_try_()
+{
+}
+
+
+any cons(any a, any d)
+{
+}
+
+
+any far(any x)
+{
+}
+
+
+any fdr(any x)
+{
+}
+
+
+any car(any x)
+{
+}
+
+
+any cdr(any x)
+{
+}
+
+
+void set_far(any cell, any x)
+{
+}
+
+
+void set_fdr(any cell, any x)
+{
+}
+
+
+bool is_cons(any x)
+{
+}
+
+
+bool is_single(any x)
+{
+}
+
+
+any single(any x)
+{
+}
+
+
+any list2(any a, any b)
+{
+}
+
+
+any list3(any a, any b, any c)
+{
+}
+
+
+my any pcons(any a, any d)
+{
+}
+
+
+my any pcopy(any x)
+{
+}
+
+
+listgen listgen_new()
+{
+}
+
+
+void listgen_add(listgen* lg, any x)
+{
+}
+
+
+my void listgen_add_list(listgen* lg, any xs)
+{
+}
+
+
+my void listgen_set_tail(listgen* lg, any x)
+{
+}
+
+
+my any duplist(any xs)
+{
+}
+
+
+int64_t len(any x)
+{
+}
+
+
+my any reverse(any xs)
+{
+}
+
+
+my bool is_member(any a, any xs)
+{
+}
+
+
+my any assoc(any obj, any xs)
+{
+}
+
+
+my any assoc_entry(any obj, any xs)
+{
+}
+
+
+my any cat2(any a, any b)
+{
+}
+
+
+my any move_last_to_rest_x(any xs)
+{
+}
+
+
+my any merge_sort(any bigger_p, any hd)
+{
+}
+
+
+my bool is_zero(any x)
+{
+}
+
+
+bool is_str(any x)
+{
+}
+
+
+my any str(any chrs)
+{
+}
+
+
+my any unstr(any s)
+{
+}
+
+
+my any charp2list(const char* p)
+{
+}
+
+
+any charp2str(const char* p)
+{
+}
+
+
+my char* list2charp(any x)
+{
+}
+
+
+char* str2charp(any x)
+{
+}
+
+
+my bool str_eql(any s1, any s2)
+{
+}
+
+
+my any num2str(any n)
+{
+}
+
+
+my hash hash_new(size_t initsize, any default_val)
+{
+}
+
+
+my void hash_free(hash h)
+{
+}
+
+
+my bool find_slot(hash h, any key, size_t* pos)
+{
+}
+
+
+my bool slot_used(any x)
+{
+}
+
+
+my void enlarge_table(hash h)
+{
+}
+
+
+my void hash_set(hash h, any key, any val)
+{
+}
+
+
+my any hash_get(hash h, any key)
+{
+}
+
+
+my void hash_rm(hash h, any key)
+{
+}
+
+
+my bool is_sym(any x)
+{
+}
+
+
+my any string_hash(const char* s, size_t* len)
+{
+}
+
+
+char* symtext(any sym)
+{
+}
+
+
+my any as_sym(char* name)
+{
+}
+
+
+my any add_sym(const char* name, size_t len, any id)
+{
+}
+
+
+any intern(const char* name)
+{
+}
+
+
+my any intern_from_chars(any chrs)
+{
+}
+
+
+my any gensym()
+{
+}
+
+
+my any sym2str(any sym)
+{
+}
+
+
+my void init_syms()
+{
+}
+
+
+my void ensure_sub_alloc(size_t size)
+{
+}
+
+
+my sub_code sub_alloc(size_t codeword_cnt)
+{
+}
+
+
+my sub_code make_sub_code(int argc, int take_rest, int extra_localc, int size_of_env, int code_size)
+{
+}
+
+
+my int count_locals(sub_code sc)
+{
+}
+
+
+my bool is_sub(any x)
+{
+}
+
+
+my any sub2any(sub s)
+{
+}
+
+
+my sub any2sub(any x)
+{
+}
+
+
+my any copy_sub(any x)
+{
+}
+
+
+my void name_sub(sub subr, any name)
+{
+}
+
+
+my void check_overwrite(hash namespace, any name)
+{
+}
+
+
+my void add_name(hash namespace, any name, bool overwritable, any val)
+{
+}
+
+
+my any get_binding(any name)
+{
+}
+
+
+my void bind(any name, bool overwritable, any subr)
+{
+}
+
+
+my bool is_bound(any name)
+{
+}
+
+
+my void declare_binding(any name)
+{
+}
+
+
+my void mac_bind(any name, bool overwritable, any subr)
+{
+}
+
+
+my any get_mac(any name)
+{
+}
+
+
+my bool is_mac_bound(any name)
+{
+}
+
+
+my void reader_bind(any name, bool overwritable, any subr)
+{
+}
+
+
+my any get_reader(any name)
+{
+}
+
+
+my bool is_reader_bound(any name)
+{
+}
+
+
+my any get_dyn(any name)
+{
+}
+
+
+my bool is_dyn_bound(any name)
+{
+}
+
+
+my void check_dyn_bound(any x, any name)
+{
+}
+
+
+my void set_dyn_val(any name, any x)
+{
+}
+
+
+my void create_dyn(any name, any x)
+{
+}
+
+
+my any get_existing_dyn(any name)
+{
+}
+
+
+my any get_dyn_val(any name)
+{
+}
+
+
+my void invalid_utf8(const char* msg)
+{
+}
+
+
+my int utf8_read(utf8_reader reader, void* hook)
+{
+}
+
+
+my int from_strp(const char*)
+{
+}
+
+
+my int utf8from_strp(const char*)
+{
+}
+
+
+my int utf8getc(FILE* fp)
+{
+}
+
+
+my void utf8_write(utf8_writer writer, int c, void* hook)
+{
+}
+
+
+my void to_strp(int c, char*)
+{
+}
+
+
+my void utf8to_strp(int c, char*)
+{
+}
+
+
+my void utf8putc(int c, FILE* fp)
+{
+}
+
+
+my any fp2any(FILE* fp, type_other_tag t, any name)
+{
+}
+
+
+any fp2src(FILE* fp, any name)
+{
+}
+
+
+any fp2dst(FILE* fp, any name)
+{
+}
+
+
+my FILE* any2fp(any x, type_other_tag t)
+{
+}
+
+
+FILE* src2fp(any x)
+{
+}
+
+
+FILE* dst2fp(any x)
+{
+}
+
+
+my any get_filename(any x)
+{
+}
+
+
+my any input_line(any x)
+{
+}
+
+
+my any copy_src(any x)
+{
+}
+
+
+my any copy_dst(any x)
+{
+}
+
+
+my void bputc(int x)
+{
+}
+
+
+my void bprintf(const char* fmt, )
+{
+}
+
+
+my int nextc()
+{
+}
+
+
+my int look()
+{
+}
+
+
+my void print_sub_args(any x)
+{
+}
+
+
+my bool is_arglist(any x)
+{
+}
+
+
+my void print(any x)
+{
+}
+
+
+my void say_str(any s)
+{
+}
+
+
+my void say(any x)
+{
+}
+
+
+my void eprint(any x)
+{
+}
+
+
+my void parse_error(const char* text)
+{
+}
+
+
+my bool is_symchar(int c)
+{
+}
+
+
+my void skip_until(char end)
+{
+}
+
+
+my int find_token()
+{
+}
+
+
+my int digit2int(any chr)
+{
+}
+
+
+my any chars2num(any chrs)
+{
+}
+
+
+my any chars_to_num_or_sym(any cs)
+{
+}
+
+
+my any read_sym_chars(int start_char)
+{
+}
+
+
+my any read_str()
+{
+}
+
+
+my any read_list()
+{
+}
+
+
+my any short_lambda_parser(any* body)
+{
+}
+
+
+my any read_lambda_short_form()
+{
+}
+
+
+my any read_unquote()
+{
+}
+
+
+my any reader()
+{
+}
+
+
+my any bone_read()
+{
+}
+
+
+void bone_result(any x)
+{
+}
+
+
+my size_t alloc_locals(int n)
+{
+}
+
+
+my void drop_locals(int n)
+{
+}
+
+
+my bool is_self_evaluating(any x)
+{
+}
+
+
+my void eprint_arg(any x)
+{
+}
+
+
+my void backtrace()
+{
+}
+
+
+upcoming_call* next_call()
+{
+}
+
+
+my void add_upcoming_call()
+{
+}
+
+
+my void args_error(sub_code sc, any xs)
+{
+}
+
+
+my void args_error_unspecific(sub_code sc)
+{
+}
+
+
+my void add_nonrest_arg()
+{
+}
+
+
+my void add_first_rest_arg()
+{
+}
+
+
+my void add_another_rest_arg()
+{
+}
+
+
+my void add_rest_arg()
+{
+}
+
+
+my void verify_argc(struct upcoming_call* the_call)
+{
+}
+
+
+my void call(sub subr, size_t args_pos, int locals_cnt)
+{
+}
+
+
+my void apply(any s, any xs)
+{
+}
+
+
+void call0(any subr)
+{
+}
+
+
+void call1(any s, any x)
+{
+}
+
+
+void call2(any subr, any x, any y)
+{
+}
+
+
+my any mac_expand_1(any x)
+{
+}
+
+
+my any mac_expand(any x)
+{
+}
+
+
+my int extra_pos(compile_state* s)
+{
+}
+
+
+my void emit(any x, compile_state* state)
+{
+}
+
+
+my void compile_if(any e, any env, bool tail_context, compile_state* state)
+{
+}
+
+
+my any lambda_ignore_list(any old, any args)
+{
+}
+
+
+my void found_local(any local, listgen* lg, int* cnt)
+{
+}
+
+
+my void collect_locals_rec(any code, any locals, any ignore, int* cnt, listgen* lg)
+{
+}
+
+
+my any collect_locals(any code, any locals, any ignore, int* cnt)
+{
+}
+
+
+my any add_local(any env, any name, any kind, int num)
+{
+}
+
+
+my any locals_for_lambda(any env, any args)
+{
+}
+
+
+my any flatten_rest_x(any xs, int* len, int* take_rest)
+{
+}
+
+
+my void compile_lambda(any args, any body, any env, compile_state* state)
+{
+}
+
+
+my void compile_do(any body, any env, bool tail_context, compile_state* state)
+{
+}
+
+
+my bool arglist_contains(any args, any name)
+{
+}
+
+
+my bool refers_to(any expr, any name)
+{
+}
+
+
+my void compile_with(any name, any expr, any body, any env, bool tail_context, compile_state* state)
+{
+}
+
+
+my any compile_expr(any e, any env, bool tail_context, compile_state* state)
+{
+}
+
+
+my any compile2list(any expr, any env, int extra_offset, int* extra_locals)
+{
+}
+
+
+my sub_code compile2sub_code(any expr, any env, int argc, int take_rest, int env_size)
+{
+}
+
+
+my sub_code compile_toplevel_expr(any e)
+{
+}
+
+
+my void eval_toplevel_expr(any e)
+{
+}
+
+
+my any qq_list(any x)
+{
+}
+
+
+my any qq_id(any x)
+{
+}
+
+
+my any quasiquote(any x)
+{
+}
+
+
+DEFSUB (fastplus)
+{
+}
+
+
+DEFSUB (fullplus)
+{
+}
+
+
+DEFSUB (cons)
+{
+}
+
+
+DEFSUB (print)
+{
+}
+
+
+DEFSUB (apply)
+{
+}
+
+
+DEFSUB (id)
+{
+}
+
+
+DEFSUB (nilp)
+{
+}
+
+
+DEFSUB (eqp)
+{
+}
+
+
+DEFSUB (not)
+{
+}
+
+
+DEFSUB (car)
+{
+}
+
+
+DEFSUB (cdr)
+{
+}
+
+
+DEFSUB (consp)
+{
+}
+
+
+DEFSUB (symp)
+{
+}
+
+
+DEFSUB (subp)
+{
+}
+
+
+DEFSUB (nump)
+{
+}
+
+
+DEFSUB (intp)
+{
+}
+
+
+DEFSUB (floatp)
+{
+}
+
+
+DEFSUB (round)
+{
+}
+
+
+DEFSUB (ceil)
+{
+}
+
+
+DEFSUB (floor)
+{
+}
+
+
+DEFSUB (trunc)
+{
+}
+
+
+DEFSUB (strp)
+{
+}
+
+
+DEFSUB (str)
+{
+}
+
+
+DEFSUB (unstr)
+{
+}
+
+
+DEFSUB (len)
+{
+}
+
+
+DEFSUB (assoc)
+{
+}
+
+
+DEFSUB (intern)
+{
+}
+
+
+DEFSUB (copy)
+{
+}
+
+
+DEFSUB (say)
+{
+}
+
+
+DEFSUB (fastminus)
+{
+}
+
+
+DEFSUB (fullminus)
+{
+}
+
+
+DEFSUB (fast_num_eqp)
+{
+}
+
+
+DEFSUB (fast_num_neqp)
+{
+}
+
+
+DEFSUB (fast_num_gtp)
+{
+}
+
+
+DEFSUB (fast_num_ltp)
+{
+}
+
+
+DEFSUB (fast_num_geqp)
+{
+}
+
+
+DEFSUB (fast_num_leqp)
+{
+}
+
+
+DEFSUB (each)
+{
+}
+
+
+DEFSUB (fastmult)
+{
+}
+
+
+DEFSUB (fullmult)
+{
+}
+
+
+DEFSUB (fastdiv)
+{
+}
+
+
+DEFSUB (fulldiv)
+{
+}
+
+
+DEFSUB (listp)
+{
+}
+
+
+DEFSUB (cat2)
+{
+}
+
+
+DEFSUB (in_reg)
+{
+}
+
+
+DEFSUB (bind)
+{
+}
+
+
+DEFSUB (assoc_entry)
+{
+}
+
+
+DEFSUB (str_eql)
+{
+}
+
+
+DEFSUB (str_neql)
+{
+}
+
+
+DEFSUB (list_star)
+{
+}
+
+
+DEFSUB (memberp)
+{
+}
+
+
+DEFSUB (reverse)
+{
+}
+
+
+DEFSUB (mod)
+{
+}
+
+
+DEFSUB (bit_not)
+{
+}
+
+
+DEFSUB (bit_and)
+{
+}
+
+
+DEFSUB (bit_or)
+{
+}
+
+
+DEFSUB (bit_xor)
+{
+}
+
+
+DEFSUB (quasiquote)
+{
+}
+
+
+DEFSUB (mac_expand_1)
+{
+}
+
+
+DEFSUB (mac_bind)
+{
+}
+
+
+DEFSUB (mac_expand)
+{
+}
+
+
+DEFSUB (boundp)
+{
+}
+
+
+DEFSUB (mac_bound_p)
+{
+}
+
+
+DEFSUB (eval)
+{
+}
+
+
+DEFSUB (gensym)
+{
+}
+
+
+DEFSUB (map)
+{
+}
+
+
+DEFSUB (filter)
+{
+}
+
+
+DEFSUB (full_cat)
+{
+}
+
+
+DEFSUB (refers_to)
+{
+}
+
+
+DEFSUB (load)
+{
+}
+
+
+DEFSUB (var_bind)
+{
+}
+
+
+DEFSUB (with_var)
+{
+}
+
+
+DEFSUB (var_bound_p)
+{
+}
+
+
+DEFSUB (var_bang)
+{
+}
+
+
+DEFSUB (reg_loop)
+{
+}
+
+
+DEFSUB (err)
+{
+}
+
+
+DEFSUB (singlep)
+{
+}
+
+
+DEFSUB (read)
+{
+}
+
+
+DEFSUB (chr_read)
+{
+}
+
+
+DEFSUB (chr_look)
+{
+}
+
+
+DEFSUB (reader_t)
+{
+}
+
+
+DEFSUB (reader_f)
+{
+}
+
+
+DEFSUB (reader_bind)
+{
+}
+
+
+DEFSUB (reader_bound_p)
+{
+}
+
+
+DEFSUB (reload)
+{
+}
+
+
+DEFSUB (sort)
+{
+}
+
+
+DEFSUB (num2str)
+{
+}
+
+
+DEFSUB (sym2str)
+{
+}
+
+
+DEFSUB (src_line)
+{
+}
+
+
+DEFSUB (file_name)
+{
+}
+
+
+DEFSUB (with_file_src)
+{
+}
+
+
+DEFSUB (with_file_dst)
+{
+}
+
+
+DEFSUB (eofp)
+{
+}
+
+
+DEFSUB (srcp)
+{
+}
+
+
+DEFSUB (dstp)
+{
+}
+
+
+DEFSUB (declare)
+{
+}
+
+
+DEFSUB (protect)
+{
+}
+
+
+DEFSUB (dup)
+{
+}
+
+
+DEFSUB (pcons)
+{
+}
+
+
+my any make_csub(csub cptr, int argc, int take_rest)
+{
+}
+
+
+void bone_register_csub(csub cptr, const char* name, int argc, int take_rest)
+{
+}
+
+
+my void register_cmac(csub cptr, const char* name, int argc, int take_rest)
+{
+}
+
+
+my void register_creader(csub cptr, const char* name)
+{
+}
+
+
+my void init_csubs()
+{
+}
+
+
+my any copy(any x)
+{
+}
+
+
+my void bone_init_thread()
+{
+}
+
+
+void bone_info_entry(const char* name, int n)
+{
+}
+
+
+void bone_init(int argc, char*)
+{
+}
+
+
+my char* mod2file(const char* mod)
+{
+}
+
+
+void bone_load(const char* mod)
+{
+}
+
+
+void bone_repl()
+{
+}
+
+
+Finished expression statements:
+;
+
+* p = '\0';
+
+;
+
+dynamic_vals[dyn_pos] = old;
+
+;
+
+set_dyn_val(intern("_*allow-overwrites*"), old);
+
+;
+
+dynamic_vals[dyn_src] = old;
+
+fclose(fp);
+
+;
+
+dynamic_vals[dyn_dst] = old;
+
+fclose(fp);
+
+;
+
+call_stack_pos = csp_backup;
+
+silence_errors = old;
+
+Finished compound statements:
+}
+
+}
+
+}
+
+}
+
+}
+
+}
+
+Finished if statements:
+if (failed) throw();
+
+if (failed) throw();
+
+if (failed) throw();
+
+if (failed) throw();
+
+Finished switch statemnets:
+
+
+Finished return statements:
+return res;
+
+Finished comments:
+ /* bone.c -- The Bone Lisp interpreter.
+ * Copyright (C) 2016 Wolfgang Jaehrling
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 // FIXME: thread-local
 
-Finished declaration:
-static bool silence_errors = false;
-
-Finished comment:
 // FIXME: thread-local?
 
-Finished identifier: va_start
+//my void eprint(any); my any L(any x) { eprint(x); puts(""); return x; } // for debugging
 
-Finished argument list: (args, fmt)
-
-Finished identifier: vfprintf
-
-Finished argument list: (stderr, fmt, args)
-
-Finished identifier: va_end
-
-Finished argument list: (args)
-
-Finished comment:
-//static void eprint(any); static any L(any x) { eprint(x); puts(""); return x; } // for debugging
-
-Finished identifier: eprintf
-
-Finished argument list: ("%s\n", msg)
-
-Finished identifier: exit
-
-Finished argument list: (1)
-
-Finished identifier: abort
-
-Finished argument list: ()
-
-Compound statement:
-{
-	case t_cons:
-	return "cons";
-	
-	case t_sym:
-	return "sym";
-	
-	case t_str:
-	return "str";
-	
-	case t_sub:
-	return "sub";
-	
-	case t_num:
-	return "num";
-	
-	case t_other:
-	
-	default:
-		abort();
-	
-	// never called with t_other
-}
-Finished declaration:
-static void eprint(any x);
-
-Finished declaration:
-static void backtrace();
-
-Finished identifier: eprintf
-
-Finished argument list: ("ERR: ")
-
-Finished identifier: va_start
-
-Finished argument list: (args, fmt)
-
-Finished identifier: vfprintf
-
-Finished argument list: (stderr, fmt, args)
-
-Finished identifier: va_end
-
-Finished argument list: (args)
-
-Finished identifier: eprintf
-
-Finished argument list: ("\n")
-
-Finished identifier: backtrace
-
-Finished argument list: ()
-
-Finished identifier: throw
-
-Finished argument list: ()
-
-Finished identifier: eprintf
-
-Finished argument list: ("ERR: %s: ", msg)
-
-Finished identifier: eprint
-
-Finished argument list: (x)
-
-Finished identifier: eprintf
-
-Finished argument list: ("\n")
-
-Finished identifier: backtrace
-
-Finished argument list: ()
-
-Finished identifier: throw
-
-Finished argument list: ()
-
-Finished identifier: eprintf
-
-Finished argument list: ("ERR: typecheck failed: (%s? ", type_name(t))
-
-Finished identifier: eprint
-
-Finished argument list: (x)
-
-Finished identifier: eprintf
-
-Finished argument list: (")\n")
-
-Finished identifier: backtrace
-
-Finished argument list: ()
-
-Finished identifier: throw
-
-Finished argument list: ()
-
-expression_statement: type_error(x, t);
-
-Finished identifier: check
-
-Finished argument list: (x, t)
-
-Finished identifier: check
-
-Finished argument list: (x, t_num)
-
-expression_statement: generic_error("ERR: expected integer type", x);
-
-expression_statement: basic_error("ERR: integer out of allowed range: %" PRId64, n);
-
-expression_statement: generic_error("ERR: expected float type", x);
-
-Finished identifier: abort
-
-Finished argument list: ()
-
-Compound statement:
-{
-	case t_num_int:
-	return (float)any2int(x);
-	
-	case t_num_float:
-	return any2float(x);
-	
-	default:
-		abort();
-	
-}
-Finished comment:
 //////////////// regions ////////////////
 
-Finished declaration:
-static size_t blocksize;
-
-Finished comment:
 // in bytes
 
-Finished declaration:
-static size_t blockwords;
-
-Finished comment:
 // words per block
 
-Finished declaration:
-static any blockmask;
-
-Finished comment:
 // to get the block an `any` belongs to; is not actually an object!
 
-Finished declaration:
-static any **free_block;
-
-Finished comment:
 // A block begins with a pointer to the previous block that belongs to the region.
 
-Finished comment:
 // The metadata of a region (i.e. this struct) is stored in its first block.
 
-Finished comment:
 // This code is in FORTH-style.
 
-Finished comment:
 // get ptr to start of block that x belongs to.
 
-Finished identifier: blocks_init
-
-Finished argument list: (p, ALLOC_BLOCKS_AT_ONCE)
-
-expression_statement: free_block = fresh_blocks();
-
-Finished identifier: ensure_free_block
-
-Finished argument list: ()
-
-Finished identifier: reg_init
-
-Finished argument list: (r, b)
-
-return_statement: return;
-
-Finished identifier: munmap
-
-Finished argument list: (b, blocksize)
-
-Finished identifier: blocks_sysfree
-
-Finished argument list: (next)
-
-Finished identifier: blocks_sysfree
-
-Finished argument list: (r->current_block)
-
-Finished declaration:
-static reg permanent_reg;
-
-Finished comment:
 // FIXME: thread-local
 
-Finished declaration:
-static reg *reg_stack;
-
-Finished declaration:
-static int reg_pos, reg_allocated;
-
-Finished declaration:
-static any **allocp, **current_block;
-
-Finished comment:
 // from currently used reg.
 
-Finished identifier: store_reg
-
-Finished argument list: (curr_reg)
-
-Finished identifier: inc_regs
-
-Finished argument list: ()
-
-Finished identifier: load_reg
-
-Finished argument list: (curr_reg)
-
-Finished identifier: store_reg
-
-Finished argument list: (curr_reg)
-
-Finished identifier: load_reg
-
-Finished argument list: (curr_reg)
-
-Finished identifier: reg_push
-
-Finished argument list: (permanent_reg)
-
-Finished identifier: reg_push
-
-Finished argument list: (reg_new())
-
-Finished identifier: reg_free
-
-Finished argument list: (reg_pop())
-
-return_statement: return res;
-
-Finished declaration:
-static any copy(any x);
-
-Finished identifier: reg_push
-
-Finished argument list: (reg_stack[reg_pos-1])
-
-Finished identifier: reg_pop
-
-Finished argument list: ()
-
-Finished comment:
 //////////////// exceptions ////////////////
 
-Finished comment:
 // FIXME: thread-local
 
-Finished declaration:
-static struct exc_buf {
-  jmp_buf buf;
-  int reg_pos;
-} *exc_bufs;
-
-Finished declaration:
-static int exc_num;
-
-Finished declaration:
-static int exc_allocated;
-
-expression_statement: fail("internal error: throw/catch mismatch");
-
-Finished identifier: exc_buf_nonempty
-
-Finished argument list: ()
-
-Finished identifier: rollback_reg_sp
-
-Finished argument list: (exc_bufs[exc_num].reg_pos)
-
-Finished identifier: exc_buf_nonempty
-
-Finished argument list: ()
-
-Finished comment:
 //////////////// conses / lists ////////////////
 
-Finished comment:
 // no tag() needed as t_cons==0
 
-Finished comment:
 // fast, no typecheck
 
-Finished comment:
 // likewise
 
-Finished identifier: check
-
-Finished argument list: (x, t_cons)
-
-Finished identifier: check
-
-Finished argument list: (x, t_cons)
-
-Finished identifier: reg_permanent
-
-Finished argument list: ()
-
-Finished identifier: reg_pop
-
-Finished argument list: ()
-
-Finished identifier: reg_permanent
-
-Finished argument list: ()
-
-Finished identifier: reg_pop
-
-Finished argument list: ()
-
-expression_statement: lg->xs = lg->last = single(x);
-
-Finished identifier: set_fdr
-
-Finished argument list: (lg->last, new)
-
-Else clause inner compound statement:
-{
-	any new = single(x);
-	set_fdr(lg->last, new);
-	lg->last = new;
-}
-
-Finished identifier: foreach
-
-Finished argument list: (x, xs)
-
-Finished identifier: listgen_add
-
-Finished argument list: (lg, x)
-
-expression_statement: lg->xs = lg->last = x;
-
-Finished identifier: set_fdr
-
-Finished argument list: (lg->last, x)
-
-Else clause expression statement: set_fdr(lg->last, x);
-
-Finished identifier: listgen_add_list
-
-Finished argument list: (&lg, xs)
-
-Finished identifier: foreach
-
-Finished argument list: (x, xs)
-
-return_statement: return true;
-
-Finished identifier: foreach
-
-Finished argument list: (x, xs)
-
-return_statement: return fdr(x);
-
-Finished identifier: foreach
-
-Finished argument list: (x, xs)
-
-return_statement: return x;
-
-return_statement: return b;
-
-Finished identifier: foreach
-
-Finished argument list: (x, a)
-
-Finished identifier: listgen_add
-
-Finished argument list: (&lg, x)
-
-Finished identifier: listgen_set_tail
-
-Finished argument list: (&lg, b)
-
-return_statement: return far(xs);
-
-Finished identifier: foreach_cons
-
-Finished argument list: (pair, xs)
-
-Finished identifier: set_fdr
-
-Finished argument list: (pair, far(fdr(pair)))
-
-return_statement: return NIL;
-
-expression_statement: from_p = false;
-
-expression_statement: from_p = true;
-
-Finished identifier: call2
-
-Finished argument list: (bigger_p, far(p), far(q))
-
-Else clause inner compound statement:
-{
-	call2(bigger_p, far(p), far(q));
-	from_p = !is(last_value);
-}
-
-Else if: else if (len_of_q == 0 ||)
-
-
-Else clause inner compound statement:
-{
-	len_of_q--;
-	e = q;
-	q = fdr(q);
-}
-
-expression_statement: set_fdr(tl, e);
-
-Else clause expression statement: hd = e;
-
-Finished identifier: set_fdr
-
-Finished argument list: (tl, NIL)
-
-return_statement: return hd;
-
-Finished identifier: abort
-
-Finished argument list: ()
-
-Compound statement:
-{
-	case t_num_int:
-	return any2int(x) == 0;
-	
-	case t_num_float:
-	return any2float(x) == 0.0;
-	
-	default:
-		abort();
-	
-}
-Finished comment:
 //////////////// strs ////////////////
 
-Finished comment:
 // FIXME: for short strings only
 
-ERROR
-Handling ERROR:
-name: {
-text: {
+//////////////// hash tables ////////////////
+
+   /* Find the entry in H with KEY and provide the entry number in *POS.
+   Return true if there is an entry with this key already.  If there
+   is none, *POS will contain the position of the slot we can use to
+   add it. */
+
+//////////////// syms ////////////////
+
+// `name` must be interned
+
+//////////////// subs ////////////////
+
+// in bytes!
+
+//////////////// bindings ////////////////
+
+// FIXME: does it need mutex protection? -> yes, but we use it only at compile-time anyway
+
+// FIXME: needs mutex protection, see above
+
+// FIXME: needs mutex protection, see above
+
+// this is shared by threads, it just contains numbers as values
+
+// FIXME: thread-local, resize
+
+//////////////// UTF-8 ////////////////
+
+// read UTF-8 according to RFC 3629.
+
+//////////////// srcs and dsts ////////////////
+
+//////////////// printer ////////////////
+
+//////////////// reader ////////////////
+
+// These can be used for syms in s-exprs
+
+// Disallowed are the first 32 and "#'(),@:;[]`{}|
+
+// for mutual recursion
+
+//////////////// evaluator ////////////////
+
+// FIXME: thread-local
+
+// FIXME: thread-local
+
+// FIXME: thread-local
+
+//void call1(any subr, any x) { apply(subr, single(x)); }
+
+//////////////// compiler ////////////////
+
+// decl for mutual recursion
+
+// `locals` is of the form ((foo arg . 0) (bar arg . 1) (baz env . 0))
+
+// if `e` is a sym that has is bound globally, return the value bound to it; false in all other cases.
+
+//////////////// quasiquote ////////////////
+
+//////////////// library ////////////////
+
+//////////////// misc ////////////////
+
+Finished errors:
+}
+
+}
+
+}
+
+}
+
+}
+
+}
+
+Finished type definitions:
+typedef union 
+{
+	float f;
+} float_or_uint32;
+
+typedef struct reg 
+{
+	any *, *;
+} * reg;
+
+typedef struct hash 
+{
+	size_t size, taken_slots;
+	any default_value;
+} * hash;
+
+typedef struct sub_code 
+{
+	// fields are in the order in which we access them.
+	int argc;	// number of required args
+	int take_rest;	// accepting rest args? 0=no, 1=yes
+	int extra_localc;	// the ones introduced by `with`
+	any name;	// sym for backtraces
+	int size_of_env;	// so that we can copy subs
+	any ops[1];	// can be longer
+} * sub_code;
+
+typedef struct sub 
+{
+	sub_code code;
+} * sub;
+
+typedef int(* utf8_reader)(void* hook);
+
+typedef void(* utf8_writer)(int c, void* hook);
+
+typedef struct io 
+{
+	type_other_tag t;
+	any name;
+} * io;
+
+typedef  opcode;
+
+typedef struct 
+{
+	any dst;
+	int max_locals;
+	int extra_offset;
+} compile_state;
+
+Finished struct specifiers:
+struct upcoming_call 
+{
+	sub to_be_called;
+	int nonrest_args_left;
+	size_t args_pos, next_arg_pos;
+}
+
+Finished preproc definitions:
+#define _GNU_SOURCE 1 // for mmap()s MAP_ANONYMOUS
+#define HASH_SLOT_UNUSED UNIQ(100)
+#define HASH_SLOT_DELETED UNIQ(101)
+#define READER_LIST_END UNIQ(102)
+#define BINDING_DEFINED UNIQ(103)
+#define BINDING_EXISTS UNIQ(104)
+#define BINDING_DECLARED UNIQ(105)
+#define ALLOC_BLOCKS_AT_ONCE 16
+#define curr_reg reg_stack[reg_pos]
+#define MAXLOAD 175 // value between 0 and 255
 
