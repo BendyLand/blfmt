@@ -18,6 +18,11 @@ pub fn traverse_ast(ast: Tree, src: String) {
     let mut type_defs = Vec::<String>::new();
     let mut struct_specs = Vec::<String>::new();
     let mut preproc_defs = Vec::<String>::new();
+    let mut preproc_ifdefs = Vec::<String>::new();
+    let mut preproc_ifs = Vec::<String>::new();
+    let mut preproc_function_defs = Vec::<String>::new();
+    let mut preproc_calls = Vec::<String>::new();
+    let mut sized_type_speicifers = Vec::<String>::new();
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
@@ -79,12 +84,27 @@ pub fn traverse_ast(ast: Tree, src: String) {
                 let preproc_def = handle_preproc_def(child, src.clone());
                 preproc_defs.push(preproc_def);
             },
+            "preproc_ifdef" => {
+                let preproc_ifdef = handle_preproc_ifdef(child, src.clone());
+                preproc_ifdefs.push(preproc_ifdef);
+            },
+            "preproc_if" => {
+                let preproc_if = handle_preproc_if(child, src.clone());
+                preproc_ifs.push(preproc_if);
+            },
+            "preproc_function_def" => {
+                let preproc_function_def = handle_preproc_function_def(child, src.clone());
+                preproc_function_defs.push(preproc_function_def);
+            },
+            "preproc_call" => {
+                let preproc_call = handle_preproc_call(child, src.clone());
+                preproc_calls.push(preproc_call);
+            },
+            "sized_type_specifier" => {
+                let sized_type_specifier = handle_sized_type_specifier(child, src.clone());
+                sized_type_speicifers.push(sized_type_specifier);
+            },
             ";" => (),
-            // "preproc_ifdef" => handle_preproc_ifdef(child, src.clone()),
-            // "preproc_if" => handle_preproc_if(child, src.clone()),
-            // "preproc_function_def" => handle_preproc_function_def(child, src.clone()),
-            // "preproc_call" => handle_preproc_call(child, src.clone()),
-            // "sized_type_specifier" => handle_sized_type_specifier(child, src.clone()),
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
     }
@@ -102,6 +122,11 @@ pub fn traverse_ast(ast: Tree, src: String) {
     let mut finished_type_defs = type_defs.join("\n\n");
     let mut finished_struct_specs = struct_specs.join("\n\n");
     let mut finished_preproc_defs = preproc_defs.join("\n");
+    let mut finished_preproc_ifdefs = preproc_ifdefs.join("\n");
+    let mut finished_preproc_ifs = preproc_ifs.join("\n");
+    let mut finished_preproc_function_defs = preproc_function_defs.join("\n");
+    let mut finished_preproc_calls = preproc_calls.join("\n");
+    let mut finished_sized_type_specifiers = sized_type_speicifers.join("\n");
 
     println!("Finished includes:\n{}\n", finished_includes);
     println!("Finished declarations:\n{}\n", finished_declarations);
@@ -115,7 +140,12 @@ pub fn traverse_ast(ast: Tree, src: String) {
     println!("Finished errors:\n{}\n", finished_errors);
     println!("Finished type definitions:\n{}\n", finished_type_defs);
     println!("Finished struct specifiers:\n{}\n", finished_struct_specs);
-    println!("Finished preproc definitions:\n{}\n", finished_preproc_defs);
+    println!("Finished preproc definitions::\n{}\n", finished_preproc_defs);
+    println!("Finished preproc ifdefs:\n{}\n", finished_preproc_ifdefs);
+    println!("Finished preproc ifs:\n{}\n", finished_preproc_ifs);
+    println!("Finished preproc function definitions:\n{}\n", finished_preproc_function_defs);
+    println!("Finished preproc calls:\n{}\n", finished_preproc_calls);
+    println!("Finished sized type specifiers:\n{}\n", finished_sized_type_specifiers);
 }
 
 fn handle_compound_statement(root: Node, src: String) -> String {
@@ -197,19 +227,30 @@ fn handle_compound_statement(root: Node, src: String) -> String {
             "while" => {
                 result = handle_while(node, src.clone());
             },
+            "parameter_list" => {
+                result = handle_parameter_list(node, src.clone());
+            },
+            "preproc_ifdef" => {
+                result = handle_preproc_ifdef(node, src.clone());
+            },
+            "preproc_if" => {
+                result = handle_preproc_if(node, src.clone());
+            },
+            "preproc_function_def" => {
+                result = handle_preproc_function_def(node, src.clone());
+            },
+            "preproc_call" => {
+                result = handle_preproc_call(node, src.clone());
+            },
+            "do_statement" => {
+                result = handle_do_statement(node, src.clone());
+            },
             ";" => result = ";".to_string(),
             "return" => result = "return".to_string(),
             "true" => result = "true".to_string(),
             "false" => result = "false".to_string(),
             "{" => result = "{".to_string(),
             "}" => result = "}".to_string(),
-            // "parameter_list" => handle_parameter_list(node, src.clone()),
-            // "preproc_ifdef" => handle_preproc_ifdef(node, src.clone()),
-            // "preproc_if" => handle_preproc_if(node, src.clone()),
-            // "preproc_function_def" => handle_preproc_function_def(node, src.clone()),
-            // "preproc_call" => handle_preproc_call(node, src.clone()),
-            // "for_range_loop" => handle_for_range_loop(node, src.clone()),
-            // "do_statement" => handle_do_statement(node, src.clone()),
             _ => println!("Unknown grammar name 2: {}\n", node.grammar_name()),
         }
     }
@@ -235,7 +276,6 @@ fn handle_declaration(root: Node, src: String) -> String {
         match node.grammar_name() {
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(node.clone(), src.clone());
-                dbg!(&compound_statement);
                 parts.push(compound_statement);
             },
             "init_declarator" => {
@@ -251,8 +291,7 @@ fn handle_declaration(root: Node, src: String) -> String {
                 parts.push(identifier);
             },
             "function_declarator" => {
-                let mut function_declarator = handle_function_declarator(node, src.clone());
-                function_declarator = utils::remove_unnecessary_spaces(function_declarator);
+                let function_declarator = handle_function_declarator(node, src.clone());
                 parts.push(function_declarator);
             },
             "type_qualifier" => {
@@ -264,8 +303,7 @@ fn handle_declaration(root: Node, src: String) -> String {
                 parts.push(error);
             },
             "pointer_declarator" => {
-                let mut pointer_declarator = handle_pointer_declarator(node, src.clone());
-                pointer_declarator = utils::remove_dereference_spaces(pointer_declarator);
+                let pointer_declarator = handle_pointer_declarator(node, src.clone());
                 parts.push(pointer_declarator);
             },
             "array_declarator" => {
@@ -292,12 +330,6 @@ fn handle_declaration(root: Node, src: String) -> String {
     result = parts.join(" ");
     if result.contains(",") { result = utils::remove_whitespace_before_commas(result); }
     result = utils::remove_unnecessary_spaces(result);
-    if result.starts_with("*") {
-        result = utils::remove_dereference_spaces(result);
-    }
-    else {
-        result = utils::remove_pointer_spaces(result);
-    }
     return result;
 }
 
@@ -579,7 +611,7 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
             },
             "for_statement" => {
                 let for_statement = handle_for_statement(node, src.clone());
-                // result += format!("\t{}\n", for_statement).as_str();
+                result += format!("\t{}\n", for_statement).as_str();
             },
             _ => println!("You should't be here (inner_compound_statement): {}\n", node.grammar_name()),
         }
@@ -1137,6 +1169,7 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
                 result += identifier.as_str();
             },
             "pointer_declarator" => {
+                //todo: I should refactor this one
                 let mut temp = String::new();
                 for subnode in node.children(&mut node.walk()) {
                     let text = subnode.utf8_text(src.as_bytes()).unwrap();
@@ -1160,7 +1193,7 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
                                         },
                                         "parameter_list" => {
                                             let parameter_list = handle_parameter_list(inner_subnode, src.clone());
-                                            // temp += parameter_list.as_str();
+                                            temp += parameter_list.as_str();
                                         },
                                         _ => println!("You shouldn't be here (inside of pointer_declarator): {}\n", inner_subnode.grammar_name()),
                                     }
@@ -1627,7 +1660,7 @@ fn handle_field_expression(root: Node, src: String) -> String {
             },
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
-                // result += field_expression.as_str();
+                result += field_expression.as_str();
             },
             "->" => result += "->",
             "." => result += ".",
@@ -1925,6 +1958,22 @@ fn handle_conditional_expression(root: Node, src: String) -> String {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 parts.push(parenthesized_expression);
             },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
+            },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                parts.push(subscript_expression);
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                parts.push(number_literal);
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node, src.clone());
+                parts.push(char_literal);
+            },
             ":" => parts.push(":".to_string()),
             "?" => parts.push("?".to_string()),
             _ => println!("Conditional expression: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
@@ -2175,7 +2224,7 @@ fn handle_type_definition(root: Node, src: String) -> String {
             },
             "enum_specifier" => {
                 let enum_specifier = handle_enum_specifier(node, src.clone());
-                // result += enum_specifier.as_str();
+                result += enum_specifier.as_str();
             },
             ";" => result += ";",
             _ => println!("You shouldn't be here (type_definition): {}\n", node.grammar_name()),
@@ -2282,30 +2331,6 @@ fn handle_abstract_array_declarator(root: Node, src: String) -> String {
     return result;
 }
 
-fn handle_preproc_function_def(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ =>  (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_preproc_call(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_do_statement(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
 fn handle_sized_type_specifier(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
@@ -2323,49 +2348,6 @@ fn handle_sized_type_specifier(root: Node, src: String) -> String {
     return result;
 }
 
-fn handle_preproc_ifdef(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_continue_statement(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_variadic_parameter(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
-fn handle_storage_class_specifier(root: Node, src: String) -> String {
-    let mut result = String::new();
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            "static" => result += "static",
-            _ => println!("You shouldn't be here (storage_class_specifier): {}\n", node.grammar_name()),
-        }
-    }
-    return result;
-}
-
-fn handle_preproc_if(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => (), // println!("{}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
 fn handle_enum_specifier(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
@@ -2376,7 +2358,7 @@ fn handle_enum_specifier(root: Node, src: String) -> String {
             },
             "enumerator_list" => {
                 let enumerator_list = handle_enumerator_list(node, src.clone());
-                // result += format!("{} ", identifier).as_str();
+                result += format!("{} ", enumerator_list).as_str();
             },
             "field_declaration_list" => {
                 let field_declaration_list = handle_field_declaration_list(node, src.clone());
@@ -2420,14 +2402,6 @@ fn handle_union_specifier(root: Node, src: String) -> String {
     return result;
 }
 
-fn handle_parameter_list(root: Node, src: String) {
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-}
-
 fn handle_enumerator_list(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
     let mut temp = String::new();
@@ -2456,6 +2430,17 @@ fn handle_enumerator_list(root: Node, src: String) -> String {
     return result;
 }
 
+fn handle_storage_class_specifier(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "static" => result += "static",
+            _ => println!("You shouldn't be here (storage_class_specifier): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
 fn sort_includes(includes: &mut Vec<String>) {
     includes.sort_by(|a, b| {
         if a.contains("\"") && b.contains("\"") {
@@ -2474,4 +2459,202 @@ fn sort_includes(includes: &mut Vec<String>) {
             else { Ordering::Equal }
         }
     });
+}
+
+fn handle_preproc_ifdef(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    let mut temp = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "#ifndef" => {
+                temp += "#ifndef ";
+            },
+            "#ifdef" => {
+                temp += "#ifdef ";
+            },
+            "#endif" => {
+                parts.push("#endif".to_string());
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                temp += identifier.as_str();
+                parts.push(temp);
+                temp = String::new();
+            },
+            "preproc_def" => {
+                let preproc_def = handle_preproc_def(node, src.clone());
+                parts.push(preproc_def);
+            },
+            _ => println!("You shouldn't be here (preproc_ifdef): {}\n", node.grammar_name()),
+        }
+    }
+    let result = parts.join("\n");
+    return result;
+}
+
+fn handle_preproc_if(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    let mut temp = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "#if" => {
+                temp += "#if ";
+            },
+            "#endif" => {
+                parts.push("#endif".to_string());
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                temp += binary_expression.as_str();
+                parts.push(temp);
+                temp = String::new();
+            },
+            "return_statement" => {
+                let return_statement = handle_return_statement(node, src.clone());
+                parts.push(return_statement);
+            },
+            "function_definition" => {
+                let function_definition = handle_function_definition(node, src.clone());
+                parts.push(function_definition);
+            },
+            "preproc_else" => {
+                let preproc_else = handle_preproc_else(node, src.clone());
+                parts.push(preproc_else);
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                parts.push(number_literal);
+            },
+            "\n" => {
+                // maybe remove?
+                parts.push("\n".to_string());
+            },
+            _ => println!("You shouldn't be here (preproc_if): {}\n", node.grammar_name()),
+        }
+    }
+    let result = parts.join("\n");
+    return result;
+}
+
+fn handle_preproc_function_def(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "preproc_directive" => {
+                result += format!("{} ", node.utf8_text(src.as_bytes()).unwrap()).as_str();
+            },
+            "#define" => {
+                result += "#define ";
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += format!("{} ", identifier).as_str();
+            },
+            "preproc_params" => {
+                let preproc_params = handle_preproc_params(node, src.clone());
+                result += format!("{} ", preproc_params).as_str();
+            },
+            "preproc_arg" => {
+                result += node.utf8_text(src.as_bytes()).unwrap();
+            },
+            _ =>  println!("You shouldn't be here (preproc_function_def): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_preproc_params(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "(" => result += "(",
+            ")" => result += ")",
+            "," => result += ", ",
+            _ => println!("You shouldn't be here (preproc_params): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_preproc_call(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "preproc_directive" => {
+                result += format!("{} ", node.utf8_text(src.as_bytes()).unwrap()).as_str();
+            },
+            "preproc_arg" => {
+                result += node.utf8_text(src.as_bytes()).unwrap();
+            },
+            _ => println!("Preproc call: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_preproc_else(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "#else" => {
+                parts.push("#else".to_string());
+            },
+            "return_statement" => {
+                let return_statement = handle_return_statement(node, src.clone());
+                parts.push(return_statement);
+            },
+            _ => println!("You shouldn't be here (preproc_else): {}\n", node.grammar_name()),
+        }
+    }
+    let result = parts.join("\n");
+    return result;
+}
+
+fn handle_variadic_parameter(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "..." => result += "...",
+            _ => println!("You shouldn't be here (variadic_parameter): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_parameter_list(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("You shouldn't be here (parameter_list): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_do_statement(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("Do statement: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_continue_statement(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("Continue statement: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
 }
