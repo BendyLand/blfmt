@@ -46,6 +46,18 @@ void strAppend(string* original, const char* suffix)
         perror("Failed to reallocate memory for new string.");
         exit(EXIT_FAILURE);
     }
+    else if (0) {
+        // do something else
+    }
+    else if (0) {
+        // do another something else
+    }
+    else if (0) {
+        // do another something else
+    }
+    else {
+        // do a final thing
+    }
     strcat(newData, suffix);
     original->data = newData;
     original->length = newLen;
@@ -102,6 +114,7 @@ void strArrFree(string** original)
         while (original[i] != NULL) {
             strFree(original[i]);
             i++;
+            continue;
         }
         free(original);
     }
