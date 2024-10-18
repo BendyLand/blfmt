@@ -70,7 +70,7 @@ pub fn add_all_leading_tabs(text: String) -> String {
     let lines: Vec<&str> = text.split("\n").collect();
     let mut temp_vec = Vec::<String>::new();
     for line in lines {
-        let temp_str = "\t".to_string() + line;
+        let temp_str = format!("\t{}", line);
         temp_vec.push(temp_str);
     }
     return temp_vec.join("\n");
@@ -241,8 +241,17 @@ pub fn extract_c_function_header(group: &String) -> String {
     }
 }
 
+fn line_is_empty(line: &str) -> bool {
+    for c in line.chars() {
+        if c.is_alphanumeric() {
+            return false;
+        }
+    }
+    return true;
+}
+
 pub fn remove_empty_lines(lines: Vec<&str>) -> String {
-    let result: Vec<&str> = lines.into_iter().filter(|line| !line.is_empty()).collect();
+    let result: Vec<&str> = lines.into_iter().filter(|line| !line_is_empty(line)).collect();
     return result.join("\n");
 }
 

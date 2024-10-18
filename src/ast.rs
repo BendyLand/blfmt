@@ -22,7 +22,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
     let mut preproc_ifs = Vec::<String>::new();
     let mut preproc_function_defs = Vec::<String>::new();
     let mut preproc_calls = Vec::<String>::new();
-    let mut sized_type_speicifers = Vec::<String>::new();
+    let mut sized_type_specifiers = Vec::<String>::new();
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
@@ -102,7 +102,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
             },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(child, src.clone());
-                sized_type_speicifers.push(sized_type_specifier);
+                sized_type_specifiers.push(sized_type_specifier);
             },
             ";" => (),
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
@@ -126,7 +126,7 @@ pub fn traverse_ast(ast: Tree, src: String) {
     let mut finished_preproc_ifs = preproc_ifs.join("\n");
     let mut finished_preproc_function_defs = preproc_function_defs.join("\n");
     let mut finished_preproc_calls = preproc_calls.join("\n");
-    let mut finished_sized_type_specifiers = sized_type_speicifers.join("\n");
+    let mut finished_sized_type_specifiers = sized_type_specifiers.join("\n");
 
     println!("Finished includes:\n{}\n", finished_includes);
     println!("Finished declarations:\n{}\n", finished_declarations);
@@ -134,13 +134,13 @@ pub fn traverse_ast(ast: Tree, src: String) {
     println!("Finished expression statements:\n{}\n", finished_expression_states);
     println!("Finished compound statements:\n{}\n", finished_compound_states);
     println!("Finished if statements:\n{}\n", finished_if_states);
-    println!("Finished switch statemnets:\n{}\n", finished_switch_states);
+    println!("Finished switch statements:\n{}\n", finished_switch_states);
     println!("Finished return statements:\n{}\n", finished_return_states);
     println!("Finished comments:\n{}\n", finished_comments);
     println!("Finished errors:\n{}\n", finished_errors);
     println!("Finished type definitions:\n{}\n", finished_type_defs);
     println!("Finished struct specifiers:\n{}\n", finished_struct_specs);
-    println!("Finished preproc definitions::\n{}\n", finished_preproc_defs);
+    println!("Finished preproc definitions:\n{}\n", finished_preproc_defs);
     println!("Finished preproc ifdefs:\n{}\n", finished_preproc_ifdefs);
     println!("Finished preproc ifs:\n{}\n", finished_preproc_ifs);
     println!("Finished preproc function definitions:\n{}\n", finished_preproc_function_defs);
@@ -149,108 +149,151 @@ pub fn traverse_ast(ast: Tree, src: String) {
 }
 
 fn handle_compound_statement(root: Node, src: String) -> String {
-    let mut result = "".to_string();
+    let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "preproc_include" => {
-                result = handle_preproc_include(node, src.clone());
+                let preproc_include = handle_preproc_include(node, src.clone());
+                result += format!("\t{}\n", preproc_include).as_str();
             },
             "declaration" => {
-                result = handle_declaration(node, src.clone());
+                let declaration = handle_declaration(node, src.clone());
+                result += format!("\t{}\n", declaration).as_str();
             },
             "function_definition" => {
-                result = handle_function_definition(node, src.clone());
+                let function_definition = handle_function_definition(node, src.clone());
+                result += format!("\t{}\n", function_definition).as_str();
             },
             "expression_statement" => {
-                result = handle_expression_statement(node, src.clone());
+                let expression_statement = handle_expression_statement(node, src.clone());
+                result += format!("\t{}\n", expression_statement).as_str();
             },
             "compound_statement" => {
-                result = handle_inner_compound_statement(node, src.clone());
+                let compound_statement = handle_inner_compound_statement(node, src.clone());
+                result += format!("\t{}\n", compound_statement).as_str();
             },
             "if_statement" => {
-                result = handle_if_statement(node, src.clone());
+                let mut if_statement = handle_if_statement(node, src.clone());
+                if_statement = utils::add_all_leading_tabs(if_statement);
+                result += format!("{}\n", if_statement).as_str();
             },
             "switch_statement" => {
-                result = handle_switch_statement(node, src.clone());
+                let mut switch_statement = handle_switch_statement(node, src.clone());
+                // switch_statement = utils::add_all_leading_tabs(switch_statement);
+                switch_statement = utils::remove_empty_lines(switch_statement.split("\n").collect::<Vec<&str>>());
+                result += format!("\t{}\n", switch_statement).as_str();
             },
             "case_statement" => {
-                result = handle_case_statement(node, src.clone());
+                let case_statement = handle_case_statement(node, src.clone());
+                result += format!("\t{}\n", case_statement).as_str();
             },
             "break_statement" => {
-                result = "break;\n".to_string();
+                let break_statement = "break;\n".to_string();
+                result += format!("\t{}\n", break_statement).as_str();
             },
             "continue_statement" => {
-                result = "continue;\n".to_string();
+                let continue_statement = "continue;\n".to_string();
+                result += format!("\t{}\n", continue_statement).as_str();
             },
             "goto_statement" => {
-                result = handle_goto_statement(node, src.clone());
+                let goto_statement = handle_goto_statement(node, src.clone());
+                result += format!("\t{}\n", goto_statement).as_str();
             },
             "primitive_type" => {
-                result = handle_primitive_type(node, src.clone());
+                let primitive_type = handle_primitive_type(node, src.clone());
+                result += format!("\t{}\n", primitive_type).as_str();
             },
             "parenthesized_expression" => {
-                result = handle_parenthesized_expression(node, src.clone());
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += format!("\t{}\n", parenthesized_expression).as_str();
             },
             "identifier" => {
-                result = handle_identifier(node, src.clone());
+                let identifier = handle_identifier(node, src.clone());
+                result += format!("\t{}\n", identifier).as_str();
             },
             "return_statement" => {
-                result = handle_return_statement(node, src.clone());
+                let return_statement = handle_return_statement(node, src.clone());
+                result += format!("\t{}\n", return_statement).as_str();
             },
             "comment" => {
-                result = handle_comment(node, src.clone());
+                let comment = handle_comment(node, src.clone());
+                result += format!("\t{}\n", comment).as_str();
             },
             "labeled_statement" => {
-                result = handle_labeled_statement(node, src.clone());
+                let labeled_statement = handle_labeled_statement(node, src.clone());
+                result += format!("\t{}\n", labeled_statement).as_str();
             },
             "while_statement" => {
-                result = handle_while_statement(node, src.clone());
+                let mut while_statement = handle_while_statement(node, src.clone());
+                while_statement = utils::add_all_leading_tabs(while_statement);
+                result += format!("{}\n", while_statement).as_str();
             },
             "for_statement" => {
-                result = handle_for_statement(node, src.clone());
+                let mut for_statement = handle_for_statement(node, src.clone());
+                for_statement = utils::add_all_leading_tabs(for_statement);
+                result += format!("{}\n", for_statement).as_str();
             },
             "preproc_def" => {
-                result = handle_preproc_def(node, src.clone());
+                let mut preproc_def = handle_preproc_def(node, src.clone());
+                preproc_def = utils::add_all_leading_tabs(preproc_def);
+                result += format!("{}\n", preproc_def).as_str();
             },
             "type_definition" => {
-                result = handle_type_definition(node, src.clone());
+                let type_definition = handle_type_definition(node, src.clone());
+                result += format!("\t{}\n", type_definition).as_str();
             },
             "struct_specifier" => {
-                result = handle_struct_specifier(node, src.clone());
+                let struct_specifier = handle_struct_specifier(node, src.clone());
+                result += format!("\t{}\n", struct_specifier).as_str();
             },
             "init_declarator" => {
-                result = handle_init_declarator(node, src.clone());
+                let init_declarator = handle_init_declarator(node, src.clone());
+                result += format!("\t{}\n", init_declarator).as_str();
             },
             "ERROR" => {
-                result = handle_error(node, src.clone());
-            },
-            "while" => {
-                result = handle_while(node, src.clone());
+                let error = handle_error(node, src.clone());
+                result += format!("\t{}\n", error).as_str();
             },
             "parameter_list" => {
-                result = handle_parameter_list(node, src.clone());
+                dbg!("Here (parameter_list)");
+                let parameter_list = handle_parameter_list(node, src.clone());
+                result += format!("\t{}\n", parameter_list).as_str();
             },
             "preproc_ifdef" => {
-                result = handle_preproc_ifdef(node, src.clone());
+                let preproc_ifdef = handle_preproc_ifdef(node, src.clone());
+                result += format!("\t{}\n", preproc_ifdef).as_str();
             },
             "preproc_if" => {
-                result = handle_preproc_if(node, src.clone());
+                let mut preproc_if = handle_preproc_if(node, src.clone());
+                preproc_if = utils::add_all_leading_tabs(preproc_if);
+                result += format!("{}\n", preproc_if).as_str();
             },
             "preproc_function_def" => {
-                result = handle_preproc_function_def(node, src.clone());
+                let mut preproc_function_def = handle_preproc_function_def(node, src.clone());
+                preproc_function_def = utils::add_all_leading_tabs(preproc_function_def);
+                result += format!("{}\n", preproc_function_def).as_str();
             },
             "preproc_call" => {
-                result = handle_preproc_call(node, src.clone());
+                let preproc_call = handle_preproc_call(node, src.clone());
+                result += format!("\t{}\n", preproc_call).as_str();
             },
             "do_statement" => {
-                result = handle_do_statement(node, src.clone());
+                let mut do_statement = handle_do_statement(node, src.clone());
+                do_statement = utils::add_all_leading_tabs(do_statement);
+                result += format!("{}\n", do_statement).as_str();
             },
-            ";" => result = ";".to_string(),
-            "return" => result = "return".to_string(),
-            "true" => result = "true".to_string(),
-            "false" => result = "false".to_string(),
-            "{" => result = "{".to_string(),
-            "}" => result = "}".to_string(),
+            "return" => {
+                dbg!(node.utf8_text(src.as_bytes()).unwrap());
+            },
+            "true" => {
+                dbg!(node.utf8_text(src.as_bytes()).unwrap());
+            },
+            "false" => {
+                dbg!(node.utf8_text(src.as_bytes()).unwrap());
+            },
+            ";" => result += ";",
+            "{" => result += "{\n",
+            "}" => result += "}",
             _ => println!("Unknown grammar name 2: {}\n", node.grammar_name()),
         }
     }
@@ -261,9 +304,7 @@ fn handle_preproc_include(root: Node, src: String) -> String {
     let result: String;
     let mut vec = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => vec.push(node.utf8_text(src.as_bytes()).unwrap().to_string()),
-        }
+        vec.push(node.utf8_text(src.as_bytes()).unwrap().to_string());
     }
     result = vec.join(" ");
     return result;
@@ -354,22 +395,22 @@ fn handle_function_definition(root: Node, src: String) -> String {
                 result += format!("{} ", identifier).as_str();
             },
             "ERROR" => {
-                // Usually an unknown specifier, like a custom alias for static.
+                // Usually an unknown specifier, like a custom alias for `static`.
                 let error = handle_error(node, src.clone());
                 result += format!("{} ", error).as_str();
             },
             "function_declarator" => {
                 let function_declarator = handle_function_declarator(node, src.clone());
-                result += format!("{}\n{{\n", function_declarator).as_str();
+                result += format!("{}\n", function_declarator).as_str();
             },
             "pointer_declarator" => {
                 let pointer_declarator = handle_pointer_declarator(node, src.clone());
                 result = result.trim_end().to_string();
-                result += format!("{}\n{{\n", pointer_declarator).as_str();
+                result += format!("{}\n", pointer_declarator).as_str();
             },
             "parenthesized_declarator" => {
                 let parenthesized_declarator = handle_parenthesized_declarator(node, src.clone());
-                result += format!("{}\n{{\n", parenthesized_declarator).as_str();
+                result += format!("{}\n", parenthesized_declarator).as_str();
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node.clone(), src.clone());
@@ -377,6 +418,7 @@ fn handle_function_definition(root: Node, src: String) -> String {
             },
             "storage_class_specifier" => {
                 let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
+                result += format!("{} ", storage_class_specifier).as_str();
             },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
@@ -564,12 +606,14 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
                 result += format!("\t{}\n", goto_statement).as_str();
             },
             "if_statement" => {
-                let if_statement = handle_if_statement(node, src.clone());
-                result += format!("\t{}\n\t", if_statement).as_str();
+                let mut if_statement = handle_if_statement(node, src.clone());
+                if_statement = utils::add_all_leading_tabs(if_statement);
+                result += format!("{}\n", if_statement).as_str();
             },
             "switch_statement" => {
-                let switch_statement = handle_switch_statement(node, src.clone());
-                result += format!("\t{}\n", switch_statement).as_str();
+                let mut switch_statement = handle_switch_statement(node, src.clone());
+                switch_statement = utils::add_all_leading_tabs(switch_statement);
+                result += format!("{}\n", switch_statement).as_str();
             },
             "break_statement" => {
                 result += "\tbreak;\n";
@@ -588,31 +632,35 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
                 result += format!("\t{}\n", declaration).as_str();
             },
             "comment" => {
-                let comment = handle_comment(node, src.clone());
-                result += format!("\t{}\n", comment).as_str();
+                let mut comment = handle_comment(node, src.clone());
+                comment = utils::add_all_leading_tabs(comment);
+                result += format!("{}\n", comment).as_str();
             },
-            "{" => result += "{\n",
-            "}" => result += "}",
             "compound_statement" => {
                 let compound_statement = handle_nested_inner_compound_statement(node, src.clone());
                 result += format!("\t{}\n", compound_statement).as_str();
             },
             "while_statement" => {
-                let while_statement = handle_while_statement(node, src.clone());
-                result += format!("\t{}\n", while_statement).as_str();
+                let mut while_statement = handle_while_statement(node, src.clone());
+                while_statement = utils::add_all_leading_tabs(while_statement);
+                result += format!("{}\n", while_statement).as_str();
             },
             "preproc_call" => {
                 let preproc_call = handle_preproc_call(node, src.clone());
-                // result += format!("\t{}\n", preproc_call).as_str();
+                result += format!("\t{}\n", preproc_call).as_str();
             },
             "do_statement" => {
-                let do_statement = handle_do_statement(node, src.clone());
-                // result += format!("\t{}\n", do_statement).as_str();
+                let mut do_statement = handle_do_statement(node, src.clone());
+                do_statement = utils::add_all_leading_tabs(do_statement);
+                result += format!("{}\n", do_statement).as_str();
             },
             "for_statement" => {
-                let for_statement = handle_for_statement(node, src.clone());
-                result += format!("\t{}\n", for_statement).as_str();
+                let mut for_statement = handle_for_statement(node, src.clone());
+                for_statement = utils::add_all_leading_tabs(for_statement);
+                result += format!("{}\n", for_statement).as_str();
             },
+            "{" => result += "{\n",
+            "}" => result += "}",
             _ => println!("You should't be here (inner_compound_statement): {}\n", node.grammar_name()),
         }
     }
@@ -620,13 +668,7 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
 }
 
 fn handle_update_expression(root: Node, src: String) -> String {
-    let mut result = {
-        root
-            .clone()
-            .utf8_text(src.as_bytes())
-            .unwrap()
-            .to_string()
-    };
+    let mut result = root.utf8_text(src.as_bytes()).unwrap().to_string();
     result = remove_all_spaces(result);
     return result.to_string();
 }
@@ -741,15 +783,14 @@ fn handle_else_clause(root: Node, src: String) -> String {
                 result += "else {\n";
             },
             "switch_statement" => {
-                let switch_statement = handle_switch_statement(node, src.clone());
-                result += format!("\t{}\n", switch_statement).as_str();
+                let mut switch_statement = handle_switch_statement(node, src.clone());
+                switch_statement = utils::add_all_leading_tabs(switch_statement);
+                result += format!("{}\n", switch_statement).as_str();
             },
             "if_statement" => {
-                //? This is where the `else if` branches go
-                let if_statement = handle_if_statement(node, src.clone());
-                let mut line = format!("else {}\n", if_statement);
-                line = utils::remove_unnecessary_spaces(line);
-                result += format!("\t{}\n", line).as_str();
+                let mut if_statement = handle_if_statement(node, src.clone());
+                if_statement = utils::add_all_leading_tabs(if_statement);
+                result += format!("{}\n", if_statement).as_str();
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
@@ -760,7 +801,9 @@ fn handle_else_clause(root: Node, src: String) -> String {
                 result += format!("\t{}\n", expression_statement).as_str();
             },
             "for_statement" => {
-                let _ = handle_for_statement(node, src.clone());
+                let mut for_statement = handle_for_statement(node, src.clone());
+                for_statement = utils::add_all_leading_tabs(for_statement);
+                result += format!("{}\n", for_statement).as_str();
             },
             _ => println!("You shouldn't be here (else_clause): {}\n", node.grammar_name()),
         }
@@ -769,23 +812,26 @@ fn handle_else_clause(root: Node, src: String) -> String {
 }
 
 fn construct_conditional(parts: Vec<String>) -> String {
-    let mut result = Vec::<String>::new();
-    for  part in parts.into_iter() {
-        result.push(part)
+    let mut result = String::new();
+    for (i, part) in parts.into_iter().enumerate() {
+        match i {
+            0 => result += "if ",
+            1 => result += format!("{} ", part).as_str(),
+            _ => result += part.as_str(),
+        }
     }
-    return result.join(" ");
+    return result;
 }
 
 fn handle_switch_statement(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
+            "switch" => result += "switch ",
             "compound_statement" => {
-                let compound_statement = handle_compound_statement(node, src.clone());
+                let compound_statement = handle_inner_compound_statement(node, src.clone());
+                println!("Inner compound:\n{}\n", &compound_statement);
                 result += compound_statement.as_str();
-            },
-            "switch" => {
-                result += "switch ";
             },
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
@@ -797,6 +843,7 @@ fn handle_switch_statement(root: Node, src: String) -> String {
     return result;
 }
 
+//todo: there's something weird about this one.
 fn handle_case_statement(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
@@ -881,6 +928,7 @@ fn handle_goto_statement(root: Node, src: String) -> String {
     return result;
 }
 
+//todo: something about this is weird
 fn handle_while_statement(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
@@ -890,8 +938,7 @@ fn handle_while_statement(root: Node, src: String) -> String {
                 parts.push(compound_statement);
             },
             "while" => {
-                let while_result = handle_while(node.clone(), src.clone());
-                parts.push(while_result);
+                parts.push("while".to_string());
             },
             "parenthesized_expression" => {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
@@ -905,27 +952,10 @@ fn handle_while_statement(root: Node, src: String) -> String {
                 let switch_statement = handle_switch_statement(node, src.clone());
                 parts.push(switch_statement);
             },
-            _ => println!("You shouldn't be here (while_statement): {}: {}", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("You shouldn't be here (while_statement): {}\n", node.grammar_name()),
         }
     }
     let result = parts.join(" ");
-    return result;
-}
-
-fn handle_while(root: Node, src: String) -> String {
-    let mut result = String::new();
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            "compound_statement" => {
-                let compound_statement = handle_inner_compound_statement(node.clone(), src.clone());
-                result += compound_statement.as_str();
-            }
-            "while" => {
-                result += "while ";
-            },
-            _ => println!("You shouldn't be here (while): {}\n", node.grammar_name()),
-        }
-    }
     return result;
 }
 
@@ -1144,7 +1174,7 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                     },
                     "variadic_parameter" => {
                         let variadic_parameter = handle_variadic_parameter(subnode, src.clone());
-                        // dbg!(variadic_parameter)
+                        temp += variadic_parameter.as_str();
                     },
                     _ => println!("You shouldn't be here (function_declarator): {}\n", subnode.grammar_name()),
                 }
@@ -1542,7 +1572,10 @@ fn handle_inner_pointer_expression(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "*" => result += "* ",
-            "identifier" => result += node.utf8_text(src.as_bytes()).unwrap(),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
             _ => println!("You shouldn't be here (inner_pointer_expression): {}\n", node.grammar_name()),
         }
     }
@@ -1659,22 +1692,12 @@ fn handle_field_expression(root: Node, src: String) -> String {
                 result += call_expression.as_str();
             },
             "field_expression" => {
-                let field_expression = handle_field_expression(node, src.clone());
+                let field_expression = handle_inner_field_expression(node, src.clone());
                 result += field_expression.as_str();
             },
             "->" => result += "->",
             "." => result += ".",
             _ => println!("You shouldn't be here (field_expression): {}\n", node.grammar_name()),
-        }
-    }
-    return result;
-}
-
-fn handle_inner_field_expression(root: Node, src: String) -> String {
-    let mut result = String::new();
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => println!("Inner field expression: {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -1872,7 +1895,7 @@ fn handle_initializer_list(root: Node, src: String) -> String {
             },
             "string_literal" => {
                 let string_literal = handle_string_literal(node, src.clone());
-                // result += string_literal.as_str();
+                result += string_literal.as_str();
             },
             "{" => result += "{",
             "}" => result += "}",
@@ -1976,7 +1999,7 @@ fn handle_conditional_expression(root: Node, src: String) -> String {
             },
             ":" => parts.push(":".to_string()),
             "?" => parts.push("?".to_string()),
-            _ => println!("Conditional expression: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("You shouldn't be here (conditional_expression): {}\n", node.grammar_name()),
         }
     }
     let result = parts.join(" ");
@@ -2417,16 +2440,15 @@ fn handle_enumerator_list(root: Node, src: String) -> String {
             },
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
-            _ => println!("Enumerator list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("You shouldn't be here (enumerator_list): {}\n", node.grammar_name()),
         }
     }
-    if temp.len() > 0 { 
+    if temp.len() > 0 {
         parts.remove(parts.len()-1);
-        parts.push(temp); 
+        parts.push(temp);
         parts.push("}".to_string());
     }
     let result = parts.join("\n");
-    println!("Result:\n{}\n", &result);
     return result;
 }
 
@@ -2531,7 +2553,7 @@ fn handle_preproc_if(root: Node, src: String) -> String {
             },
             "\n" => {
                 // maybe remove?
-                parts.push("\n".to_string());
+                // parts.push("\n".to_string());
             },
             _ => println!("You shouldn't be here (preproc_if): {}\n", node.grammar_name()),
         }
@@ -2567,39 +2589,6 @@ fn handle_preproc_function_def(root: Node, src: String) -> String {
     return result;
 }
 
-fn handle_preproc_params(root: Node, src: String) -> String {
-    let mut result = String::new();
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            "identifier" => {
-                let identifier = handle_identifier(node, src.clone());
-                result += identifier.as_str();
-            },
-            "(" => result += "(",
-            ")" => result += ")",
-            "," => result += ", ",
-            _ => println!("You shouldn't be here (preproc_params): {}\n", node.grammar_name()),
-        }
-    }
-    return result;
-}
-
-fn handle_preproc_call(root: Node, src: String) -> String {
-    let mut result = String::new();
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            "preproc_directive" => {
-                result += format!("{} ", node.utf8_text(src.as_bytes()).unwrap()).as_str();
-            },
-            "preproc_arg" => {
-                result += node.utf8_text(src.as_bytes()).unwrap();
-            },
-            _ => println!("Preproc call: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
-    return result;
-}
-
 fn handle_preproc_else(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
@@ -2629,11 +2618,34 @@ fn handle_variadic_parameter(root: Node, src: String) -> String {
     return result;
 }
 
-fn handle_parameter_list(root: Node, src: String) -> String {
+fn handle_preproc_params(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => println!("You shouldn't be here (parameter_list): {}\n", node.grammar_name()),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "(" => result += "(",
+            ")" => result += ")",
+            "," => result += ", ",
+            _ => println!("You shouldn't be here (preproc_params): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_preproc_call(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "preproc_directive" => {
+                result += format!("{} ", node.utf8_text(src.as_bytes()).unwrap()).as_str();
+            },
+            "preproc_arg" => {
+                result += node.utf8_text(src.as_bytes()).unwrap();
+            },
+            _ => println!("You shouldn't be here (preproc_call): {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -2643,17 +2655,55 @@ fn handle_do_statement(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => println!("Do statement: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "do" => result += "do ",
+            "while" => result += "while ",
+            ";" => result += ";",
+            "compound_statement" => {
+                let compound_statement = handle_compound_statement(node, src.clone());
+                result += compound_statement.as_str();
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
+            },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                result += expression_statement.as_str();
+            },
+            _ => println!("You shouldn't be here (do_statement): {}\n", node.grammar_name()),
         }
     }
     return result;
 }
 
-fn handle_continue_statement(root: Node, src: String) -> String {
+fn handle_inner_field_expression(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => println!("Continue statement: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            "->" => result += "->",
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "field_expression" => {
+                let field_expression = handle_field_expression(node, src.clone());
+                result += field_expression.as_str();
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                result += call_expression.as_str();
+            },
+            _ => println!("You shouldn't be here (inner_field_expression): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_parameter_list(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
