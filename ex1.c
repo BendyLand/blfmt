@@ -52,9 +52,6 @@ void strAppend(string* original, const char* suffix)
     else if (0) {
         // do another something else
     }
-    else if (0) {
-        // do another something else
-    }
     else {
         // do a final thing
     }

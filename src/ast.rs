@@ -590,80 +590,81 @@ fn handle_inner_assignment_expression(root: Node, src: String) -> String {
 }
 
 fn handle_inner_compound_statement(root: Node, src: String) -> String {
-    let mut result = "".to_string();
+    let mut parts = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
-                result += format!("\t{}\n", expression_statement).as_str();
+                parts.push(format!("\t{}", expression_statement));
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
-                result += format!("\t{}\n", return_statement).as_str();
+                parts.push(format!("\t{}", return_statement));
             },
             "goto_statement" => {
                 let goto_statement = handle_goto_statement(node, src.clone());
-                result += format!("\t{}\n", goto_statement).as_str();
+                parts.push(format!("\t{}", goto_statement));
             },
             "if_statement" => {
                 let mut if_statement = handle_if_statement(node, src.clone());
                 if_statement = utils::add_all_leading_tabs(if_statement);
-                result += format!("{}\n", if_statement).as_str();
+                parts.push(if_statement);
             },
             "switch_statement" => {
                 let mut switch_statement = handle_switch_statement(node, src.clone());
                 switch_statement = utils::add_all_leading_tabs(switch_statement);
-                result += format!("{}\n", switch_statement).as_str();
+                parts.push(switch_statement);
             },
             "break_statement" => {
-                result += "\tbreak;\n";
+                parts.push("\tbreak;".to_string());
             },
             "continue_statement" => {
-                result += "\tcontinue;\n";
+                parts.push("\tcontinue;".to_string());
             },
             "case_statement" => {
                 let mut case_statement = handle_case_statement(node, src.clone());
                 case_statement = add_all_leading_tabs(case_statement);
                 case_statement = remove_empty_lines(case_statement.split("\n").collect::<Vec<&str>>());
-                result += format!("{}\n", case_statement).as_str();
+                parts.push(case_statement);
             },
             "declaration" => {
                 let declaration = handle_declaration(node, src.clone());
-                result += format!("\t{}\n", declaration).as_str();
+                parts.push(format!("\t{}", declaration));
             },
             "comment" => {
                 let mut comment = handle_comment(node, src.clone());
                 comment = utils::add_all_leading_tabs(comment);
-                result += format!("{}\n", comment).as_str();
+                parts.push(comment);
             },
             "compound_statement" => {
                 let compound_statement = handle_nested_inner_compound_statement(node, src.clone());
-                result += format!("\t{}\n", compound_statement).as_str();
+                parts.push(format!("\t{}", compound_statement));
             },
             "while_statement" => {
                 let mut while_statement = handle_while_statement(node, src.clone());
                 while_statement = utils::add_all_leading_tabs(while_statement);
-                result += format!("{}\n", while_statement).as_str();
+                parts.push(while_statement);
             },
             "preproc_call" => {
                 let preproc_call = handle_preproc_call(node, src.clone());
-                result += format!("\t{}\n", preproc_call).as_str();
+                parts.push(format!("\t{}", preproc_call));
             },
             "do_statement" => {
                 let mut do_statement = handle_do_statement(node, src.clone());
                 do_statement = utils::add_all_leading_tabs(do_statement);
-                result += format!("{}\n", do_statement).as_str();
+                parts.push(do_statement);
             },
             "for_statement" => {
                 let mut for_statement = handle_for_statement(node, src.clone());
                 for_statement = utils::add_all_leading_tabs(for_statement);
-                result += format!("{}\n", for_statement).as_str();
+                parts.push(for_statement);
             },
-            "{" => result += "{\n",
-            "}" => result += "}",
+            "{" => parts.push("{".to_string()),
+            "}" => parts.push("}".to_string()),
             _ => println!("You should't be here (inner_compound_statement): {}\n", node.grammar_name()),
         }
     }
+    let result = parts.join("\n");
     return result;
 }
 
@@ -767,59 +768,47 @@ fn handle_if_statement(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (if_statement): {}\n", node.grammar_name()),
         }
     }
-    let result = construct_conditional(parts.clone());
+    let result = parts.join(" ");
     return result;
 }
 
+//todo: Eventually make a parameter to handle else style
 fn handle_else_clause(root: Node, src: String) -> String {
-    let mut result = String::new();
+    let mut pieces = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => {
                 let inner_compound_statement = handle_inner_compound_statement(node, src.clone());
-                result += format!("\t{}\n", inner_compound_statement).as_str();
+                pieces.push(inner_compound_statement);
             }
             "else" => {
-                result += "else {\n";
+                //* This is where placement of "else" happens
+                pieces.push("else".to_string());
             },
             "switch_statement" => {
-                let mut switch_statement = handle_switch_statement(node, src.clone());
-                switch_statement = utils::add_all_leading_tabs(switch_statement);
-                result += format!("{}\n", switch_statement).as_str();
+                let switch_statement = handle_switch_statement(node, src.clone());
+                pieces.push(switch_statement);
             },
             "if_statement" => {
-                let mut if_statement = handle_if_statement(node, src.clone());
-                if_statement = utils::add_all_leading_tabs(if_statement);
-                result += format!("{}\n", if_statement).as_str();
+                let if_statement = handle_if_statement(node, src.clone());
+                pieces.push(if_statement);
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
-                result += format!("\t{}\n", return_statement).as_str();
+                pieces.push(return_statement);
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
-                result += format!("\t{}\n", expression_statement).as_str();
+                pieces.push(expression_statement);
             },
             "for_statement" => {
-                let mut for_statement = handle_for_statement(node, src.clone());
-                for_statement = utils::add_all_leading_tabs(for_statement);
-                result += format!("{}\n", for_statement).as_str();
+                let for_statement = handle_for_statement(node, src.clone());
+                pieces.push(for_statement);
             },
             _ => println!("You shouldn't be here (else_clause): {}\n", node.grammar_name()),
         }
     }
-    return result;
-}
-
-fn construct_conditional(parts: Vec<String>) -> String {
-    let mut result = String::new();
-    for (i, part) in parts.into_iter().enumerate() {
-        match i {
-            0 => result += "if ",
-            1 => result += format!("{} ", part).as_str(),
-            _ => result += part.as_str(),
-        }
-    }
+    let result = pieces.join(" ");
     return result;
 }
 
@@ -2553,7 +2542,7 @@ fn handle_preproc_if(root: Node, src: String) -> String {
             },
             "\n" => {
                 // maybe remove?
-                // parts.push("\n".to_string());
+                parts.push("\n".to_string());
             },
             _ => println!("You shouldn't be here (preproc_if): {}\n", node.grammar_name()),
         }
