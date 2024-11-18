@@ -1,9 +1,7 @@
-use std::cmp::Ordering;
-
 use tree_sitter::{Tree, Node};
 use crate::{c_format, utils};
 
-pub fn traverse_ast(ast: Tree, src: String) {
+pub fn traverse_c_ast(ast: Tree, src: String) -> String {
     let root = ast.root_node();
     let mut result = String::new();
     let mut last_group_kind = String::new();
@@ -116,9 +114,8 @@ pub fn traverse_ast(ast: Tree, src: String) {
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
     }
-    //todo: rewrite sort_includes to sort_include_groups, where it scans the whole result and orders groups of includes.
-    // sort_includes(&mut includes);
-    println!("{}", result);
+    result = utils::sort_include_groups(result);
+    return result;
 }
 
 fn handle_compound_statement(root: Node, src: String) -> String {
@@ -2441,25 +2438,6 @@ fn handle_storage_class_specifier(root: Node, src: String) -> String {
     return result;
 }
 
-fn sort_includes(includes: &mut Vec<String>) {
-    includes.sort_by(|a, b| {
-        if a.contains("\"") && b.contains("\"") {
-            if a < b { Ordering::Less }
-            else if a > b { Ordering::Greater }
-            else { Ordering::Equal }
-        }
-        else if a.contains(">") && b.contains(">") {
-            if a < b { Ordering::Less }
-            else if a > b { Ordering::Greater }
-            else { Ordering::Equal }
-        }
-        else {
-            if a.contains("\"") && !b.contains("\"") { Ordering::Greater }
-            else if !a.contains("\"") && b.contains("\"") { Ordering::Less }
-            else { Ordering::Equal }
-        }
-    });
-}
 
 fn handle_preproc_ifdef(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();

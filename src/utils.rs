@@ -2,6 +2,7 @@ use std::{fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 use std::ops::{Bound, RangeBounds};
+use std::cmp::Ordering;
 
 pub trait StringUtils {
     fn substring(&self, start: usize, len: usize) -> &str;
@@ -66,6 +67,50 @@ impl StringUtils for str {
     }
 }
 
+pub fn sort_include_groups(file: String) -> String {
+    let mut lines: Vec<String> = file.lines().map(|line| line.to_string()).collect();
+    let mut result = Vec::new();
+    let mut temp_group = Vec::new();
+    for line in lines.into_iter() {
+        if line.trim_start().starts_with("#include") {
+            temp_group.push(line);
+        } 
+        else {
+            if !temp_group.is_empty() {
+                sort_includes(&mut temp_group);
+                // Add sorted group to the result
+                result.extend(temp_group.drain(..));
+            }
+            result.push(line);
+        }
+    }
+    if !temp_group.is_empty() {
+        sort_includes(&mut temp_group);
+        result.extend(temp_group.drain(..));
+    }
+    result.join("\n")
+}
+
+fn sort_includes(includes: &mut Vec<String>) {
+    includes.sort_by(|a, b| {
+        if a.contains("\"") && b.contains("\"") {
+            if a < b { Ordering::Less }
+            else if a > b { Ordering::Greater }
+            else { Ordering::Equal }
+        }
+        else if a.contains(">") && b.contains(">") {
+            if a < b { Ordering::Less }
+            else if a > b { Ordering::Greater }
+            else { Ordering::Equal }
+        }
+        else {
+            if a.contains("\"") && !b.contains("\"") { Ordering::Greater }
+            else if !a.contains("\"") && b.contains("\"") { Ordering::Less }
+            else { Ordering::Equal }
+        }
+    });
+}
+
 pub fn add_all_leading_tabs(text: String) -> String {
     let lines: Vec<&str> = text.split("\n").collect();
     let mut temp_vec = Vec::<String>::new();
@@ -101,22 +146,9 @@ pub fn remove_pointer_spaces(line: String) -> String {
             let skip = {
                 c == ' ' && 
                 line.chars().nth(i+1) == Some('*') && 
-                (line.chars().nth(i-1).unwrap().is_alphabetic() || line.chars().nth(i-1) == Some('*'))
+                (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('*'))
             };
             if skip {
-                continue;
-            }
-        }
-        result += c.to_string().as_str();
-    }
-    return result;
-}
-
-pub fn remove_double_pointer_spaces(line: String) -> String {
-    let mut result = String::new();
-    for (i, c) in line.char_indices() {
-        if i <= line.len()-3 {
-            if c == ' ' && line.chars().nth(i+1) == Some('*') && line.chars().nth(i+2) == Some('*') {
                 continue;
             }
         }
@@ -273,7 +305,7 @@ pub fn remove_blank_lines(lines: Vec<&str>) -> String {
     return result.join("\n");
 }
 
-pub fn write_file(path: String, contents: &[u8]) -> Result<(), Error> {
+pub fn write_file(path: &String, contents: &[u8]) -> Result<(), Error> {
     let mut dest = File::create(path).unwrap();
     let ok = dest.write_all(contents);
     return ok;

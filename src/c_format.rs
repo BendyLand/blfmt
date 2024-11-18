@@ -1,5 +1,5 @@
 use tree_sitter::{InputEdit, Parser, Language, Point};
-use crate::{tree_sitter_c, utils, ast};
+use crate::{tree_sitter_c, utils, c_ast};
 
 pub fn parse_c_file(path: String) -> tree_sitter::Tree {
     let mut parser = Parser::new();
