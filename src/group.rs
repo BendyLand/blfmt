@@ -2,7 +2,7 @@ use regex::Regex;
 use crate::utils::{self, StringUtils};
 
 pub fn group_rs_file_into_sections(lines: Vec<&str>) -> Vec<String> {
-    let text = utils::remove_empty_lines(lines);
+    let text = utils::remove_blank_lines(lines);
     let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     let sections = separate_rs_file_sections(lines);
     return sections;
@@ -83,14 +83,14 @@ fn separate_attrs_from_libs(section: &String) -> (String, String) {
 }
 
 pub fn group_c_file_into_sections(lines: Vec<&str>) -> Vec<String> {
-    let text = utils::remove_empty_lines(lines);
+    let text = utils::remove_blank_lines(lines);
     let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     let result = separate_c_file_sections(lines.clone());
     return result;
 }
 
 pub fn group_cpp_file_into_sections(lines: Vec<&str>) -> Vec<String> {
-    let text = utils::remove_empty_lines(lines);
+    let text = utils::remove_blank_lines(lines);
     let lines = text.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
     let result = separate_cpp_file_sections(lines.clone());
     return result;

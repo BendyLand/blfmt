@@ -5,7 +5,6 @@
 #include <stdbool.h>
 
 
-
 void strAppend(string* original, const char* suffix);
 
 string** strSplit(string* original, const char delim);
