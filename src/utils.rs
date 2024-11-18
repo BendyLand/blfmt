@@ -97,8 +97,26 @@ pub fn remove_dereference_spaces(line: String) -> String {
 pub fn remove_pointer_spaces(line: String) -> String {
     let mut result = String::new();
     for (i, c) in line.char_indices() {
-        if i <= line.len()-2 {
-            if c == ' ' && line.chars().nth(i+1) == Some('*') {
+        if i <= line.len()-2 && i > 0 {
+            let skip = {
+                c == ' ' && 
+                line.chars().nth(i+1) == Some('*') && 
+                (line.chars().nth(i-1).unwrap().is_alphabetic() || line.chars().nth(i-1) == Some('*'))
+            };
+            if skip {
+                continue;
+            }
+        }
+        result += c.to_string().as_str();
+    }
+    return result;
+}
+
+pub fn remove_double_pointer_spaces(line: String) -> String {
+    let mut result = String::new();
+    for (i, c) in line.char_indices() {
+        if i <= line.len()-3 {
+            if c == ' ' && line.chars().nth(i+1) == Some('*') && line.chars().nth(i+2) == Some('*') {
                 continue;
             }
         }
