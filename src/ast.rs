@@ -6,100 +6,111 @@ use crate::{c_format, utils};
 pub fn traverse_ast(ast: Tree, src: String) {
     let root = ast.root_node();
     let mut result = String::new();
-    let mut include_count = 0;
-    let total_includes = {
-        src
-            .as_bytes()
-            .windows("#include".len())
-            .filter(|&w| w == "#include".as_bytes())
-            .count()
-    };
-    let mut func_def_count = 0;
+    let mut last_group_kind = String::new();
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
                 let preproc_include = handle_preproc_include(child, src.clone());
                 result += format!("{}\n", preproc_include).as_str();
-                include_count += 1;
-                if include_count >= total_includes { result += "\n"; }
+                last_group_kind = "preproc_include".to_string();
+                if last_group_kind != "preproc_include".to_string() { result += "\n"; }
             },
             "declaration" => {
+                if last_group_kind == "preproc_include".to_string() { result += "\n"; }
                 let declaration = handle_declaration(child, src.clone());
                 result += format!("{}\n", declaration).as_str();
+                last_group_kind = "declaration".to_string();
             },
             "function_definition" => {
-                if func_def_count < 1 { result += "\n"; }
+                if last_group_kind != "function_definition".to_string() { result += "\n"; }
                 let function_definition = handle_function_definition(child, src.clone());
                 result += format!("{}\n\n", function_definition).as_str();
-                func_def_count += 1;
+                last_group_kind = "function_definition".to_string();
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(child, src.clone());
                 result += format!("{}\n\n", expression_statement).as_str();
+                last_group_kind = "expression_statement".to_string();
             },
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(child, src.clone());
                 result += format!("{}\n\n", compound_statement).as_str();
+                last_group_kind = "compound_statement".to_string();
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(child, src.clone());
                 result += format!("{}\n\n", if_statement).as_str();
+                last_group_kind = "if_statement".to_string();
             },
             "switch_statement" => {
                 let switch_statement = handle_switch_statement(child, src.clone());
                 result += format!("{}\n\n", switch_statement).as_str();
+                last_group_kind = "switch_statement".to_string();
             },
             "continue_statement" => {
                 let continue_statement = "continue;\n";
                 result += continue_statement;
+                last_group_kind = "continue_statement".to_string();
             },
             "break_statement" => {
                 let break_statement = "break;\n";
                 result += break_statement;
+                last_group_kind = "break_statement".to_string();
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(child, src.clone());
                 result += format!("{}\n\n", return_statement).as_str();
+                last_group_kind = "return_statement".to_string();
             },
             "comment" => {
                 let comment = handle_comment(child, src.clone());
-                result += format!("{}\n\n", comment).as_str();
+                result += format!("{}\n", comment).as_str();
+                last_group_kind = "comment".to_string();
             },
             "ERROR" => {
                 let error = handle_error(child, src.clone());
                 result += format!("{}\n\n", error).as_str();
+                last_group_kind = "ERROR".to_string();
             },
             "type_definition" => {
                 let type_definition = handle_type_definition(child, src.clone());
                 result += format!("{}\n\n", type_definition).as_str();
+                last_group_kind = "type_definition".to_string();
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(child, src.clone());
                 result += format!("{}\n\n", struct_specifier).as_str();
+                last_group_kind = "struct_specifier".to_string();
             },
             "preproc_def" => {
                 let preproc_def = handle_preproc_def(child, src.clone());
                 result += format!("{}\n\n", preproc_def).as_str();
+                last_group_kind = "preproc_def".to_string();
             },
             "preproc_ifdef" => {
                 let preproc_ifdef = handle_preproc_ifdef(child, src.clone());
                 result += format!("{}\n\n", preproc_ifdef).as_str();
+                last_group_kind = "preproc_ifdef".to_string();
             },
             "preproc_if" => {
                 let preproc_if = handle_preproc_if(child, src.clone());
                 result += format!("{}\n\n", preproc_if).as_str();
+                last_group_kind = "preproc_if".to_string();
             },
             "preproc_function_def" => {
                 let preproc_function_def = handle_preproc_function_def(child, src.clone());
                 result += format!("{}\n\n", preproc_function_def).as_str();
+                last_group_kind = "preproc_function_def".to_string();
             },
             "preproc_call" => {
                 let preproc_call = handle_preproc_call(child, src.clone());
                 result += format!("{}\n\n", preproc_call).as_str();
+                last_group_kind = "preproc_call".to_string();
             },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(child, src.clone());
                 result += format!("{}\n\n", sized_type_specifier).as_str();
+                last_group_kind = "sized_type_specifier".to_string();
             },
             ";" => (), // handled in functions above
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
@@ -179,7 +190,8 @@ fn handle_compound_statement(root: Node, src: String) -> String {
             },
             "comment" => {
                 let comment = handle_comment(node, src.clone());
-                result += format!("\t{}\n", comment).as_str();
+                if comment.starts_with(" ") { result += format!("{}\n", comment).as_str(); }
+                else { result += format!("\t{}\n", comment).as_str(); }
             },
             "labeled_statement" => {
                 let labeled_statement = handle_labeled_statement(node, src.clone());
@@ -587,7 +599,7 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
             },
             "case_statement" => {
                 let mut case_statement = handle_case_statement(node, src.clone());
-                // Without the line below, "case" vertically aligns with "switch". 
+                // Without the line below, "case" vertically aligns with "switch".
                 // case_statement = utils::add_all_leading_tabs(case_statement);
                 case_statement = utils::remove_blank_lines(case_statement.split("\n").collect::<Vec<&str>>());
                 parts.push(case_statement);
@@ -2082,44 +2094,74 @@ fn handle_labeled_statement(root: Node, src: String) -> String {
 }
 
 fn handle_for_statement(root: Node, src: String) -> String {
-    let mut result = String::new();
+    let mut vec = Vec::<String>::new();
+    let mut temp = String::new();
+    let mut reached_compound = false;
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "compound_statement" => {
+                reached_compound = true;
                 let compound_statement = handle_compound_statement(node, src.clone());
-                result += compound_statement.as_str();
+                // result += compound_statement.as_str();
+                vec.push(compound_statement);
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
-                result += if_statement.as_str();
+                // result += if_statement.as_str();
+                vec.push(if_statement);
             },
             "update_expression" => {
                 let update_expression = handle_update_expression(node, src.clone());
-                result += update_expression.as_str();
+                if !reached_compound {
+                    temp += update_expression.as_str();
+                }
+                else {
+                    vec.push(update_expression);
+                }
+                // result += update_expression.as_str();
             },
             "assignment_expression" => {
                 let assignment_expression = handle_assignment_expression(node, src.clone());
-                result += assignment_expression.as_str();
+                // result += assignment_expression.as_str();
+                vec.push(assignment_expression);
             },
             "binary_expression" => {
                 let binary_expression = handle_binary_expression(node, src.clone());
-                result += binary_expression.as_str();
+                if !reached_compound {
+                    temp += format!(" {}", binary_expression).as_str();
+                }
+                else {
+                    vec.push(binary_expression);
+                }
+                // result += binary_expression.as_str();
             },
             "declaration" => {
                 let declaration = handle_declaration(node, src.clone());
-                result += declaration.as_str();
+                if !reached_compound {
+                    temp += declaration.as_str();
+                }
+                else {
+                    vec.push(declaration);
+                }
+                // result += declaration.as_str();
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
-                result += expression_statement.as_str();
+                // result += expression_statement.as_str();
+                vec.push(expression_statement);
             },
-            ";" => result += "; ",
-            "(" => result += "(",
-            ")" => result += ")",
-            "for" => result += "for ",
+            ";" => temp += "; ",
+            "(" => temp += "(",
+            ")" => {
+                temp += ")";
+                vec.push(temp);
+                temp = "".to_string();
+            },
+            "for" => temp += "for ",
             _ => println!("You shouldn't be here (for_statement): {}\n", node.grammar_name()),
         }
     }
+    let result = vec.join(" ");
     return result;
 }
 
