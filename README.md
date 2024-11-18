@@ -2,7 +2,7 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is currently in early development and is only functional for .go, .py, and .txt files; .c, .cpp, and .rs files are currently non-functional.**
+**blfmt is currently in early development and is only functional for .go, .py, .txt, and fairly basic .c files; .cpp and .rs files are currently non-functional. Go and Python files are formatted using gofmt and Black respectively; you must have them installed before using this tool for those file types.**
 
 *This document will be updated regularly as the project continues, but the tool is in a basic functional state at the moment. Its behavior in certain circumstances can be unpredictable. Always make a copy of your file before formatting!*
 
@@ -63,7 +63,7 @@ cargo run -- path/to/file.txt
 cargo run -- path/to/file.c(pp)
 ```
 
- - Currently, C/C++ files will be formatted using my personal favorite style. 
+ - C/C++ files will be formatted using my personal favorite style. 
  - It is easier to show you than to try to explain it:
 ```c
 // Example C/C++ file format
@@ -95,7 +95,6 @@ But you're in luck! See *Future Plans* below for details.
 ```bash
 cargo run -- path/to/file.rs
 ```
- 
  - Just like with C and C++ files, Rust files are currently formatted to my preferred style.
  - Unlike C/C++, I do not plan to add several known styles to this one.
      - In my opinion, the various styles don't look as good with Rust's syntax rules, so I'm just sticking with the one version for this language.
@@ -103,7 +102,7 @@ cargo run -- path/to/file.rs
 
 ## Future Plans
 
-As I mentioned, right now C files are formatted directly to a pre-determined style. 
+As I mentioned, C files are being formatted directly to a pre-determined style. 
 (Also, for the time being, anything beyond a very basic file structure will fundamentally break).
 Eventually, I want to allow the user to specify a known style (Allman, K&R, Stroustrup, etc.).
 (I would obviously also like to fix the broken parts).
@@ -111,10 +110,3 @@ Eventually, I want to allow the user to specify a known style (Allman, K&R, Stro
 Additionally, I am in the process of adding support for C++ and Rust. 
 However, since these languages are so complex, I may only be able to include support for basic
 structuring and certain constructs, like the positioning of conditionals.
-
-I actually plan to add support for Python though. 
-And Lua support would be a pleasant surprise for everyone; 
-we'll see how long Python takes.  
-
-If it would allow for greater flexibility in languages, I may just end up wrapping existing formatters inside of this one, like how the Go implementation works. 
-
