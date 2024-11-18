@@ -1,11 +1,11 @@
 use tree_sitter::{InputEdit, Parser, Language, Point};
-use crate::{utils, ast};
+use crate::{utils, c_ast};
 
 pub fn format_cpp_file(path: String) {
     let ast = parse_cpp_file(path.clone());
     let contents = std::fs::read_to_string(path).unwrap();
     // print_tree(ast.root_node(), &contents, 0);
-    ast::traverse_ast(ast, contents);
+    c_ast::traverse_c_ast(ast, contents);
 }
 
 pub fn parse_cpp_file(path: String) -> tree_sitter::Tree {

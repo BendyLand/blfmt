@@ -1,4 +1,4 @@
-use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, txt_format, ast};
+use crate::{group, options, utils, utils::StringUtils, c_format, cpp_format, txt_format, c_ast};
 use regex::Regex;
 use std::fs::{self, File};
 use std::io::Write;
@@ -6,16 +6,23 @@ use std::process::Command;
 
 pub fn format_c_file(path: String) {
     let ast = c_format::parse_c_file(path.clone());
-    let contents = std::fs::read_to_string(path).unwrap();
-    // print_tree(ast.root_node(), &contents, 0);
-    ast::traverse_ast(ast, contents);
+    let contents = std::fs::read_to_string(&path).unwrap_or("NOFILE".to_string());
+    if contents == "NOFILE".to_string() {
+        println!("'{}' not found.", path);
+        return;
+    }
+    let result = c_ast::traverse_c_ast(ast, contents);
+    let ok = utils::write_file(&path, result.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: {}", path),
+        Err(e) => println!("Error during `format_txt_file()`: {}", e),
+    };
 }
 
 pub fn format_cpp_file(path: String) {
     let ast = cpp_format::parse_cpp_file(path.clone());
     let contents = std::fs::read_to_string(path).unwrap();
-    // print_tree(ast.root_node(), &contents, 0);
-    ast::traverse_ast(ast, contents);
+    // c_ast::traverse_c_ast(ast, contents);
 }
 
 pub fn format_py_file(path: String) {
@@ -53,7 +60,7 @@ pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[Strin
         sep += "\n";
     }
     let paragraphs = result.join(sep.as_str());
-    let ok = utils::write_file(path, paragraphs.as_bytes());
+    let ok = utils::write_file(&path, paragraphs.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path_clone),
         Err(e) => println!("Error during `format_txt_file()`: {}", e),
