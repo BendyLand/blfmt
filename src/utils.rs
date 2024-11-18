@@ -241,7 +241,7 @@ pub fn extract_c_function_header(group: &String) -> String {
     }
 }
 
-fn line_is_empty(line: &str) -> bool {
+fn line_has_no_alphanumeric(line: &str) -> bool {
     for c in line.chars() {
         if c.is_alphanumeric() {
             return false;
@@ -250,8 +250,8 @@ fn line_is_empty(line: &str) -> bool {
     return true;
 }
 
-pub fn remove_empty_lines(lines: Vec<&str>) -> String {
-    let result: Vec<&str> = lines.into_iter().filter(|line| !line_is_empty(line)).collect();
+pub fn remove_blank_lines(lines: Vec<&str>) -> String {
+    let result: Vec<&str> = lines.into_iter().filter(|line| !line_has_no_alphanumeric(line) || line.contains("}")).collect();
     return result.join("\n");
 }
 
