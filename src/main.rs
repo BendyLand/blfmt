@@ -16,6 +16,7 @@ mod options;
 mod c_format;
 mod cpp_format;
 mod c_ast;
+mod cpp_ast;
 mod txt_format;
 
 fn main() {
@@ -42,8 +43,9 @@ fn main() {
             format::format_go_file(filepath);
         },
         ".cpp" => {
-            // let test = format::format_cpp_file(filepath);
-            println!("C++ files currently unsupported.");
+            let style = options::get_c_style(&args);
+            format::format_cpp_file(filepath, style);
+            // println!("C++ files currently unsupported.");
         },
         ".c" => {
             let style = options::get_c_style(&args);

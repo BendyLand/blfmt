@@ -1,13 +1,6 @@
 use tree_sitter::{InputEdit, Parser, Language, Point};
 use crate::{utils, c_ast};
 
-pub fn format_cpp_file(path: String) {
-    let ast = parse_cpp_file(path.clone());
-    let contents = std::fs::read_to_string(path).unwrap();
-    // print_tree(ast.root_node(), &contents, 0);
-    // c_ast::traverse_c_ast(ast, contents);
-}
-
 pub fn parse_cpp_file(path: String) -> tree_sitter::Tree {
     let mut parser = Parser::new();
     parser.set_language(&tree_sitter_cpp::LANGUAGE.into()).expect("Error loading C++ parser.");

@@ -44,10 +44,10 @@ pub fn check_restore_arg(args: &Vec<String>) -> usize {
         args.contains(&"--restore".to_string())
     };
     if contains_restore_arg {
-        // utils::restore_example_txt_files();
-        restore::restore_example_c_file();
-        // utils::restore_example_cpp_file();
-        // utils::restore_example_rs_file();
+        // restore::restore_example_txt_files();
+        // restore::restore_example_c_file();
+        restore::restore_example_cpp_file();
+        // restore::restore_example_rs_file();
         println!("Example file restored.");
         return 1; 
     }

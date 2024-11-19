@@ -2,9 +2,9 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is currently in early development and is only functional for .go, .py, .txt, and fairly basic .c files; .cpp and .rs files are currently non-functional. Go and Python files are formatted using gofmt and Black respectively; you must have them installed before using this tool for those file types.**
+**blfmt is still in development and is functional for .go, .py, .txt, and fairly basic .c and .cpp files. Go and Python files are formatted using gofmt and Black respectively, so you must have them installed before using this tool for those file types.**
 
-*This document will be updated regularly as the project continues, but the tool is in a basic functional state at the moment. Its behavior in certain circumstances can be unpredictable. Always make a copy of your file before formatting!*
+*Note: C/C++ files are currently supported, but certain constructs may not work perfectly. Always make a copy of your original file before formatting.*
 
 ### About
 
@@ -102,7 +102,6 @@ cargo run -- path/to/file.c --style stroustrup
 In the future, Allman style will be supported. If no style is specified, the 
 Stroustrup option will be used by default.
 
-
 #### Rust files:
 ```bash
 cargo run -- path/to/file.rs
@@ -111,14 +110,3 @@ cargo run -- path/to/file.rs
  - Unlike C/C++, I do not plan to add several known styles to this one.
      - In my opinion, the various styles don't look as good with Rust's syntax rules, so I'm just sticking with the one version for this language.
  - If you would like a reference for the style I am aiming for, `rs_ex1.rs` (which is taken from this very project) is probably the best example currently. It was formatted from what you see in `safe_rs_ex1.rs`.
-
-## Future Plans
-
-As I mentioned, C files are being formatted directly to a pre-determined style. 
-(Also, for the time being, anything beyond a very basic file structure will fundamentally break).
-Eventually, I want to allow the user to specify a known style (Allman, K&R, Stroustrup, etc.).
-(I would obviously also like to fix the broken parts).
-
-Additionally, I am in the process of adding support for C++ and Rust. 
-However, since these languages are so complex, I may only be able to include support for basic
-structuring and certain constructs, like the positioning of conditionals.

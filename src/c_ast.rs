@@ -2100,12 +2100,10 @@ fn handle_for_statement(root: Node, src: String) -> String {
             "compound_statement" => {
                 reached_compound = true;
                 let compound_statement = handle_compound_statement(node, src.clone());
-                // result += compound_statement.as_str();
                 vec.push(compound_statement);
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
-                // result += if_statement.as_str();
                 vec.push(if_statement);
             },
             "update_expression" => {
@@ -2116,11 +2114,9 @@ fn handle_for_statement(root: Node, src: String) -> String {
                 else {
                     vec.push(update_expression);
                 }
-                // result += update_expression.as_str();
             },
             "assignment_expression" => {
                 let assignment_expression = handle_assignment_expression(node, src.clone());
-                // result += assignment_expression.as_str();
                 vec.push(assignment_expression);
             },
             "binary_expression" => {
@@ -2131,7 +2127,6 @@ fn handle_for_statement(root: Node, src: String) -> String {
                 else {
                     vec.push(binary_expression);
                 }
-                // result += binary_expression.as_str();
             },
             "declaration" => {
                 let declaration = handle_declaration(node, src.clone());
@@ -2141,11 +2136,9 @@ fn handle_for_statement(root: Node, src: String) -> String {
                 else {
                     vec.push(declaration);
                 }
-                // result += declaration.as_str();
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
-                // result += expression_statement.as_str();
                 vec.push(expression_statement);
             },
             ";" => temp += "; ",
