@@ -76,16 +76,16 @@ pub enum Style {
 pub fn format_else_lines(file: &mut String, style: Style) {
     match style {
         Style::KnR => return,
-        Style::Allman => format_else_to_allman(file),
-        Style::Stroustrup => format_else_to_stroustrup(file),
+        Style::Allman => format_to_allman(file),
+        Style::Stroustrup => format_to_stroustrup(file),
     }
 }
 
-fn format_else_to_allman(file: &mut String) {
+fn format_to_allman(file: &mut String) {
     //todo: implement
 }
 
-fn format_else_to_stroustrup(file: &mut String) {
+fn format_to_stroustrup(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     for i in 0..lines.len() {
         if lines[i].contains("else") && lines[i].contains("}") {
