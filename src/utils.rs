@@ -125,7 +125,9 @@ pub fn sort_include_groups(file: String) -> String {
         }
         else {
             if !temp_group.is_empty() {
-                sort_includes(&mut temp_group);
+                for _ in 0..temp_group.len() {
+                    sort_includes(&mut temp_group);
+                }
                 // Add sorted group to the result
                 result.extend(temp_group.drain(..));
             }
@@ -136,25 +138,29 @@ pub fn sort_include_groups(file: String) -> String {
         sort_includes(&mut temp_group);
         result.extend(temp_group.drain(..));
     }
-    result.join("\n")
+    return result.join("\n");
+}
+
+fn remove_comment(line: String) -> String {
+    let idx = line.find("//").unwrap_or(line.len());
+    let mut result: String;
+    if idx == line.len() { result = line; }
+    else { result = line[..idx].to_string(); }
+    return result;
 }
 
 fn sort_includes(includes: &mut Vec<String>) {
     includes.sort_by(|a, b| {
-        if a.contains("\"") && b.contains("\"") {
-            if a < b { Ordering::Less }
-            else if a > b { Ordering::Greater }
-            else { Ordering::Equal }
-        }
-        else if a.contains(">") && b.contains(">") {
-            if a < b { Ordering::Less }
-            else if a > b { Ordering::Greater }
-            else { Ordering::Equal }
-        }
-        else {
-            if a.contains("\"") && !b.contains("\"") { Ordering::Greater }
-            else if !a.contains("\"") && b.contains("\"") { Ordering::Less }
-            else { Ordering::Equal }
+        let mut a2 = a.clone();
+        let mut b2 = b.clone();
+        a2 = remove_comment(a2);
+        b2 = remove_comment(b2);
+        let a_has_angle = a2.contains('<') && a2.contains('>');
+        let b_has_angle = b2.contains('<') && b2.contains('>');
+        match (a_has_angle, b_has_angle) {
+            (true, false) => Ordering::Less,    // Angle brackets come first
+            (false, true) => Ordering::Greater, // Double quotes come after
+            _ => a.cmp(b), // If both are the same type, sort normally
         }
     });
 }
@@ -199,6 +205,22 @@ pub fn remove_pointer_spaces(line: String) -> String {
             if skip {
                 continue;
             }
+        }
+        result += c.to_string().as_str();
+    }
+    return result;
+}
+
+pub fn remove_reference_spaces(line: String) -> String {
+    let mut result = String::new();
+    for (i, c) in line.char_indices() {
+        if i <= line.len()-2 && i > 0 {
+            let skip = {
+                c == ' ' &&
+                line.chars().nth(i+1) == Some('&') &&
+                (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('>'))
+            };
+            if skip { continue; }
         }
         result += c.to_string().as_str();
     }
@@ -442,8 +464,9 @@ pub fn infer_file_type(filepath: &String) -> String {
 }
 
 pub fn get_file_extensions_list() -> Vec<String> {
+    // .cpp has to stay before .c, otherwise it breaks
     let exts = {
-        vec![".c", ".cpp", ".go", ".py", ".txt"]
+        vec![".cpp", ".c", ".go", ".py", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()

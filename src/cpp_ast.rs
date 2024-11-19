@@ -861,6 +861,10 @@ fn handle_switch_statement(root: Node, src: String) -> String {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 result += format!("{} ", parenthesized_expression).as_str();
             },
+            "condition_clause" => {
+                let condition_clause = handle_condition_clause(node, src.clone());
+                result += format!("{} ", condition_clause).as_str();
+            },
             _ => println!("You shouldn't be here (switch_statement): {}\n", node.grammar_name()),
         }
     }
@@ -1221,6 +1225,7 @@ fn handle_function_declarator(root: Node, src: String) -> String {
             result += temp.as_str();
         }
     }
+    result = utils::remove_reference_spaces(result);
     return result;
 }
 
@@ -1659,6 +1664,14 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
                 parts.push(sized_type_specifier);
             },
+            "abstract_reference_declarator" => {
+                let abstract_reference_declarator = handle_abstract_reference_declarator(node, src.clone());
+                parts.push(abstract_reference_declarator);
+            },
+            "reference_declarator" => {
+                let reference_declarator = handle_reference_declarator(node, src.clone());
+                parts.push(reference_declarator);
+            },
             _ => println!("You shouldn't be here (parameter_declaration): {}\n", node.grammar_name()),
         }
     }
@@ -1884,6 +1897,10 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "argument_list" => {
                 let argument_list = handle_argument_list(node, src.clone());
                 parts.push(argument_list);
+            },
+            "char_literal" => {
+                let char_literal = handle_char_literal(node, src.clone());
+                parts.push(char_literal);
             },
             "=" => parts.push("=".to_string()),
             "false" => parts.push("false".to_string()),
@@ -3033,7 +3050,18 @@ fn handle_reference_declarator(root: Node, src: String) -> String {
                 result += identifier.as_str();
             },
             "&" => result += "& ",
-            _ => println!("Reference declarator: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("You shouldn't be here (reference_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_abstract_reference_declarator(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "&" => result += "&",
+            _ => println!("You shouldn't be here (abstract_reference_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
