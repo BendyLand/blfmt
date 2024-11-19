@@ -45,15 +45,10 @@ fn main() {
         ".cpp" => {
             let style = options::get_c_style(&args);
             format::format_cpp_file(filepath, style);
-            // println!("C++ files currently unsupported.");
         },
         ".c" => {
             let style = options::get_c_style(&args);
             format::format_c_file(filepath, style);
-        },
-        ".rs" => {
-            // format::format_rs_file(filepath);
-            println!("Rust files currently unsupported.");
         },
         ".py" => {
             format::format_py_file(filepath);
