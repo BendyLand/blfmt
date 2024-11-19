@@ -89,7 +89,19 @@ int main(void)
 ```
 Make sense? Good!
 Don't like it? That's actually pretty reasonable; it's not for everyone. 
-But you're in luck! See *Future Plans* below for details.
+But you're in luck! There is support for specifying other styles!
+
+At the moment, the only available styles are the one above (known as the Stroustrup 
+variant of K&R) and K&R (can be typed KnR or knr as well). The style can be specified 
+like so:
+
+```bash
+cargo run -- path/to/file.c -s knr
+cargo run -- path/to/file.c --style stroustrup
+```
+In the future, Allman style will be supported. If no style is specified, the 
+Stroustrup option will be used by default.
+
 
 #### Rust files:
 ```bash
