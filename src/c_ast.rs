@@ -1,7 +1,7 @@
 use tree_sitter::{Tree, Node};
 use crate::{c_format, utils};
 
-pub fn traverse_c_ast(ast: Tree, src: String) -> String {
+pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let root = ast.root_node();
     let mut result = String::new();
     let mut last_group_kind = String::new();
@@ -115,6 +115,7 @@ pub fn traverse_c_ast(ast: Tree, src: String) -> String {
         }
     }
     result = utils::sort_include_groups(result);
+    utils::format_else_lines(&mut result, style);
     return result;
 }
 

@@ -39,11 +39,14 @@ void strAppend(string* original, const char* suffix)
 	if (!newData) {
 		perror("Failed to reallocate memory for new string.");
 		exit(EXIT_FAILURE);
-	} else if (0) {
+	}
+	else if (0) {
 		// do something else
-	} else if (0) {
+	}
+	else if (0) {
 		// do another something else
-	} else {
+	}
+	else {
 		// do a final thing
 	}
 	strcat(newData, suffix);
@@ -129,7 +132,8 @@ bool strIsEmpty(string* str)
 {
 	if (str->length == 0 || strlen(str->data) < 1) {
 		return true;
-	} else {
+	}
+	else {
 		return false;
 	}
 }
@@ -157,7 +161,8 @@ void strFree(string* str)
 	if (str) {
 		free(str->data);
 		free(str);
-	} else {
+	}
+	else {
 		// nothing happens
 	}
 }

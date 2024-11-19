@@ -7,6 +7,25 @@ pub struct TxtOpts {
     pub spacing: usize,
 }
 
+pub fn get_c_style(args: &Vec<String>) -> utils::Style {
+    let args: Vec<String> = args.into_iter().map(|x| x.to_lowercase()).collect();
+    let result: utils::Style;
+    if args.contains(&"-s".to_string()) || args.contains(&"--style".to_string()) {
+        if args.contains(&"allman".to_string()) { 
+            result = utils::Style::Allman; 
+        }
+        else if args.contains(&"k&r".to_string()) || args.contains(&"knr".to_string()) { 
+            result = utils::Style::KnR; 
+        }
+        else if args.contains(&"stroustrup".to_string()) { 
+            result = utils::Style::Stroustrup; 
+        }
+        else { result = utils::Style::Stroustrup; }
+    }
+    else { result = utils::Style::Stroustrup; }
+    return result;
+}
+
 pub fn get_txt_opts(args: &Vec<String>) -> TxtOpts {
     let opts: TxtOpts;
     if args.contains(&"-o".to_string()) || args.contains(&"--opts".to_string()) {
