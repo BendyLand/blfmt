@@ -3,17 +3,6 @@ use crate::utils;
 
 //* THESE PATHS ARE PROBABLY ALL WRONG
 
-pub fn restore_example_rs_file() {
-    let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/safe_rs_ex1.rs").unwrap().to_owned();
-    let good1 = temp1.as_bytes();
-    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/rs_ex1.rs").expect("Unable to get rs_ex1.rs");
-    let res1 = file1.write_all(good1);
-    match res1 {
-        Err(e) => println!("{}", e),
-        _ => (),
-    };
-}
-
 pub fn restore_example_cpp_file() {
     let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/safe_cpp_example4.cpp").unwrap().to_owned();
     let good1 = temp1.as_bytes();
