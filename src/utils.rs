@@ -100,6 +100,21 @@ fn format_to_stroustrup(file: &mut String) {
     *file = result;
 }
 
+pub fn close_empty_curly_brace_blocks(file: &mut String) {
+    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
+    let mut lines_to_remove = Vec::<usize>::new();
+    for i in 0..lines.len()-1 {
+        if lines[i].ends_with("{") && lines[i+1].starts_with("}") {
+            lines[i] = format!("{}}}", lines[i]);
+            lines_to_remove.push(i+1);
+        }
+    }
+    for n in lines_to_remove {
+        lines.remove(n);
+    }
+    *file =  lines.join("\n");
+}
+
 pub fn sort_include_groups(file: String) -> String {
     let mut lines: Vec<String> = file.lines().map(|line| line.to_string()).collect();
     let mut result = Vec::new();
@@ -195,6 +210,15 @@ pub fn remove_all_spaces(line: String) -> String {
     let mut result = String::new();
     for c in chars {
         result += c.to_string().as_str();
+    }
+    return result;
+}
+
+pub fn remove_object_constructor_space(line: String) -> String {
+    let mut result = line.clone();
+    let start = line.find("(").unwrap_or(line.len());
+    if line.chars().nth(start-1) == Some(' ') {
+        result.remove(start-1);
     }
     return result;
 }
