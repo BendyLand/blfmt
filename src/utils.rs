@@ -85,26 +85,6 @@ fn format_else_to_allman(file: &mut String) {
     //todo: implement
 }
 
-fn get_closest_indentation_level(index: &usize) -> usize {
-    let mut indents = Vec::<usize>::new();
-    dbg!(&index);
-    for i in 1..10 { indents.push(i*4); }
-    let mut result = 0;
-    for (i, indent) in indents.clone().into_iter().enumerate() {
-        if &indent >= index {
-            dbg!(indent);
-            if index - &indent < 2 {
-                result = indent;
-            }
-            else {
-
-            }
-            break;
-        }
-    }
-    return result;
-}
-
 fn format_else_to_stroustrup(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     for i in 0..lines.len() {
