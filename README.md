@@ -101,12 +101,3 @@ cargo run -- path/to/file.c --style stroustrup
 ```
 In the future, Allman style will be supported. If no style is specified, the 
 Stroustrup option will be used by default.
-
-#### Rust files:
-```bash
-cargo run -- path/to/file.rs
-```
- - Just like with C and C++ files, Rust files are currently formatted to my preferred style.
- - Unlike C/C++, I do not plan to add several known styles to this one.
-     - In my opinion, the various styles don't look as good with Rust's syntax rules, so I'm just sticking with the one version for this language.
- - If you would like a reference for the style I am aiming for, `rs_ex1.rs` (which is taken from this very project) is probably the best example currently. It was formatted from what you see in `safe_rs_ex1.rs`.
