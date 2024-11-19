@@ -67,6 +67,59 @@ impl StringUtils for str {
     }
 }
 
+pub enum Style {
+    Allman,
+    KnR,
+    Stroustrup,
+}
+
+pub fn format_else_lines(file: &mut String, style: Style) {
+    match style {
+        Style::KnR => return,
+        Style::Allman => format_else_to_allman(file),
+        Style::Stroustrup => format_else_to_stroustrup(file),
+    }
+}
+
+fn format_else_to_allman(file: &mut String) {
+    //todo: implement
+}
+
+fn get_closest_indentation_level(index: &usize) -> usize {
+    let mut indents = Vec::<usize>::new();
+    dbg!(&index);
+    for i in 1..10 { indents.push(i*4); }
+    let mut result = 0;
+    for (i, indent) in indents.clone().into_iter().enumerate() {
+        if &indent >= index {
+            dbg!(indent);
+            if index - &indent < 2 {
+                result = indent;
+            }
+            else {
+
+            }
+            break;
+        }
+    }
+    return result;
+}
+
+fn format_else_to_stroustrup(file: &mut String) {
+    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
+    for i in 0..lines.len() {
+        if lines[i].contains("else") && lines[i].contains("}") {
+            let idx = lines[i].find("else").unwrap();
+            let indents = lines[i].chars().filter(|x| *x == '\t').count();
+            lines[i].insert(idx-1, '\n');
+            lines[i].remove(idx);
+            for _ in 0..indents { lines[i].insert(idx, '\t'); }
+        }
+    }
+    let result = lines.join("\n");
+    *file = result;
+}
+
 pub fn sort_include_groups(file: String) -> String {
     let mut lines: Vec<String> = file.lines().map(|line| line.to_string()).collect();
     let mut result = Vec::new();
@@ -74,7 +127,7 @@ pub fn sort_include_groups(file: String) -> String {
     for line in lines.into_iter() {
         if line.trim_start().starts_with("#include") {
             temp_group.push(line);
-        } 
+        }
         else {
             if !temp_group.is_empty() {
                 sort_includes(&mut temp_group);
@@ -125,9 +178,9 @@ pub fn remove_dereference_spaces(line: String) -> String {
     let mut result = String::new();
     let mut skip = false;
     for (i, c) in line.char_indices() {
-        if skip { 
+        if skip {
             skip = false;
-            continue; 
+            continue;
         }
         if i <= line.len()-2 {
             if c == '*' && line.chars().nth(i+1) == Some(' ') {
@@ -144,8 +197,8 @@ pub fn remove_pointer_spaces(line: String) -> String {
     for (i, c) in line.char_indices() {
         if i <= line.len()-2 && i > 0 {
             let skip = {
-                c == ' ' && 
-                line.chars().nth(i+1) == Some('*') && 
+                c == ' ' &&
+                line.chars().nth(i+1) == Some('*') &&
                 (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('*'))
             };
             if skip {

@@ -46,7 +46,8 @@ fn main() {
             println!("C++ files currently unsupported.");
         },
         ".c" => {
-            format::format_c_file(filepath);
+            let style = options::get_c_style(&args);
+            format::format_c_file(filepath, style);
         },
         ".rs" => {
             // format::format_rs_file(filepath);

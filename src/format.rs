@@ -4,14 +4,14 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command;
 
-pub fn format_c_file(path: String) {
+pub fn format_c_file(path: String, style: utils::Style) {
     let ast = c_format::parse_c_file(path.clone());
     let contents = std::fs::read_to_string(&path).unwrap_or("NOFILE".to_string());
     if contents == "NOFILE".to_string() {
         println!("'{}' not found.", path);
         return;
     }
-    let result = c_ast::traverse_c_ast(ast, contents);
+    let result = c_ast::traverse_c_ast(ast, contents, style);
     let ok = utils::write_file(&path, result.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: {}", path),
