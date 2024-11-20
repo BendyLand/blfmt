@@ -4,111 +4,114 @@ use crate::{c_format, utils};
 pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let root = ast.root_node();
     let mut result = String::new();
-    let mut last_group_kind = String::new();
+    let mut last_group_kind = "";
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
                 let preproc_include = handle_preproc_include(child, src.clone());
                 result += format!("{}\n", preproc_include).as_str();
-                last_group_kind = "preproc_include".to_string();
-                if last_group_kind != "preproc_include".to_string() { result += "\n"; }
+                last_group_kind = "preproc_include";
+                if last_group_kind != "preproc_include" { result += "\n"; }
             },
             "declaration" => {
                 if last_group_kind == "preproc_include".to_string() { result += "\n"; }
-                let declaration = handle_declaration(child, src.clone());
+                let mut declaration = handle_declaration(child, src.clone());
+                if declaration.contains("*") { declaration = utils::remove_pointer_spaces(declaration); }
                 result += format!("{}\n", declaration).as_str();
-                last_group_kind = "declaration".to_string();
+                last_group_kind = "declaration";
             },
             "function_definition" => {
                 if last_group_kind != "function_definition".to_string() { result += "\n"; }
                 let function_definition = handle_function_definition(child, src.clone());
                 result += format!("{}\n\n", function_definition).as_str();
-                last_group_kind = "function_definition".to_string();
+                last_group_kind = "function_definition";
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(child, src.clone());
                 result += format!("{}\n\n", expression_statement).as_str();
-                last_group_kind = "expression_statement".to_string();
+                last_group_kind = "expression_statement";
             },
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(child, src.clone());
                 result += format!("{}\n\n", compound_statement).as_str();
-                last_group_kind = "compound_statement".to_string();
+                last_group_kind = "compound_statement";
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(child, src.clone());
                 result += format!("{}\n\n", if_statement).as_str();
-                last_group_kind = "if_statement".to_string();
+                last_group_kind = "if_statement";
             },
             "switch_statement" => {
                 let switch_statement = handle_switch_statement(child, src.clone());
                 result += format!("{}\n\n", switch_statement).as_str();
-                last_group_kind = "switch_statement".to_string();
+                last_group_kind = "switch_statement";
             },
             "continue_statement" => {
                 let continue_statement = "continue;\n";
                 result += continue_statement;
-                last_group_kind = "continue_statement".to_string();
+                last_group_kind = "continue_statement";
             },
             "break_statement" => {
                 let break_statement = "break;\n";
                 result += break_statement;
-                last_group_kind = "break_statement".to_string();
+                last_group_kind = "break_statement";
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(child, src.clone());
                 result += format!("{}\n\n", return_statement).as_str();
-                last_group_kind = "return_statement".to_string();
+                last_group_kind = "return_statement";
             },
             "comment" => {
+                if last_group_kind == "declaration" || 
+                last_group_kind == "preproc_include" { result += "\n"; }
                 let comment = handle_comment(child, src.clone());
                 result += format!("{}\n", comment).as_str();
-                last_group_kind = "comment".to_string();
+                last_group_kind = "comment";
             },
             "ERROR" => {
                 let error = handle_error(child, src.clone());
                 result += format!("{}\n\n", error).as_str();
-                last_group_kind = "ERROR".to_string();
+                last_group_kind = "ERROR";
             },
             "type_definition" => {
-                let type_definition = handle_type_definition(child, src.clone());
+                let mut type_definition = handle_type_definition(child, src.clone());
                 result += format!("{}\n\n", type_definition).as_str();
-                last_group_kind = "type_definition".to_string();
+                last_group_kind = "type_definition";
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(child, src.clone());
                 result += format!("{}\n\n", struct_specifier).as_str();
-                last_group_kind = "struct_specifier".to_string();
+                last_group_kind = "struct_specifier";
             },
             "preproc_def" => {
                 let preproc_def = handle_preproc_def(child, src.clone());
                 result += format!("{}\n\n", preproc_def).as_str();
-                last_group_kind = "preproc_def".to_string();
+                last_group_kind = "preproc_def";
             },
             "preproc_ifdef" => {
                 let preproc_ifdef = handle_preproc_ifdef(child, src.clone());
                 result += format!("{}\n\n", preproc_ifdef).as_str();
-                last_group_kind = "preproc_ifdef".to_string();
+                last_group_kind = "preproc_ifdef";
             },
             "preproc_if" => {
                 let preproc_if = handle_preproc_if(child, src.clone());
                 result += format!("{}\n\n", preproc_if).as_str();
-                last_group_kind = "preproc_if".to_string();
+                last_group_kind = "preproc_if";
             },
             "preproc_function_def" => {
                 let preproc_function_def = handle_preproc_function_def(child, src.clone());
                 result += format!("{}\n\n", preproc_function_def).as_str();
-                last_group_kind = "preproc_function_def".to_string();
+                last_group_kind = "preproc_function_def";
             },
             "preproc_call" => {
                 let preproc_call = handle_preproc_call(child, src.clone());
                 result += format!("{}\n\n", preproc_call).as_str();
-                last_group_kind = "preproc_call".to_string();
+                last_group_kind = "preproc_call";
             },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(child, src.clone());
                 result += format!("{}\n\n", sized_type_specifier).as_str();
-                last_group_kind = "sized_type_specifier".to_string();
+                last_group_kind = "sized_type_specifier";
             },
             ";" => (), // handled in functions above
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
@@ -2231,7 +2234,10 @@ fn handle_field_declaration_list(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "field_declaration" => {
-                let field_declaration = handle_field_declaration(node, src.clone());
+                let mut field_declaration = handle_field_declaration(node, src.clone());
+                if field_declaration.contains("*") { 
+                    field_declaration = utils::switch_pointer_spaces(field_declaration); 
+                }
                 if temp.len() > 0 {
                     parts.push(temp);
                     temp = String::new();
@@ -2436,26 +2442,46 @@ fn handle_storage_class_specifier(root: Node, src: String) -> String {
 fn handle_preproc_ifdef(root: Node, src: String) -> String {
     let mut parts = Vec::<String>::new();
     let mut temp = String::new();
+    let mut last_kind = "";
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "#ifndef" => {
                 temp += "#ifndef ";
+                last_kind = "#ifndef";
             },
             "#ifdef" => {
                 temp += "#ifdef ";
+                last_kind = "#ifdef";
             },
             "#endif" => {
-                parts.push("#endif".to_string());
+                parts.push("\n#endif".to_string());
+                last_kind = "#endif";
             },
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 temp += identifier.as_str();
                 parts.push(temp);
                 temp = String::new();
+                last_kind = "identifier";
             },
             "preproc_def" => {
-                let preproc_def = handle_preproc_def(node, src.clone());
+                let preproc_def = handle_preproc_def(node, src.clone()) + "\n";
                 parts.push(preproc_def);
+                last_kind = "preproc_def";
+            },
+            "preproc_include" => {
+                let preproc_include = handle_preproc_include(node, src.clone());
+                parts.push(preproc_include);
+                last_kind = "preproc_include";
+            },
+            "declaration" => {
+                let mut declaration = handle_declaration(node, src.clone());
+                if declaration.contains("*") {
+                    declaration = utils::remove_pointer_spaces(declaration);
+                }
+                if last_kind != "declaration" { declaration = format!("\n{}", declaration); }
+                parts.push(declaration);
+                last_kind = "declaration";
             },
             _ => println!("You shouldn't be here (preproc_ifdef): {}\n", node.grammar_name()),
         }
