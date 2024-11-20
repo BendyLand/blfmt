@@ -87,8 +87,9 @@ fn format_to_allman(file: &mut String) {
 
 fn format_to_stroustrup(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
+    let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
     for i in 0..lines.len() {
-        if lines[i].contains("else") && lines[i].contains("}") {
+       if pattern.is_match(&lines[i]) && lines[i].contains("}") {
             let idx = lines[i].find("else").unwrap();
             let indents = lines[i].chars().filter(|x| *x == '\t').count();
             lines[i].insert(idx-1, '\n');
@@ -209,6 +210,36 @@ pub fn remove_pointer_spaces(line: String) -> String {
             }
         }
         result += c.to_string().as_str();
+    }
+    return result;
+}
+
+pub fn switch_pointer_spaces(line: String) -> String {
+    let mut result = String::new();
+    for (i, c) in line.char_indices() {
+        if i <= line.len()-2 && i > 0 {
+            let skip = {
+                c == ' ' &&
+                line.chars().nth(i+1) == Some('*') &&
+                (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('*'))
+            };
+            if skip {
+                continue;
+            }
+        }
+        result += c.to_string().as_str();
+    }
+    for (i, c) in line.char_indices() {
+        if i < line.len()-2 {
+            let add_space = {
+                c == '*' && 
+                line.chars().nth(i+1).unwrap() != '*' && 
+                line.chars().nth(i+1).unwrap() != ' '
+            };
+            if add_space {
+                result.insert(i, ' ');
+            }
+        }
     }
     return result;
 }

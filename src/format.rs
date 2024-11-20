@@ -12,11 +12,12 @@ pub fn format_c_file(path: String, style: utils::Style) {
         return;
     }
     let result = c_ast::traverse_c_ast(ast, contents, style);
-    let ok = utils::write_file(&path, result.as_bytes());
-    match ok {
-        Ok(_) => println!("Successfully wrote: '{}'", path),
-        Err(e) => println!("Error during `format_c_file()`: {}", e),
-    };
+    println!("{}", result);
+    // let ok = utils::write_file(&path, result.as_bytes());
+    // match ok {
+    //     Ok(_) => println!("Successfully wrote: '{}'", path),
+    //     Err(e) => println!("Error during `format_c_file()`: {}", e),
+    // };
 }
 
 pub fn format_cpp_file(path: String, style: utils::Style) {
