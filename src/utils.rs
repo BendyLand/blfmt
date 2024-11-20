@@ -104,7 +104,9 @@ pub fn close_empty_curly_brace_blocks(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_to_remove = Vec::<usize>::new();
     for i in 0..lines.len()-1 {
-        if lines[i].ends_with("{") && lines[i+1].starts_with("}") {
+        if lines[i].trim_end().ends_with("{") && 
+           lines[i+1].trim_start().starts_with("}") &&
+           lines[i+1].trim().len() == 1 {
             lines[i] = format!("{}}}", lines[i]);
             lines_to_remove.push(i+1);
         }
@@ -466,7 +468,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 pub fn get_file_extensions_list() -> Vec<String> {
     // .cpp has to stay before .c, otherwise it breaks
     let exts = {
-        vec![".cpp", ".c", ".go", ".py", ".txt"]
+        vec![".cpp", ".c", ".hpp", ".h", ".go", ".py", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()

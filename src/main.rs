@@ -46,7 +46,15 @@ fn main() {
             let style = options::get_c_style(&args);
             format::format_cpp_file(filepath, style);
         },
+        ".hpp" => {
+            let style = options::get_c_style(&args);
+            format::format_cpp_file(filepath, style);
+        },
         ".c" => {
+            let style = options::get_c_style(&args);
+            format::format_c_file(filepath, style);
+        },
+        ".h" => {
             let style = options::get_c_style(&args);
             format::format_c_file(filepath, style);
         },
