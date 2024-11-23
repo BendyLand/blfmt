@@ -2244,7 +2244,6 @@ fn handle_concatenated_string(root: Node, src: String) -> String {
     return result;
 }
 
-//todo: something is wrong with this one that deletes content
 fn handle_labeled_statement(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
