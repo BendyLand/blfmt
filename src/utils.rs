@@ -89,7 +89,7 @@ fn format_to_stroustrup(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
     for i in 0..lines.len() {
-       if pattern.is_match(&lines[i]) && lines[i].contains("}") {
+        if pattern.is_match(&lines[i]) {
             let idx = lines[i].find("else").unwrap();
             let indents = lines[i].chars().filter(|x| *x == '\t').count();
             lines[i].insert(idx-1, '\n');

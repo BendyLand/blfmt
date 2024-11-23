@@ -1,7 +1,1 @@
-Access specifier: public : public
-
-You shouldn't be here (field_declaration_list): :
-
-Access specifier: private : private
-
-You shouldn't be here (field_declaration_list): :
+You should't be here (inner_compound_statement): labeled_statement
