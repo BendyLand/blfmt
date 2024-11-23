@@ -131,7 +131,6 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
             },
             "template_declaration" => {
                 let template_declaration = handle_template_declaration(child, src.clone());
-                if last_group_kind != "template_declaration" { result += "\n"; }
                 result += format!("{}\n\n", template_declaration).as_str();
                 last_group_kind = "template_declaration".to_string();
             },
@@ -704,6 +703,10 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
                 for_range_loop = utils::add_all_leading_tabs(for_range_loop);
                 parts.push(for_range_loop);
             },
+            "labeled_statement" => {
+                let labeled_statement = handle_labeled_statement(node, src.clone());
+                parts.push(labeled_statement);
+            },
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
             _ => println!("You should't be here (inner_compound_statement): {}\n", node.grammar_name()),
@@ -833,7 +836,6 @@ fn handle_if_statement(root: Node, src: String) -> String {
     return result;
 }
 
-//todo: Eventually make a parameter to handle else style
 fn handle_else_clause(root: Node, src: String) -> String {
     let mut pieces = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
@@ -843,7 +845,6 @@ fn handle_else_clause(root: Node, src: String) -> String {
                 pieces.push(inner_compound_statement);
             }
             "else" => {
-                //* This is where placement of "else" happens
                 pieces.push("else".to_string());
             },
             "switch_statement" => {
@@ -2243,12 +2244,14 @@ fn handle_concatenated_string(root: Node, src: String) -> String {
     return result;
 }
 
+//todo: something is wrong with this one that deletes content
 fn handle_labeled_statement(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
+                result += expression_statement.as_str();
             },
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
@@ -2262,10 +2265,11 @@ fn handle_labeled_statement(root: Node, src: String) -> String {
                 let if_statement = handle_if_statement(node, src.clone());
                 result += if_statement.as_str();
             },
-            ":" => result += ":",
+            ":" => result += ":\n",
             _ => println!("You shouldn't be here (labeled_statement): {}\n", node.grammar_name()),
         }
     }
+    result = utils::add_all_leading_tabs(result);
     return result;
 }
 
