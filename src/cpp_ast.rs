@@ -1,7 +1,6 @@
 use tree_sitter::{Tree, Node};
 use crate::{cpp_format, utils};
 
-// Be careful on .hpp files. Member function declarations are sometimes deleted.
 pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let root = ast.root_node();
     let mut result = String::new();
@@ -126,6 +125,7 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
             },
             "class_specifier" => {
                 let class_specifier = handle_class_specifier(child, src.clone());
+                if last_group_kind.contains("preproc") { result += "\n"; }
                 result += format!("{};\n\n", class_specifier.trim_end()).as_str();
                 last_group_kind = "class_specifier".to_string();
             },
@@ -283,6 +283,11 @@ fn handle_compound_statement(root: Node, src: String) -> String {
                 let mut do_statement = handle_do_statement(node, src.clone());
                 do_statement = utils::add_all_leading_tabs(do_statement);
                 result += format!("{}\n", do_statement).as_str();
+            },
+            "try_statement" => {
+                let mut try_statement = handle_try_statement(node, src.clone());
+                try_statement = utils::add_all_leading_tabs(try_statement);
+                result += format!("{}\n", try_statement).as_str();
             },
             "return" => {
                 dbg!(node.utf8_text(src.as_bytes()).unwrap());
@@ -492,7 +497,6 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             },
             "gnu_asm_expression" => {
                 result = handle_gnu_asm_expression(root.clone(), src.clone());
-                dbg!(&result);
             },
             ";" => (), // Handled in the functions called above.
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),
@@ -2415,19 +2419,11 @@ fn handle_field_declaration_list(root: Node, src: String) -> String {
         match node.grammar_name() {
             "field_declaration" => {
                 let field_declaration = handle_field_declaration(node, src.clone());
-                if temp.len() > 0 {
-                    parts.push(temp);
-                    temp = String::new();
-                }
-                else {
-                    temp += format!("\t{}", field_declaration).as_str();
-                }
+                parts.push(format!("\t{}", field_declaration));
             },
             "comment" => {
                 let comment = handle_comment(node, src.clone());
-                temp += format!("\t{}", comment).as_str();
-                parts.push(temp);
-                temp = String::new();
+                parts.push(format!("\t{}", comment));
             },
             "access_specifier" => {
                 let access_specifier = handle_access_specifier(node, src.clone());
@@ -2855,12 +2851,7 @@ fn handle_inner_field_expression(root: Node, src: String) -> String {
 }
 
 fn handle_parameter_list(root: Node, src: String) -> String {
-    let mut result = String::new();
-    for node in root.children(&mut root.walk()) {
-        match node.grammar_name() {
-            _ => println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
-        }
-    }
+    let result = root.utf8_text(src.as_bytes()).unwrap().to_string();
     return result;
 }
 
@@ -3253,5 +3244,45 @@ fn handle_gnu_asm_expression(root: Node, src: String) -> String {
             _ => println!("Gnu asm expression: {} : {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
+    return result;
+}
+
+fn handle_try_statement(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "try" => parts.push("try".to_string()),
+            "compound_statement" => {
+                let compound_statement = handle_compound_statement(node, src.clone());
+                parts.push(compound_statement);
+            }
+            "catch_clause" => {
+                let catch_clause = handle_catch_clause(node, src.clone());
+                parts.push(catch_clause);
+            }
+            _ => println!("You shouldn't be here (try_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    let result = parts.join(" ");
+    return result;
+}
+
+fn handle_catch_clause(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "catch" => parts.push("catch".to_string()),
+            "parameter_list" => {
+                let parameter_list = handle_parameter_list(node, src.clone());
+                parts.push(parameter_list);
+            },
+            "compound_statement" => {
+                let compound_statement = handle_compound_statement(node, src.clone());
+                parts.push(compound_statement);
+            },
+            _ => println!("You shouldn't be here (catch_clause): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    let result = parts.join(" ");
     return result;
 }

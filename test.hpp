@@ -1,29 +1,30 @@
 #pragma once
 
 #include <iostream>
-#include <vector>
+#include <regex>
 
-inline std::ostream& operator<<(std::ostream& os, bool boolean)
+class Matcher
 {
-	if (boolean) {
-		std::cout << "true";
+public:
+	Matcher(const std::string text)
+	{
+		try {
+			this->pattern = std::regex(text);
+		}
+		catch (const std::regex_error& e) {
+			std::cout << "Regex error: " << e.what() << std::endl;
+			exit(EXIT_FAILURE);
+		}
 	}
-	else {
-		std::cout << "false";
-	}
-	return os;
-}
+	void find_token_matches(const std::vector<std::string>& tokens);
+	void print_token_matches();
+private:
+	// Fields
+	std::regex pattern;
+	std::vector<std::string> matches;
+	std::vector<std::string> non_matches;
+	// Methods
+	bool is_match(const std::string& str);
+};
 
-template <typename T>
-inline std::ostream& operator<<(std::ostream& os, std::vector<T> vec)
-{
-	size_t length = vec.size();
-	for (size_t i = 0; i < length; i++) {
-		if (i < length - 1) std::cout << vec[i] << ", ";
-		else std::cout << vec[i] << std::endl;
-	}
-	return os;
-}
-
-std::vector<std::string> args_to_vec(int argc, char** argv);
-void print_usage();
+std::string get_pattern();
