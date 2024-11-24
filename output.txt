@@ -1,1 +1,5 @@
-You should't be here (inner_compound_statement): labeled_statement
+You shouldn't be here (middle of call_expression): qualified_identifier
+
+You shouldn't be here (middle of call_expression): qualified_identifier
+
+Successfully wrote: 'main.cpp'

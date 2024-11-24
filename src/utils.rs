@@ -247,10 +247,11 @@ pub fn switch_pointer_spaces(line: String) -> String {
 pub fn remove_reference_spaces(line: String) -> String {
     let mut result = String::new();
     for (i, c) in line.char_indices() {
-        if i <= line.len()-2 && i > 0 {
+        if i <= line.len()-3 && i > 0 {
             let skip = {
                 c == ' ' &&
                 line.chars().nth(i+1) == Some('&') &&
+                line.chars().nth(i+2) != Some('&') &&
                 (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('>'))
             };
             if skip { continue; }
