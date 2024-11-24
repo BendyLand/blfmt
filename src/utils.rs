@@ -64,9 +64,17 @@ fn format_to_allman(file: &mut String) {
 fn format_to_stroustrup(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
+    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap(); 
     for i in 0..lines.len() {
         if pattern.is_match(&lines[i]) {
             let idx = lines[i].find("else").unwrap();
+            let indents = lines[i].chars().filter(|x| *x == '\t').count();
+            lines[i].insert(idx-1, '\n');
+            lines[i].remove(idx);
+            for _ in 0..indents { lines[i].insert(idx, '\t'); }
+        }
+        else if catch_pattern.is_match(&lines[i]) {
+            let idx = lines[i].find("catch").unwrap();
             let indents = lines[i].chars().filter(|x| *x == '\t').count();
             lines[i].insert(idx-1, '\n');
             lines[i].remove(idx);

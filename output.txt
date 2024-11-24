@@ -1,5 +1,15 @@
-You shouldn't be here (middle of call_expression): qualified_identifier
-
-You shouldn't be here (middle of call_expression): qualified_identifier
-
-Successfully wrote: 'main.cpp'
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "{"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "access_specifier"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = ":"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "function_definition"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "access_specifier"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = ":"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "comment"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "comment"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
+[src/cpp_ast.rs:2421:9] &node.grammar_name() = "}"
