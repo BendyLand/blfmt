@@ -6,9 +6,7 @@ use std::cmp::Ordering;
 
 pub trait StringUtils {
     fn substring(&self, start: usize, len: usize) -> &str;
-    fn slice(&self, range: impl RangeBounds<usize>) -> &str;
-    fn peek_next(&self, current: usize) -> Option<char>;
-    fn starts_with_any(&self, chars: Vec<char>) -> bool;
+    fn at(&self, current: usize) -> Option<char>;
 }
 
 impl StringUtils for str {
@@ -37,33 +35,11 @@ impl StringUtils for str {
         &self[byte_start..byte_end]
     }
 
-    fn slice(&self, range: impl RangeBounds<usize>) -> &str {
-        let start = match range.start_bound() {
-            Bound::Included(bound) | Bound::Excluded(bound) => *bound,
-            Bound::Unbounded => 0,
-        };
-        let len = match range.end_bound() {
-            Bound::Included(bound) => *bound + 1,
-            Bound::Excluded(bound) => *bound,
-            Bound::Unbounded => self.len(),
-        } - start;
-        self.substring(start, len)
-    }
-
-    fn peek_next(&self, current: usize) -> Option<char> {
-        if current < self.len()-1 {
-            return self.chars().nth(current+1);
+    fn at(&self, current: usize) -> Option<char> {
+        if current < self.len() {
+            return self.chars().nth(current);
         }
         return None;
-    }
-
-    fn starts_with_any(&self, chars: Vec<char>) -> bool {
-        for c in chars {
-            if self.starts_with(c) {
-                return true;
-            }
-        }
-        return false;
     }
 }
 
@@ -202,8 +178,8 @@ pub fn remove_pointer_spaces(line: String) -> String {
         if i <= line.len()-2 && i > 0 {
             let skip = {
                 c == ' ' &&
-                line.chars().nth(i+1) == Some('*') &&
-                (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('*'))
+                line.at(i+1) == Some('*') &&
+                (line.at(i-1).unwrap().is_alphanumeric() || line.at(i-1) == Some('*'))
             };
             if skip {
                 continue;
@@ -220,8 +196,8 @@ pub fn switch_pointer_spaces(line: String) -> String {
         if i <= line.len()-2 && i > 0 {
             let skip = {
                 c == ' ' &&
-                line.chars().nth(i+1) == Some('*') &&
-                (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('*'))
+                line.at(i+1) == Some('*') &&
+                (line.at(i-1).unwrap().is_alphanumeric() || line.at(i-1) == Some('*'))
             };
             if skip {
                 continue;
@@ -233,8 +209,8 @@ pub fn switch_pointer_spaces(line: String) -> String {
         if i < line.len()-2 {
             let add_space = {
                 c == '*' && 
-                line.chars().nth(i+1).unwrap() != '*' && 
-                line.chars().nth(i+1).unwrap() != ' '
+                line.at(i+1) != Some('*') && 
+                line.at(i+1) != Some(' ')
             };
             if add_space {
                 result.insert(i, ' ');
@@ -250,9 +226,9 @@ pub fn remove_reference_spaces(line: String) -> String {
         if i <= line.len()-3 && i > 0 {
             let skip = {
                 c == ' ' &&
-                line.chars().nth(i+1) == Some('&') &&
-                line.chars().nth(i+2) != Some('&') &&
-                (line.chars().nth(i-1).unwrap().is_alphanumeric() || line.chars().nth(i-1) == Some('>'))
+                line.at(i+1) == Some('&') &&
+                line.at(i+2) != Some('&') &&
+                (line.at(i-1).unwrap().is_alphanumeric() || line.at(i-1) == Some('>'))
             };
             if skip { continue; }
         }
@@ -273,7 +249,7 @@ pub fn remove_all_spaces(line: String) -> String {
 pub fn remove_object_constructor_space(line: String) -> String {
     let mut result = line.clone();
     let start = line.find("(").unwrap_or(line.len());
-    if line.chars().nth(start-1) == Some(' ') {
+    if line.at(start-1) == Some(' ') {
         result.remove(start-1);
     }
     return result;
@@ -289,7 +265,7 @@ pub fn remove_unnecessary_spaces(line: String) -> String {
             skip = false;
             continue;
         }
-        if let Some(next) = line.peek_next(i) {
+        if let Some(next) = line.at(i+1) {
             if ending_tokens.contains(&next) {
                 if c == ' ' { continue; }
             }
@@ -306,7 +282,7 @@ pub fn remove_whitespace_before_commas(line: String) -> String {
     let mut result = "".to_string();
     for (i, c) in line.chars().enumerate() {
         if i < line.len()-1 {
-            if c == ' ' && line.chars().nth(i+1) == Some(',') { continue; }
+            if c == ' ' && line.at(i+1) == Some(',') { continue; }
         }
         result += c.to_string().as_str();
     }
@@ -335,73 +311,6 @@ pub fn sanitize(input: String) -> String {
     let captures = allowed_chars.captures(&input).unwrap();
     let result = captures.get(0).unwrap().as_str().to_string();
     return result;
-}
-
-pub fn check_is_function_hoist(group: &String) -> bool {
-    let re = Regex::new(r"^\s*\w+.*\)\s*;\s*(\n\s*\w+.*\)\s*;\s*)*$").unwrap();
-    return re.is_match(&group);
-}
-
-pub fn starts_with_any(line: &String, opts: &Vec<String>) -> bool {
-    for opt in opts {
-        let words = &line.split(" ").collect::<Vec<&str>>();
-        if line.trim().to_string().starts_with(opt) && (opt.len() == words[0].len()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-pub fn extract_inner_header(line: String) -> String {
-    let re = Regex::new(r"^.*\(.*\)").unwrap();
-    let mut result = line.strip_suffix("{").unwrap_or(&line).to_string();
-    let matches = re.find_iter(&result).map(|x| x.as_str().to_string()).collect::<Vec<String>>();
-    if matches.len() > 0 {
-        result = matches[0].clone();
-    }
-    return result;
-}
-
-fn handle_one_liner(line: String) -> String {
-    let mut result = String::new();
-    let idx1 = line.chars().position(|x| x == '{').unwrap();
-    let idx2 = line.chars().position(|x| x == '}').unwrap();
-    result += (line[0..idx1].to_string()+ "\n").as_str();
-    result += ("{".to_string() + "\n").as_str();
-    result += (line[idx1+1..idx2].trim_start().to_string() + "\n").as_str();
-    result += ("}".to_string() + "\n").as_str();
-    return result;
-}
-
-pub fn extract_c_function_header(group: &String) -> String {
-    let lines = group.split("\n").map(|x| x.to_string()).collect::<Vec<String>>();
-    let result;
-    if lines[0].ends_with(")") {
-        lines[0].clone()
-    }
-    else {
-        let end = lines[0].chars().position(|x| x == ')').unwrap_or_else(|| {
-            let length = lines[0].len();
-            if length > 0 {
-                length - 1
-            }
-            else {
-                length
-            }
-        });
-        let one_liner = lines[0].contains("{") && lines[0].contains("}");
-        if one_liner {
-            result = handle_one_liner(lines[0].to_string());
-            return result;
-        }
-        if lines[0].len() > 0 {
-            let temp = &lines[0][..end+1];
-            temp.to_owned().to_string()
-        }
-        else {
-            String::new()
-        }
-    }
 }
 
 fn line_has_no_alphanumeric(line: &str) -> bool {
@@ -500,7 +409,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 pub fn get_file_extensions_list() -> Vec<String> {
     // .cpp has to stay before .c, otherwise it breaks
     let exts = {
-        vec![".cpp", ".c", ".hpp", ".h", ".go", ".py", ".txt"]
+        vec![".cpp", ".cc", ".c", ".hpp", ".hh", ".h", ".go", ".py", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
@@ -524,5 +433,5 @@ pub fn check_valid_file_ext(path: &String) -> bool {
 }
 
 pub fn print_usage() {
-    println!("USAGE:\nblfmt <file-path> <flags + options>");
+    println!("USAGE:\nblfmt <file-path> <flags + opts>");
 }
