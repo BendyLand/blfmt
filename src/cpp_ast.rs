@@ -490,6 +490,10 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             "ERROR" => {
                 result = handle_error(root.clone(), src.clone());
             },
+            "gnu_asm_expression" => {
+                result = handle_gnu_asm_expression(root.clone(), src.clone());
+                dbg!(&result);
+            },
             ";" => (), // Handled in the functions called above.
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),
         }
@@ -733,6 +737,10 @@ fn handle_call_expression(root: Node, src: String) -> String {
                         "identifier" => {
                             let identifier = handle_identifier(subnode, src.clone());
                             temp += identifier.as_str();
+                        },
+                        "qualified_identifier" => {
+                            let qualified_identifier = handle_qualified_identifier(subnode, src.clone());
+                            temp += qualified_identifier.as_str();
                         },
                         "argument_list" => {
                             let argument_list = handle_argument_list(subnode, src.clone());
@@ -1416,6 +1424,8 @@ fn handle_binary_expression(root: Node, src: String) -> String {
                 parts.push(string_literal);
             },
             "null" => parts.push("NULL".to_string()),
+            "true" => parts.push("true".to_string()),
+            "false" => parts.push("false".to_string()),
             "+" => parts.push("+".to_string()),
             "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
@@ -2119,6 +2129,10 @@ fn handle_conditional_expression(root: Node, src: String) -> String {
             "char_literal" => {
                 let char_literal = handle_char_literal(node, src.clone());
                 parts.push(char_literal);
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                parts.push(string_literal);
             },
             "true" => parts.push("true".to_string()),
             "false" => parts.push("false".to_string()),
@@ -2944,6 +2958,7 @@ fn handle_for_range_loop(root: Node, src: String) -> String {
             ")" => {
                 temp = temp.trim_end().to_string();
                 temp += ")";
+                temp = utils::remove_reference_spaces(temp);
                 vec.push(temp);
                 temp = "".to_string();
             },
@@ -3222,6 +3237,20 @@ fn handle_access_specifier(root: Node, src: String) -> String {
             "public" => result += "public:",
             "private" => result += "private:",
             _ => println!("You shouldn't be here (access_specifier): {} : {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_gnu_asm_expression(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "gnu_asm_expression" => {
+                result += node.utf8_text(src.as_bytes()).unwrap();
+            },
+            ";" => result += ";",
+            _ => println!("Gnu asm expression: {} : {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
