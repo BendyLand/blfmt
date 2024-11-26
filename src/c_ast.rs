@@ -118,7 +118,7 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
         }
     }
     result = utils::sort_include_groups(result);
-    utils::format_else_lines(&mut result, style);
+    utils::format_else_lines(&mut result, &style);
     return result;
 }
 
@@ -413,25 +413,25 @@ fn handle_expression_statement(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "assignment_expression" => {
-                result = handle_assignment_expression(root.clone(), src.clone());
+                result = handle_assignment_expression(node, src.clone());
             },
             "update_expression" => {
-                result = handle_update_expression(root.clone(), src.clone());
+                result = handle_update_expression(node, src.clone());
             },
             "call_expression" => {
-                result = handle_call_expression(root.clone(), src.clone());
+                result = handle_call_expression(node, src.clone());
             },
             "identifier" => {
-                result = handle_identifier(root.clone(), src.clone());
+                result = handle_identifier(node, src.clone());
             },
             "binary_expression" => {
-                result = handle_binary_expression(root.clone(), src.clone());
+                result = handle_binary_expression(node, src.clone());
             },
             "pointer_expression" => {
-                result = handle_pointer_expression(root.clone(), src.clone());
+                result = handle_pointer_expression(node, src.clone());
             },
             "ERROR" => {
-                result = handle_error(root.clone(), src.clone());
+                result = handle_error(node, src.clone());
             },
             ";" => (), // Handled in the functions called above.
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),

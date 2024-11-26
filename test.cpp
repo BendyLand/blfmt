@@ -1,106 +1,43 @@
-#include "tokens.hpp"
+#include "matcher.hpp"
+#include "utils.hpp"
 
-Name Token::get_name() const
+std::string get_pattern()
 {
-	return this->token.first;
+	std::cout << \
+	"Welcome to match mode!\n" << \
+	"Please enter the regex pattern you would like to check against:" << std::endl;
+	std::string pattern;
+	std::getline(std::cin, pattern);
+	return pattern;
 }
 
-std::string Token::get_name_str() const
+// Public
+void Matcher::find_token_matches(const std::vector<std::string>& tokens)
 {
-	return name_to_str(this->token.first);
-}
-
-std::vector<std::string> Token::get_args() const
-{
-	return this->token.second;
-}
-
-Name str_to_name(std::string name)
-{
-	static const std::unordered_map<std::string, Name> name_map = {{"cp", Name::CP}, {"mv", Name::MV}, {"rm", Name::RM}, {"mkdir", Name::MKDIR}, {"check_env", Name::CHECK_ENV}, {"set_env", Name::SET_ENV}, {"unset_env", Name::UNSET_ENV}, {"exec", Name::EXEC}, {"puts", Name::PUTS}, {"prompt", Name::PROMPT}, {"confirm", Name::CONFIRM}, {"if", Name::IF}, {"then", Name::THEN}, {"else", Name::ELSE}, {"end", Name::END}, {"cond", Name::COND}, {"for", Name::FOR}, {"do", Name::DO}, {"label", Name::LABEL}, {"goto", Name::GOTO}, {"download", Name::DOWNLOAD}, {"variable", Name::VARIABLE}, {"upload", Name::UPLOAD}};
-	auto it = name_map.find(name);
-	return it != name_map.end() ? it->second : Name::UNKNOWN;
-}
-
-std::string name_to_str(Name name)
-{
-	std::string result;
-	switch (name) {
-	case Name::CP: 
-		result = "cp";
-		break;
-	case Name::MV: 
-		result = "mv";
-		break;
-	case Name::RM: 
-		result = "rm";
-		break;
-	case Name::MKDIR: 
-		result = "mkdir";
-		break;
-	case Name::CHECK_ENV: 
-		result = "check_env";
-		break;
-	case Name::SET_ENV: 
-		result = "set_env";
-		break;
-	case Name::UNSET_ENV: 
-		result = "unset_env";
-		break;
-	case Name::EXEC: 
-		result = "exec";
-		break;
-	case Name::PUTS: 
-		result = "puts";
-		break;
-	case Name::PROMPT: 
-		result = "prompt";
-		break;
-	case Name::CONFIRM: 
-		result = "confirm";
-		break;
-	case Name::IF: 
-		result = "if";
-		break;
-	case Name::THEN: 
-		result = "then";
-		break;
-	case Name::ELSE: 
-		result = "else";
-		break;
-	case Name::END: 
-		result = "end";
-		break;
-	case Name::COND: 
-		result = "cond";
-		break;
-	case Name::FOR: 
-		result = "for";
-		break;
-	case Name::DO: 
-		result = "do";
-		break;
-	case Name::LABEL: 
-		result = "label";
-		break;
-	case Name::GOTO: 
-		result = "goto";
-		break;
-	case Name::DOWNLOAD: 
-		result = "download";
-		break;
-	case Name::UPLOAD: 
-		result = "upload";
-		break;
-	case Name::VARIABLE: 
-		result = "variable";
-		break;
-	case Name::UNKNOWN: 
-		result = "unknown";
-		break;
-	default: 
-		result = "ERROR";
-		break;
+	std::vector<std::string> matches;
+	std::vector<std::string> non_matches;
+	matches.reserve(tokens.size());
+	non_matches.reserve(tokens.size());
+	for (std::string token : tokens) {
+		if (is_match(token)) matches.emplace_back(token);
+		else non_matches.emplace_back(token);
 	}
-	return result;
+	this->matches = matches;
+	this->non_matches = non_matches;
+}
+
+void Matcher::print_token_matches()
+{
+    auto print_tokens = [](const std::vector<std::string>& tokens, const std::string& message) {
+        if (tokens.empty()) std::cout << message << ":\n" << std::endl; 
+		else std::cout << message << ":\n" << tokens << std::endl;
+    };
+    print_tokens(this->non_matches, "The following tokens did not match");
+    print_tokens(this->matches, "The following tokens matched");
+}
+
+// Private
+bool Matcher::is_match(const std::string& str)
+{
+	return std::regex_search(str, this->pattern);
 }

@@ -1,15 +1,6 @@
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "{"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "access_specifier"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = ":"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "function_definition"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "access_specifier"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = ":"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "comment"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "comment"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "field_declaration"
-[src/cpp_ast.rs:2421:9] &node.grammar_name() = "}"
+You shouldn't be here (lambda_expression): lambda_expression : [](const std::vector<std::string>& tokens, const std::string& message) {
+                if (tokens.empty()) std::cout << message << ":\n" << std::endl;
+                else std::cout << message << ":\n" << tokens << std::endl;
+        }
+
+You shouldn't be here (lambda_expression): ; : ;
