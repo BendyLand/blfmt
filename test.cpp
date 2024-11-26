@@ -3,9 +3,7 @@
 
 std::string get_pattern()
 {
-	std::cout << \
-	"Welcome to match mode!\n" << \
-	"Please enter the regex pattern you would like to check against:" << std::endl;
+	std::cout << "Welcome to match mode!\n" << "Please enter the regex pattern you would like to check against:" << std::endl;
 	std::string pattern;
 	std::getline(std::cin, pattern);
 	return pattern;
@@ -28,12 +26,12 @@ void Matcher::find_token_matches(const std::vector<std::string>& tokens)
 
 void Matcher::print_token_matches()
 {
-    auto print_tokens = [](const std::vector<std::string>& tokens, const std::string& message) {
-        if (tokens.empty()) std::cout << message << ":\n" << std::endl; 
+	auto print_tokens = [](const std::vector<std::string>& tokens, const std::string& message) {
+		if (tokens.empty()) std::cout << message << ":\n" << std::endl;
 		else std::cout << message << ":\n" << tokens << std::endl;
-    };
-    print_tokens(this->non_matches, "The following tokens did not match");
-    print_tokens(this->matches, "The following tokens matched");
+	};
+	print_tokens(this->non_matches, "The following tokens did not match");
+	print_tokens(this->matches, "The following tokens matched");
 }
 
 // Private

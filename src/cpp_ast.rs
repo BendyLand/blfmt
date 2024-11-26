@@ -508,7 +508,7 @@ fn handle_expression_statement(root: Node, src: String) -> String {
                 temp = utils::add_all_leading_tabs(temp);
                 result = format!("{}\n{}", head, temp);
             },
-            ";" => (), // Handled in the functions called above.
+            ";" => result += ";",
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),
         }
     }
