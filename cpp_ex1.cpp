@@ -2,7 +2,6 @@
 #include "logging.hpp" // "utils.hpp", <boost/regex.hpp>
 
 using namespace std;
-
 string prepareFile(string file)
 {
 	file = removeComments(file);

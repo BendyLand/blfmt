@@ -20,7 +20,7 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 last_group_kind = "declaration".to_string();
             },
             "function_definition" => {
-                if last_group_kind.contains("preproc") { result += "\n"; }
+                if last_group_kind.contains("preproc") || last_group_kind.contains("using") { result += "\n"; }
                 let function_definition = handle_function_definition(child, src.clone());
                 result += format!("{}\n\n", function_definition).as_str();
                 last_group_kind = "function_definition".to_string();
@@ -523,6 +523,7 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
         match node.grammar_name() {
             ";" => parts.push(";".to_string()),
             "=" => parts.push("=".to_string()),
+            "+=" => parts.push("+=".to_string()),
             "assignment_expression" => {
                 let assignment_expression = handle_inner_assignment_expression(node, src.clone());
                 parts.push(assignment_expression);
@@ -550,6 +551,18 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
             "char_literal" => {
                 let char_literal = handle_char_literal(node, src.clone());
                 parts.push(char_literal);
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                parts.push(string_literal);
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                parts.push(binary_expression);
+            },
+            "conditional_expression" => {
+                let conditional_expression = handle_conditional_expression(node, src.clone());
+                parts.push(conditional_expression);
             },
             _ => println!("You shouldn't be here (assignment_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
@@ -1585,6 +1598,14 @@ fn handle_parenthesized_expression(root: Node, src: String) -> String {
             "update_expression" => {
                 let update_expression = handle_update_expression(node, src.clone());
                 result += update_expression.as_str();
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                result += binary_expression.as_str();
+            },
+            "assignment_expression" => {
+                let assignment_expression = handle_assignment_expression(node, src.clone());
+                result += assignment_expression.as_str();
             },
             "(" => result += "(",
             ")" => result += ")",

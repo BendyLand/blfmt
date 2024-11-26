@@ -4,7 +4,6 @@
 #include "symbols.hpp" // iostream, variant, unordered_map
 
 void mainLoop(std::vector<std::string>&, SymbolTable&);
-
 int main()
 {
 	std::string file = read_file("../../test.pr");
@@ -50,7 +49,8 @@ void mainLoop(std::vector<std::string>& lines, SymbolTable& symbols)
 				num_elif_scopes++;
 			}
 			else if (contains(line, "else")) {
-				std::cout << "Handle else: " << line << std::endl;
+				std::cout << "Handle
+				else: " << line << std::endl;
 				if (contains(line, "}")) num_elif_scopes--;
 				symbols.new_l_vars("else_" + std::to_string(num_else_scopes));
 				last_local_scope = 's';
