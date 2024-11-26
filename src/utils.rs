@@ -49,7 +49,7 @@ pub enum Style {
     Stroustrup,
 }
 
-pub fn format_else_lines(file: &mut String, style: Style) {
+pub fn format_else_lines(file: &mut String, style: &Style) {
     match style {
         Style::KnR => return,
         Style::Allman => format_to_allman(file),
