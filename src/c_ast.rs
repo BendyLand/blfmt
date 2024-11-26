@@ -433,7 +433,7 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             "ERROR" => {
                 result = handle_error(node, src.clone());
             },
-            ";" => (), // Handled in the functions called above.
+            ";" => result += ";",
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),
         }
     }
@@ -447,6 +447,18 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
         match node.grammar_name() {
             ";" => parts.push(";".to_string()),
             "=" => parts.push("=".to_string()),
+            "+=" => parts.push("=".to_string()),
+            "-=" => parts.push("=".to_string()),
+            "*=" => parts.push("=".to_string()),
+            "/=" => parts.push("=".to_string()),
+            "%=" => parts.push("=".to_string()),
+            "<<=" => parts.push("=".to_string()),
+            ">>=" => parts.push("=".to_string()),
+            "&=" => parts.push("=".to_string()),
+            "|=" => parts.push("=".to_string()),
+            "null" => parts.push("NULL".to_string()),
+            "true" => parts.push("true".to_string()),
+            "false" => parts.push("false".to_string()),
             "assignment_expression" => {
                 let assignment_expression = handle_inner_assignment_expression(node, src.clone());
                 parts.push(assignment_expression);
@@ -474,6 +486,38 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
             "char_literal" => {
                 let char_literal = handle_char_literal(node, src.clone());
                 parts.push(char_literal);
+            },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                parts.push(cast_expression);
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                parts.push(binary_expression);
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node, src.clone());
+                parts.push(unary_expression);
+            },
+            "pointer_expression" => {
+                let pointer_expression = handle_pointer_expression(node, src.clone());
+                parts.push(pointer_expression);
+            },
+            "conditional_expression" => {
+                let conditional_expression = handle_conditional_expression(node, src.clone());
+                parts.push(conditional_expression);
+            },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                parts.push(parenthesized_expression);
+            },
+            "sizeof_expression" => {
+                let sizeof_expression = handle_sizeof_expression(node, src.clone());
+                parts.push(sizeof_expression);
+            },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                parts.push(error);
             },
             _ => println!("You shouldn't be here (assignment_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
@@ -2087,7 +2131,7 @@ fn handle_labeled_statement(root: Node, src: String) -> String {
                 let if_statement = handle_if_statement(node, src.clone());
                 result += if_statement.as_str();
             },
-            ":" => result += ":",
+            ":" => result += ": ",
             _ => println!("You shouldn't be here (labeled_statement): {}\n", node.grammar_name()),
         }
     }
