@@ -15,9 +15,9 @@ pub fn restore_example_cpp_file() {
 }
 
 pub fn restore_example_c_file() {
-    let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/safe_ex1.c").unwrap().to_owned();
+    let temp1 = fs::read_to_string("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/storage/old/safe_ex3.c").unwrap().to_owned();
     let good1 = temp1.as_bytes();
-    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/ex1.c").expect("Unable to get example_file.c");
+    let mut file1 = fs::File::create("/Users/benlandrette/ccode/serious-projects/bendyland/blfmt/ex3.c").expect("Unable to get example_file.c");
     let res1 = file1.write_all(good1);
     match res1 {
         Err(e) => println!("{}", e),

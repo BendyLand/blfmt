@@ -523,7 +523,15 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
         match node.grammar_name() {
             ";" => parts.push(";".to_string()),
             "=" => parts.push("=".to_string()),
-            "+=" => parts.push("+=".to_string()),
+            "+=" => parts.push("=".to_string()),
+            "-=" => parts.push("=".to_string()),
+            "*=" => parts.push("=".to_string()),
+            "/=" => parts.push("=".to_string()),
+            "%=" => parts.push("=".to_string()),
+            "<<=" => parts.push("=".to_string()),
+            ">>=" => parts.push("=".to_string()),
+            "&=" => parts.push("=".to_string()),
+            "|=" => parts.push("=".to_string()),
             "assignment_expression" => {
                 let assignment_expression = handle_inner_assignment_expression(node, src.clone());
                 parts.push(assignment_expression);
