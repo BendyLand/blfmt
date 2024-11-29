@@ -1,41 +1,33 @@
-#include "matcher.hpp"
-#include "utils.hpp"
+#include <filesystem>
+#include <iostream>
+#include <vector>
 
-std::string get_pattern()
-{
-	std::cout << "Welcome to match mode!\n" << "Please enter the regex pattern you would like to check against:" << std::endl;
-	std::string pattern;
-	std::getline(std::cin, pattern);
-	return pattern;
-}
+namespace fs = std::filesystem;
 
-// Public
-void Matcher::find_token_matches(const std::vector<std::string>& tokens)
+void walk_dir(const fs::path& dirPath, std::vector<std::string>& fileNames);
+
+int main()
 {
-	std::vector<std::string> matches;
-	std::vector<std::string> non_matches;
-	matches.reserve(tokens.size());
-	non_matches.reserve(tokens.size());
-	for (std::string token : tokens) {
-		if (is_match(token)) matches.emplace_back(token);
-		else non_matches.emplace_back(token);
+	fs::path path = ".";
+	std::vector<std::string> names;
+	walk_dir(path, names);
+	for (std::string name : names) {
+		std::cout << name << std::endl;
 	}
-	this->matches = matches;
-	this->non_matches = non_matches;
+	return 0;
 }
 
-void Matcher::print_token_matches()
+void walk_dir(const fs::path& dirPath, std::vector<std::string>& fileNames)
 {
-	auto print_tokens = [](const std::vector<std::string>& tokens, const std::string& message) {
-		if (tokens.empty()) std::cout << message << ":\n" << std::endl;
-		else std::cout << message << ":\n" << tokens << std::endl;
-	};
-	print_tokens(this->non_matches, "The following tokens did not match");
-	print_tokens(this->matches, "The following tokens matched");
-}
-
-// Private
-bool Matcher::is_match(const std::string& str)
-{
-	return std::regex_search(str, this->pattern);
+	if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
+		std::cerr << "Invalid directory: " << dirPath << "\n";
+		return;
+	}
+	for (const auto& entry : fs::directory_iterator(dirPath)) {
+		fileNames.emplace_back(entry.path().string());
+		if (fs::is_directory(entry)) {
+			// Recursive call for subdirectory
+			walk_dir(entry, fileNames);
+		}
+	}
 }

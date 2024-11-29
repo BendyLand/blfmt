@@ -14,7 +14,7 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 if last_group_kind != "preproc_include" { result += "\n"; }
             },
             "declaration" => {
-                if last_group_kind == "preproc_include".to_string() { result += "\n"; }
+                if last_group_kind.contains("preproc") { result += "\n"; }
                 let mut declaration = handle_declaration(child, src.clone());
                 if declaration.contains("*") { declaration = utils::remove_pointer_spaces(declaration); }
                 result += format!("{}\n", declaration).as_str();
@@ -84,8 +84,9 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 last_group_kind = "struct_specifier";
             },
             "preproc_def" => {
+                if last_group_kind != "preproc_def" { result += "\n"; }
                 let preproc_def = handle_preproc_def(child, src.clone());
-                result += format!("{}\n\n", preproc_def).as_str();
+                result += format!("{}\n", preproc_def).as_str();
                 last_group_kind = "preproc_def";
             },
             "preproc_ifdef" => {
@@ -1409,6 +1410,10 @@ fn handle_inner_binary_expression(root: Node, src: String) -> String {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 parts.push(binary_expression);
             },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                parts.push(subscript_expression);
+            },
             "+" => parts.push("+".to_string()),
             "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
@@ -1607,6 +1612,10 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
                 parts.push(sized_type_specifier);
+            },
+            "array_declarator" => {
+                let array_declarator = handle_array_declarator(node, src.clone());
+                parts.push(array_declarator);
             },
             _ => println!("You shouldn't be here (parameter_declaration): {}\n", node.grammar_name()),
         }
@@ -2065,6 +2074,10 @@ fn handle_array_declarator(root: Node, src: String) -> String {
             "binary_expression" => {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 parts.push(binary_expression);
+            },
+            "array_declarator" => {
+                let array_declarator = handle_array_declarator(node, src.clone());
+                parts.push(array_declarator);
             },
             "[" => parts.push("[".to_string()),
             "]" => parts.push("]".to_string()),

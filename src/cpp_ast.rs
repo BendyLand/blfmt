@@ -14,13 +14,18 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 if last_group_kind != "preproc_include".to_string() { result += "\n"; }
             },
             "declaration" => {
-                if last_group_kind == "preproc_include".to_string() { result += "\n"; }
+                if last_group_kind.contains("preproc") { result += "\n"; }
                 let declaration = handle_declaration(child, src.clone());
                 result += format!("{}\n", declaration).as_str();
                 last_group_kind = "declaration".to_string();
             },
             "function_definition" => {
-                if last_group_kind.contains("preproc") || last_group_kind.contains("using") { result += "\n"; }
+                let should_add_space = {
+                    last_group_kind.contains("preproc")    || 
+                    last_group_kind == "using_declaration" ||
+                    last_group_kind == "declaration"
+                };
+                if should_add_space { result += "\n"; }
                 let function_definition = handle_function_definition(child, src.clone());
                 result += format!("{}\n\n", function_definition).as_str();
                 last_group_kind = "function_definition".to_string();
@@ -133,6 +138,12 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 let template_declaration = handle_template_declaration(child, src.clone());
                 result += format!("{}\n\n", template_declaration).as_str();
                 last_group_kind = "template_declaration".to_string();
+            },
+            "namespace_alias_definition" => {
+                if last_group_kind != "namespace_alias_definition" { result += "\n"; }
+                let namespace_alias_definition = handle_namespace_alias_definition(child, src.clone());
+                result += format!("{}\n\n", namespace_alias_definition).as_str();
+                last_group_kind = "namespace_alias_definition".to_string();
             },
             ";" => (), // handled in functions above
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
@@ -2947,6 +2958,14 @@ fn handle_for_range_loop(root: Node, src: String) -> String {
                 let reference_declarator = handle_reference_declarator(node, src.clone());
                 temp += format!("{} ", reference_declarator).as_str();
             },
+            "type_qualifier" => {
+                let type_qualifier = handle_type_qualifier(node, src.clone());
+                temp += format!("{} ", type_qualifier).as_str();
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                temp += format!("{} ", call_expression).as_str();
+            },
             "placeholder_type_specifier" => temp += "auto",
             ":" => temp += ": ",
             ";" => temp += "; ",
@@ -3351,9 +3370,47 @@ fn handle_abstract_function_declarator(root: Node, src: String) -> String {
                 let parameter_list = handle_parameter_list(node, src.clone());
                 parts.push(parameter_list);
             }
-            _ => println!("Abstract function declarator: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+            _ => println!("You shouldn't be here (abstract_function_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
+    return result;
+}
+
+fn handle_namespace_alias_definition(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "namespace" => parts.push("namespace".to_string()),
+            "=" => parts.push("=".to_string()),
+            ";" => parts.push(";".to_string()),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                parts.push(identifier);
+            },
+            "nested_namespace_specifier" => {
+                let nested_namespace_specifier = handle_nested_namespace_specifier(node, src.clone());
+                parts.push(nested_namespace_specifier);
+            },
+            _ => println!("You shouldn't be here (namespace_alias_definition): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    let mut result = parts.join(" ");
+    result = utils::remove_unnecessary_spaces(result);
+    return result;
+}
+
+fn handle_nested_namespace_specifier(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "::" => result += "::",
+            _ => println!("You shouldn't be here (nested_namespace_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
     return result;
 }
