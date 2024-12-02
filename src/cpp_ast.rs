@@ -145,6 +145,12 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 result += format!("{}\n\n", namespace_alias_definition).as_str();
                 last_group_kind = "namespace_alias_definition".to_string();
             },
+            "alias_declaration" => {
+                if last_group_kind != "alias_declaration" { result += "\n"; }
+                let alias_declaration = handle_alias_declaration(child, src.clone());
+                result += format!("{}\n\n", alias_declaration).as_str();
+                last_group_kind = "alias_declaration".to_string();
+            },
             ";" => (), // handled in functions above
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
@@ -1235,6 +1241,10 @@ fn handle_return_statement(root: Node, src: String) -> String {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 parts.push(parenthesized_expression);
             },
+            "initializer_list" => {
+                let initializer_list = handle_initializer_list(node, src.clone());
+                parts.push(initializer_list);
+            },
             "return" => {
                 parts.push("return".to_string());
             },
@@ -1470,6 +1480,10 @@ fn handle_binary_expression(root: Node, src: String) -> String {
                 let string_literal = handle_string_literal(node, src.clone());
                 parts.push(string_literal);
             },
+            "preproc_defined" => {
+                let preproc_defined = handle_preproc_defined(node, src.clone());
+                parts.push(preproc_defined);
+            },
             "null" => parts.push("NULL".to_string()),
             "true" => parts.push("true".to_string()),
             "false" => parts.push("false".to_string()),
@@ -1555,6 +1569,10 @@ fn handle_inner_binary_expression(root: Node, src: String) -> String {
                 let string_literal = handle_string_literal(node, src.clone());
                 parts.push(string_literal);
             },
+            "preproc_defined" => {
+                let preproc_defined = handle_preproc_defined(node, src.clone());
+                parts.push(preproc_defined);
+            },
             "+" => parts.push("+".to_string()),
             "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
@@ -1625,6 +1643,14 @@ fn handle_parenthesized_expression(root: Node, src: String) -> String {
             "assignment_expression" => {
                 let assignment_expression = handle_assignment_expression(node, src.clone());
                 result += assignment_expression.as_str();
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "qualifier_identified" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                result += qualified_identifier.as_str();
             },
             "(" => result += "(",
             ")" => result += ")",
@@ -2453,6 +2479,7 @@ fn handle_field_declaration_list(root: Node, src: String) -> String {
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
             ":" => (),
+            ";" => (),
             _ => println!("You shouldn't be here (field_declaration_list): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
     }
@@ -2492,6 +2519,10 @@ fn handle_field_declaration(root: Node, src: String) -> String {
             "function_declarator" => {
                 let function_declarator = handle_function_declarator(node, src.clone());
                 result += format!("{} ", function_declarator).as_str();
+            },
+            "storage_class_specifier" => {
+                let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
+                result += format!("{} ", storage_class_specifier).as_str();
             },
             ";" => result += ";",
             "," => result += ", ",
@@ -2717,9 +2748,37 @@ fn handle_preproc_if(root: Node, src: String) -> String {
                 let number_literal = handle_number_literal(node, src.clone());
                 parts.push(number_literal);
             },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                parts.push(expression_statement);
+            },
+            "preproc_def" => {
+                let preproc_def = handle_preproc_def(node, src.clone());
+                parts.push(preproc_def);
+            },
+            "preproc_include" => {
+                let preproc_include = handle_preproc_include(node, src.clone());
+                parts.push(preproc_include);
+            },
+            "preproc_elif" => {
+                let preproc_elif = handle_preproc_elif(node, src.clone());
+                parts.push(preproc_elif);
+            },
+            "preproc_defined" => {
+                let preproc_defined = handle_preproc_defined(node, src.clone());
+                temp += preproc_defined.as_str();
+                parts.push(temp);
+                temp = String::new();
+            },
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                temp += identifier.as_str();
+                parts.push(temp);
+                temp = String::new();
+            },
             "\n" => {
                 // maybe remove?
-                parts.push("\n".to_string());
+                // parts.push("\n".to_string());
             },
             _ => println!("You shouldn't be here (preproc_if): {}\n", node.grammar_name()),
         }
@@ -2765,6 +2824,14 @@ fn handle_preproc_else(root: Node, src: String) -> String {
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
                 parts.push(return_statement);
+            },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                parts.push(expression_statement);
+            },
+            "preproc_def" => {
+                let preproc_def = handle_preproc_def(node, src.clone());
+                parts.push(preproc_def);
             },
             _ => println!("You shouldn't be here (preproc_else): {}\n", node.grammar_name()),
         }
@@ -2847,6 +2914,7 @@ fn handle_inner_field_expression(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "->" => result += "->",
+            "." => result += ".",
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
@@ -2965,6 +3033,10 @@ fn handle_for_range_loop(root: Node, src: String) -> String {
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
                 temp += format!("{} ", call_expression).as_str();
+            },
+            "pointer_declarator" => {
+                let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                temp += format!("{} ", pointer_declarator).as_str();
             },
             "placeholder_type_specifier" => temp += "auto",
             ":" => temp += ": ",
@@ -3412,5 +3484,77 @@ fn handle_nested_namespace_specifier(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (nested_namespace_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
+    return result;
+}
+
+fn handle_preproc_elif(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "#elif" => result += "#elif ",
+            "\n" => result += "\n",
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                result += binary_expression.as_str();
+            },
+            "preproc_def" => {
+                let preproc_def = handle_preproc_def(node, src.clone());
+                result += format!("{}\n", preproc_def).as_str();
+            },
+            "preproc_elif" => {
+                let preproc_elif = handle_preproc_elif(node, src.clone());
+                result += format!("{}\n", preproc_elif).as_str();
+            },
+            "preproc_defined" => {
+                let preproc_defined = handle_preproc_defined(node, src.clone());
+                result += format!("{}\n", preproc_defined).as_str();
+            },
+            "preproc_else" => {
+                let preproc_else = handle_preproc_else(node, src.clone());
+                result += format!("{}\n", preproc_else).as_str();
+            },
+            _ => println!("You shouldn't be here (preproc_elif): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_preproc_defined(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "defined" => result += "defined",
+            "(" => result += "(",
+            ")" => result += ")",
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            _ => println!("You shouldn't be here (preproc_defined): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_alias_declaration(root: Node, src: String) -> String {
+    let mut parts = Vec::<String>::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "using" => parts.push("using".to_string()),
+            ";" => parts.push(";".to_string()),
+            "=" => parts.push("=".to_string()),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                parts.push(identifier);
+            },
+            "type_descriptor" => {
+                let type_descriptor = handle_type_descriptor(node, src.clone());
+                parts.push(type_descriptor);
+            },
+            _ => println!("You shouldn't be here (alias_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    let mut result = parts.join(" ");
+    result = utils::remove_unnecessary_spaces(result);
     return result;
 }
