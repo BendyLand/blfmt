@@ -1,1 +1,39 @@
-Successfully wrote: 'test.cpp'
+You shouldn't be here (preproc_if): preproc_defined
+
+You shouldn't be here (preproc_if): expression_statement
+
+You shouldn't be here (preproc_if): preproc_elif
+
+You shouldn't be here (return statement): initializer_list
+
+You shouldn't be here (return statement): initializer_list
+
+You shouldn't be here (parenthesized_expression): identifier
+
+You shouldn't be here (for_range_loop): pointer_declarator : * carg
+
+You shouldn't be here (return statement): initializer_list
+
+You shouldn't be here (return statement): initializer_list
+
+You shouldn't be here (preproc_if): preproc_defined
+
+You shouldn't be here (preproc_if): expression_statement
+
+You shouldn't be here (preproc_else): expression_statement
+
+You shouldn't be here (preproc_else): expression_statement
+
+Unknown grammar name 1: alias_declaration
+
+You shouldn't be here (field_declaration_list): ;: ;
+
+You shouldn't be here (preproc_if): identifier
+
+You shouldn't be here (preproc_if): expression_statement
+
+You shouldn't be here (preproc_else): expression_statement
+
+You shouldn't be here (inner_field_expression): .
+
+You shouldn't be here (inner_field_expression): .
