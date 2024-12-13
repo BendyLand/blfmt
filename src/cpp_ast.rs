@@ -8,10 +8,10 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
+                if last_group_kind != "preproc_include".to_string() { result += "\n"; }
                 let preproc_include = handle_preproc_include(child, src.clone());
                 result += format!("{}\n", preproc_include).as_str();
                 last_group_kind = "preproc_include".to_string();
-                if last_group_kind != "preproc_include".to_string() { result += "\n"; }
             },
             "declaration" => {
                 if last_group_kind.contains("preproc") { result += "\n"; }
@@ -1174,6 +1174,10 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let initializer_list = handle_initializer_list(node, src.clone());
                 result += initializer_list.as_str();
             },
+            "new_expression" => {
+                let new_expression = handle_new_expression(node, src.clone());
+                result += new_expression.as_str();
+            },
             _ => println!("You shouldn't be here (argument_list): {}\n", node.grammar_name()),
         }
     }
@@ -1989,6 +1993,10 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "char_literal" => {
                 let char_literal = handle_char_literal(node, src.clone());
                 parts.push(char_literal);
+            },
+            "new_expression" => {
+                let new_expression = handle_new_expression(node, src.clone());
+                parts.push(new_expression);
             },
             "lambda_expression" => {
                 let mut lambda_expression = handle_lambda_expression(node, src.clone());
@@ -3556,5 +3564,24 @@ fn handle_alias_declaration(root: Node, src: String) -> String {
     }
     let mut result = parts.join(" ");
     result = utils::remove_unnecessary_spaces(result);
+    return result;
+}
+
+fn handle_new_expression(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "new" => result += "new ",
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "argument_list" => {
+                let argument_list = handle_argument_list(node, src.clone());
+                result += argument_list.as_str();
+            },
+            _ => println!("You shouldn't be here (new_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
     return result;
 }
