@@ -1,1 +1,1 @@
-Successfully wrote: 'test.cpp'
+You shouldn't be here (pointer_declarator): array_declarator
