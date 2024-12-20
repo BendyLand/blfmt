@@ -1,40 +1,31 @@
- /**
- *  Monitoring Dashboard - A simple custom monitoring dashboard.
- *  Copyright (C) 2024 Ben Landrette
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it may be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program. If not, see https://www.gnu.org/licenses.
- */
 
-#include <QApplication>
-#include <QGridLayout>
-#include <QLabel>
-#include <QWidget>
+#include <chrono>
+#include <iostream>
+#include "os.hpp"
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
-	QApplication app(argc, argv);
-	QWidget window;
-	window.resize(800, 600);
-	window.setWindowTitle("Monitoring Dashboard");
-	// Create a grid layout
-	QGridLayout* layout = new QGridLayout(&window);
-	// Add labels to specific grid positions
-	layout->addWidget(new QLabel("CPU Monitoring", &window), 0, 0, Qt::AlignCenter);
-	layout->addWidget(new QLabel("Memory Monitoring", &window), 0, 1, Qt::AlignCenter);
-	layout->addWidget(new QLabel("Network Monitoring", &window), 0, 2, Qt::AlignCenter);
-	layout->addWidget(new QLabel("Device", &window), 1, 1, Qt::AlignCenter);
-	window.setStyleSheet("background-color: grey;");
-	window.show();
-	return app.exec();
+	if (argc < 2) {
+		std::cerr << "Usage: " << argv[0] << " <executable_file>[args...]\n";
+		return 1;
+	}
+	// Build the command string
+	std::string command;
+	for (int i = 1; i < argc; i++) {
+		command = argv[i];
+		if (i < argc - 1) {
+			command = " ";
+		}
+	}
+	// Time the command execution
+	auto start = std::chrono::high_resolution_clock::now();
+	std::pair<int, std::string> result = OS::run_command(command);
+	auto end = std::chrono::high_resolution_clock::now();
+	if (result.first != 0) {
+		std::cerr << result.second << std::endl;
+		return result.first;
+	}
+	std::chrono::duration<double> elapsed = end - start;
+	std::cout << "Execution time: " << elapsed.count() << " seconds\n";
+	return 0;
 }

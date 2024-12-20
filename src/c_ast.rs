@@ -1223,11 +1223,15 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
             },
             "type_identifier" => {
                 let type_identifier = handle_type_identifier(node, src.clone());
-                result += format!("{}", type_identifier).as_str();
+                result += type_identifier.as_str();
             },
             "field_identifier" => {
                 let field_identifier = handle_field_identifier(node, src.clone());
-                result += format!("{}", field_identifier).as_str();
+                result += field_identifier.as_str();
+            },
+            "array_declarator" => {
+                let array_declarator = handle_array_declarator(node, src.clone());
+                result += format!(" {}", array_declarator).as_str();
             },
             _ => println!("You shouldn't be here (pointer_declarator): {}\n", node.kind()),
         }
