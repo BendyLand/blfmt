@@ -49,6 +49,30 @@ pub enum Style {
     Stroustrup,
 }
 
+fn ensure_comma_spaces(line: String) -> String {
+    let mut result = String::new();
+    for (i, c) in line.char_indices() {
+        result += c.to_string().as_str();
+        if i < line.len()-1 {
+            if c == ',' && line.chars().nth(i+1) != Some(' ') {
+                result += " ";
+            }
+        }
+    }
+    return result;
+}
+
+pub fn tidy_up_loose_ends(file: &mut String) {
+    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
+    let mut lines_clone: Vec<String> = lines.clone();
+    for (i, line) in lines_clone.into_iter().enumerate() {
+        if line.contains(",") {
+            lines[i] = ensure_comma_spaces(line);
+        }
+    }
+    *file = lines.join("\n");
+}
+
 pub fn format_else_lines(file: &mut String, style: &Style) {
     match style {
         Style::KnR => return,

@@ -8,10 +8,10 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
+                if last_group_kind != "preproc_include" { result += "\n"; }
                 let preproc_include = handle_preproc_include(child, src.clone());
                 result += format!("{}\n", preproc_include).as_str();
                 last_group_kind = "preproc_include";
-                if last_group_kind != "preproc_include" { result += "\n"; }
             },
             "declaration" => {
                 if last_group_kind.contains("preproc") { result += "\n"; }
@@ -120,6 +120,7 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
     }
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
+    result = result.trim_start().to_string();
     return result;
 }
 

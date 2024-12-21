@@ -21,7 +21,7 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
             },
             "function_definition" => {
                 let should_add_space = {
-                    last_group_kind.contains("preproc")    || 
+                    last_group_kind.contains("preproc")    ||
                     last_group_kind == "using_declaration" ||
                     last_group_kind == "declaration"
                 };
@@ -158,6 +158,8 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
     utils::close_empty_curly_brace_blocks(&mut result);
+    utils::tidy_up_loose_ends(&mut result);
+    result = result.trim_start().to_string();
     return result;
 }
 
@@ -403,7 +405,7 @@ fn handle_declaration(root: Node, src: String) -> String {
     result = parts.join(" ");
     if result.contains(",") { result = utils::remove_whitespace_before_commas(result); }
     result = utils::remove_unnecessary_spaces(result);
-    if result.contains("= \t[") { 
+    if result.contains("= \t[") {
         let idx = result.find("= \t[").unwrap();
         result.remove(idx+2);
     }
@@ -1178,6 +1180,11 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let new_expression = handle_new_expression(node, src.clone());
                 result += new_expression.as_str();
             },
+            "lambda_expression" => {
+                let mut lambda_expression = handle_lambda_expression(node, src.clone());
+                lambda_expression = utils::add_all_leading_tabs(lambda_expression).trim_start().to_string();
+                result += lambda_expression.as_str();
+            },
             _ => println!("You shouldn't be here (argument_list): {}\n", node.grammar_name()),
         }
     }
@@ -1675,6 +1682,10 @@ fn handle_pointer_expression(root: Node, src: String) -> String {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                result += qualified_identifier.as_str();
             },
             "pointer_expression" => {
                 let pointer_expression = handle_inner_pointer_expression(node, src.clone());
