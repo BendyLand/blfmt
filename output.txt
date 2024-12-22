@@ -1,3 +1,1 @@
-You shouldn't be here (argument_list): lambda_expression
-
-You shouldn't be here (argument_list): lambda_expression
+Successfully wrote: 'test.cpp'
