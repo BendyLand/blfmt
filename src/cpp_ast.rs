@@ -1279,16 +1279,49 @@ fn handle_return_statement(root: Node, src: String) -> String {
 }
 
 fn handle_comment(root: Node, src: String) -> String {
-    let mut result = root.utf8_text(src.as_bytes()).unwrap().to_string();
-    let mut lines: Vec<&str> = result.split("\n").collect();
-    if lines.len() > 1 {
-        if lines[1].starts_with(" ") && !lines[0].starts_with(" ") {
-            let num_whitespace = utils::count_leading_whitespace(lines[1].to_string(), ' ');
-            let temp = utils::add_leading_whitespace(lines[0].to_string(), num_whitespace);
-            lines[0] = temp.as_str();
-            result = lines.join("\n");
+    let mut parts = Vec::<String>::new();
+    let mut temp = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "(" => (),
+            ")" => (),
+            "," => (),
+            "parameter_declaration" => (),
+            "comment" => {
+                let comment = extract_comment(node, src.clone());
+                parts.push(comment);
+            },
+            _ => println!("You shouldn't be here (comment): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
     }
+    let mut result: String; 
+    if parts.len() == 0 {
+        let content = root.utf8_text(src.as_bytes()).unwrap().to_string();
+        let mut lines: Vec<&str> = content.lines().collect();
+        if lines.len() > 1 {
+            if lines[1].starts_with(" ") && !lines[0].starts_with(" ") {
+                let num_whitespace = utils::count_leading_whitespace(lines[1].to_string(), ' ');
+                let temp = utils::add_leading_whitespace(lines[0].to_string(), num_whitespace);
+                lines[0] = temp.as_str();
+                result = lines.join("\n");
+            }
+            else {
+                result = lines.join("\n");
+            }
+        }
+        else {
+            result = root.utf8_text(src.as_bytes()).unwrap().to_string();
+        }
+    }
+    else {
+        result = parts.join(" ");
+    }
+    result = utils::remove_unnecessary_spaces(result);
+    return result;
+}
+
+fn extract_comment(root: Node, src: String) -> String {
+    let result = root.utf8_text(src.as_bytes()).unwrap().to_string();
     return result;
 }
 
@@ -1331,6 +1364,10 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                     "variadic_parameter" => {
                         let variadic_parameter = handle_variadic_parameter(subnode, src.clone());
                         temp += variadic_parameter.as_str();
+                    },
+                    "comment" => {
+                        let comment = handle_comment(node, src.clone());
+                        temp += format!("{} ", comment).as_str();
                     },
                     _ => println!("You shouldn't be here (function_declarator): {}\n", subnode.grammar_name()),
                 }
