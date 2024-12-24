@@ -5,6 +5,7 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let root = ast.root_node();
     let mut result = String::new();
     let mut last_group_kind = String::new();
+    let lines_before_blank_lines = utils::scan_for_lines_before_blank_lines(src.clone());
     for child in root.children(&mut root.walk()) {
         match child.grammar_name() {
             "preproc_include" => {
@@ -158,7 +159,7 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
     utils::close_empty_curly_brace_blocks(&mut result);
-    utils::tidy_up_loose_ends(&mut result);
+    utils::tidy_up_loose_ends(&mut result, lines_before_blank_lines);
     result = result.trim_start().to_string();
     return result;
 }
