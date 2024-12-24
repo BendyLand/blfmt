@@ -62,7 +62,61 @@ fn ensure_comma_spaces(line: String) -> String {
     return result;
 }
 
-pub fn tidy_up_loose_ends(file: &mut String) {
+fn check_line_is_blank(line: &String) -> bool {
+    return line.is_empty() || line.chars().all(|x| x.is_whitespace() || x == '\t');
+}
+
+fn ensure_no_consecutive_blank_lines(file: &mut String) {
+    let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
+    let mut result = Vec::<String>::new();
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        if i < lines.len()-1 {
+            let line_empty = check_line_is_blank(&line);
+            if line_empty {
+                if !check_line_is_blank(&result[result.len()-1]) {
+                    result.push(line.clone());
+                }
+                continue;
+            }
+        }
+        result.push(line);
+    }
+    *file = result.join("\n").trim_end().to_string() + "\n";
+}
+
+pub fn scan_for_lines_before_blank_lines(file: String) -> Vec<String> {
+    let mut result = Vec::<String>::new();
+    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        if i < lines.len()-1  {
+            let has_no_visible_chars = {
+                lines[i+1]
+                    .chars()
+                    .all(|x| x.is_whitespace() || x == '\t')
+            };
+            if lines[i+1].is_empty() || has_no_visible_chars {
+                result.push(line);
+            }
+        }
+    }
+    return result;
+}
+
+pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<String>) {
+    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    lines.reverse();
+    let mut indexes = Vec::<usize>::new();
+    for line in target_lines {
+        let mut idx = lines.clone().into_iter().position(|x| *x == line).unwrap_or(usize::MAX);
+        if idx == usize::MAX { continue; }
+        while idx > 0  && lines[idx].contains("#include") { idx -= 1; }
+        lines.insert(idx, "".to_string());
+    }
+    lines.reverse();
+    *file = lines.join("\n");
+}
+
+pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<String>) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_clone: Vec<String> = lines.clone();
     for (i, line) in lines_clone.into_iter().enumerate() {
@@ -71,6 +125,8 @@ pub fn tidy_up_loose_ends(file: &mut String) {
         }
     }
     *file = lines.join("\n");
+    add_blank_lines_back(file, lines_before_blank_lines);
+    ensure_no_consecutive_blank_lines(file);
 }
 
 pub fn format_else_lines(file: &mut String, style: &Style) {
@@ -88,7 +144,7 @@ fn format_to_allman(file: &mut String) {
 fn format_to_stroustrup(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
-    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap(); 
+    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
     for i in 0..lines.len() {
         if pattern.is_match(&lines[i]) {
             let idx = lines[i].find("else").unwrap();
@@ -113,7 +169,7 @@ pub fn close_empty_curly_brace_blocks(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_to_remove = Vec::<usize>::new();
     for i in 0..lines.len()-1 {
-        if lines[i].trim_end().ends_with("{") && 
+        if lines[i].trim_end().ends_with("{") &&
            lines[i+1].trim_start().starts_with("}") &&
            lines[i+1].trim().len() == 1 {
             lines[i] = format!("{}}}", lines[i]);
@@ -240,8 +296,8 @@ pub fn switch_pointer_spaces(line: String) -> String {
     for (i, c) in line.char_indices() {
         if i < line.len()-2 {
             let add_space = {
-                c == '*' && 
-                line.at(i+1) != Some('*') && 
+                c == '*' &&
+                line.at(i+1) != Some('*') &&
                 line.at(i+1) != Some(' ')
             };
             if add_space {

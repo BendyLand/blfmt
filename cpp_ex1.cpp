@@ -1,4 +1,4 @@
-#include "lexer.hpp" // "utils.hpp" -> iostream, string, fstream, vector; "symbols.hpp" -> unordered_map, variant; <boost/regex.hpp>
+#include "lexer.hpp" // "utils.hpp" -> iostream, string, fstream, vector; // "symbols.hpp" -> unordered_map, variant; <boost/regex.hpp>
 #include "logging.hpp" // "utils.hpp", <boost/regex.hpp>
 
 using namespace std;
@@ -6,7 +6,9 @@ using namespace std;
 string prepareFile(string file)
 {
 	file = removeComments(file);
+
 	file = normalize(file);
+
 	file = removeEmptyLines(file);
 	return file;
 }
@@ -35,7 +37,7 @@ string removeComments(string file)
 				if (comment > start && comment < end) {
 					result = line + "\n";
 					continue;
-					//! currently cannot place comments after strings that contain '#'
+					//!currently cannot place comments after strings that contain '#'
 				}
 			}
 			string temp = line.substr(0, comment);
@@ -100,12 +102,12 @@ AnyType parseValIntoType(string val, string type)
 	else if (type == "arithmetic") {
 		//todo: reduce arithmetic
 		result = val;
-		//! temporary
+		//!temporary
 	}
 	else if (type == "variable") {
-		//todo: lookup variables 
+		//todo: lookup variables
 		result = val;
-		//! temporary
+		//!temporary
 	}
 	else {
 		result = val.substr(1, val.size() - 2);
@@ -122,6 +124,7 @@ AnyType extractVarValue(string line)
 	AnyType result = parseValIntoType(resultStr, valType);
 	return result;
 }
+
 
 string inferType(string original)
 {
