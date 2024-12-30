@@ -2095,7 +2095,11 @@ fn handle_type_descriptor(root: Node, src: String) -> String {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
                 result += sized_type_specifier.as_str();
             },
-            _ => println!("You shouldn't be here (type_descriptor): {}", node.grammar_name()),
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                result += format!("{} ", template_type).as_str();
+            },
+            _ => println!("You shouldn't be here (type_descriptor): {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -3134,6 +3138,10 @@ fn handle_qualified_identifier(root: Node, src: String) -> String {
                 let qualified_identifier = handle_qualified_identifier(node, src.clone());
                 result += qualified_identifier.as_str();
             },
+            "template_function" => {
+                let template_function = handle_template_function(node, src.clone());
+                result += template_function.as_str();
+            },
             "::" => result += "::",
             _ => println!("You shouldn't be here (qualified_identifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
@@ -3154,6 +3162,28 @@ fn handle_template_type(root: Node, src: String) -> String {
                 result += template_argument_list.as_str();
             },
             _ => println!("You shouldn't be here (template_type): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_template_function(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                result += qualified_identifier.as_str();
+            },
+            "template_argument_list" => {
+                let template_argument_list = handle_template_argument_list(node, src.clone());
+                result += template_argument_list.as_str();
+            },
+            _ => println!("You shouldn't be here (template_function): {} : {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;

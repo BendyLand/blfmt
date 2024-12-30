@@ -1,1 +1,6 @@
-Successfully wrote: 'test.cpp'
+You shouldn't be here (type_descriptor): template_type
+You shouldn't be here (qualified_identifier): template_function: any_cast<std::string>
+
+You shouldn't be here (qualified_identifier): template_function: vector<std::string>
+
+You shouldn't be here (qualified_identifier): template_function: any_cast<std::vector<std::string>>
