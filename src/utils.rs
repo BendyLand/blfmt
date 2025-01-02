@@ -135,9 +135,7 @@ fn shift_back_preproc_lines(file: &mut String) {
     let mut parts = Vec::<String>::new();
     for line in lines {
         if line.trim_start().starts_with("#") {
-            dbg!(&line);
             let temp = remove_single_tab(line);
-            dbg!(&temp);
             parts.push(temp);
         }
         else {
