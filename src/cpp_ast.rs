@@ -2797,6 +2797,14 @@ fn handle_preproc_if(root: Node, src: String) -> String {
                 let return_statement = handle_return_statement(node, src.clone());
                 parts.push(return_statement);
             },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                parts.push(declaration);
+            },
+            "if_statement" => {
+                let if_statement = handle_if_statement(node, src.clone());
+                parts.push(if_statement);
+            },
             "function_definition" => {
                 let function_definition = handle_function_definition(node, src.clone());
                 parts.push(function_definition);
@@ -2841,10 +2849,7 @@ fn handle_preproc_if(root: Node, src: String) -> String {
                 parts.push(temp);
                 temp = String::new();
             },
-            "\n" => {
-                // maybe remove?
-                // parts.push("\n".to_string());
-            },
+            "\n" => (),
             _ => println!("You shouldn't be here (preproc_if): {}\n", node.grammar_name()),
         }
     }
@@ -2889,6 +2894,10 @@ fn handle_preproc_else(root: Node, src: String) -> String {
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
                 parts.push(return_statement);
+            },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                parts.push(declaration);
             },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());

@@ -127,6 +127,31 @@ pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<Strin
     *file = lines.join("\n");
     add_blank_lines_back(file, lines_before_blank_lines);
     ensure_no_consecutive_blank_lines(file);
+    shift_back_preproc_lines(file);
+}
+
+fn shift_back_preproc_lines(file: &mut String) {
+    let lines: Vec<String> = file.split("\n").map(|x| x.to_string()).collect();
+    let mut parts = Vec::<String>::new();
+    for line in lines {
+        if line.trim_start().starts_with("#") {
+            dbg!(&line);
+            let temp = remove_single_tab(line);
+            dbg!(&temp);
+            parts.push(temp);
+        }
+        else {
+            parts.push(line);
+        }
+    }
+    *file = parts.join("\n");
+}
+
+fn remove_single_tab(line: String) -> String {
+    let pos = line.chars().position(|x| x == '#').unwrap_or(0);
+    let mut new_line = line.clone();
+    if pos > 0 { for _ in 0..pos { new_line.remove(0); } }
+    return new_line;
 }
 
 pub fn format_else_lines(file: &mut String, style: &Style) {
