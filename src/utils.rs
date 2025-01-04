@@ -3,6 +3,7 @@ use regex::Regex;
 use crate::options::{self, TxtOpts};
 use std::ops::{Bound, RangeBounds};
 use std::cmp::Ordering;
+use std::collections::HashMap;
 
 pub trait StringUtils {
     fn substring(&self, start: usize, len: usize) -> &str;
@@ -49,12 +50,12 @@ pub enum Style {
     Stroustrup,
 }
 
-fn ensure_comma_spaces(line: String) -> String {
+pub fn ensure_space_after_char(line: &String, target: char) -> String {
     let mut result = String::new();
     for (i, c) in line.char_indices() {
         result += c.to_string().as_str();
         if i < line.len()-1 {
-            if c == ',' && line.chars().nth(i+1) != Some(' ') {
+            if c == target && line.chars().nth(i+1) != Some(' ') && line.chars().nth(i+1) != Some(target) {
                 result += " ";
             }
         }
@@ -84,44 +85,81 @@ fn ensure_no_consecutive_blank_lines(file: &mut String) {
     *file = result.join("\n").trim_end().to_string() + "\n";
 }
 
-pub fn scan_for_lines_before_blank_lines(file: String) -> Vec<String> {
-    let mut result = Vec::<String>::new();
+//todo: make a function that scans for the specific constructs that get aggressively formatted (e.g., maps)
+pub fn scan_for_lines_before_blank_lines(file: String) -> Vec<(usize, String)> {
+    let mut result = Vec::<(usize, String)>::new();
     let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let mut open_braces = 0;
     for (i, line) in lines.clone().into_iter().enumerate() {
-        if i < lines.len()-1  {
-            let has_no_visible_chars = {
-                lines[i+1]
-                    .chars()
-                    .all(|x| x.is_whitespace() || x == '\t')
-            };
-            if lines[i+1].is_empty() || has_no_visible_chars {
-                result.push(line);
+        // only add lines that are inside of blocks
+        if line.contains("{") { open_braces += 1; }
+        if line.contains("}") { open_braces -= 1; }
+        if open_braces > 0 {
+            if i < lines.len()-1  {
+                let has_no_visible_chars = {
+                    lines[i+1]
+                        .chars()
+                        .all(|x| x.is_whitespace() || x == '\t')
+                };
+                if lines[i+1].is_empty() || has_no_visible_chars {
+                    result.push((i+1, line));
+                }
             }
         }
     }
     return result;
 }
 
-pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<String>) {
+fn spaces_to_tabs(line: &String) -> String {
+    return line.replace("    ", "\t");
+}
+
+// This function works unless the code jumps by more lines than the following block contains.
+pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)>) {
     let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
-    lines.reverse();
-    let mut indexes = Vec::<usize>::new();
-    for line in target_lines {
-        let mut idx = lines.clone().into_iter().position(|x| *x == line).unwrap_or(usize::MAX);
-        if idx == usize::MAX { continue; }
-        while idx > 0  && lines[idx].contains("#include") { idx -= 1; }
-        lines.insert(idx, "".to_string());
+    println!("{:#?}", &target_lines);
+    for mut entry in target_lines.clone() {
+        if lines.len() > entry.0+1 {
+            let line = spaces_to_tabs(&entry.1);
+            if lines[entry.0] == line {
+                lines.insert(entry.0+1, "".to_string());
+            }
+            else {
+                let mut idx = entry.0;
+                'Inner: for i in (0..entry.0).rev() {
+                    if &i < &lines.len() {
+                        if &lines[i] == &line {
+                            idx = i+1;
+                            break 'Inner;
+                        }
+                    }
+                }
+                lines.insert(idx, "".to_string());
+            }
+        }
+        else {
+            let line = spaces_to_tabs(&entry.1);
+            let mut idx = entry.0;
+            'Inner: for i in (0..entry.0).rev() {
+                if &i < &lines.len() {
+                    if &lines[i] == &line {
+                        idx = i+1;
+                        break 'Inner;
+                    }
+                }
+            }
+            lines.insert(idx, "".to_string());
+        }
     }
-    lines.reverse();
     *file = lines.join("\n");
 }
 
-pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<String>) {
+pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<(usize, String)>) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_clone: Vec<String> = lines.clone();
     for (i, line) in lines_clone.into_iter().enumerate() {
         if line.contains(",") {
-            lines[i] = ensure_comma_spaces(line);
+            lines[i] = ensure_space_after_char(&line, ',');
         }
     }
     *file = lines.join("\n");
@@ -146,10 +184,9 @@ fn shift_back_preproc_lines(file: &mut String) {
 }
 
 fn remove_single_tab(line: String) -> String {
-    let pos = line.chars().position(|x| x == '#').unwrap_or(0);
-    let mut new_line = line.clone();
-    if pos > 0 { for _ in 0..pos { new_line.remove(0); } }
-    return new_line;
+    let mut line = line.clone();
+    if line.starts_with("\t") { line.remove(0); }
+    return line;
 }
 
 pub fn format_else_lines(file: &mut String, style: &Style) {
@@ -169,6 +206,7 @@ fn format_to_stroustrup(file: &mut String) {
     let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
     let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
     for i in 0..lines.len() {
+        if lines[i].trim_start().starts_with("//") || lines[i].trim_start().starts_with("/*") { continue; }
         if pattern.is_match(&lines[i]) {
             let idx = lines[i].find("else").unwrap();
             let indents = lines[i].chars().filter(|x| *x == '\t').count();
@@ -290,7 +328,11 @@ pub fn remove_pointer_spaces(line: String) -> String {
             let skip = {
                 c == ' ' &&
                 line.at(i+1) == Some('*') &&
-                (line.at(i-1).unwrap().is_alphanumeric() || line.at(i-1) == Some('*'))
+                (
+                    line.at(i-1).unwrap().is_alphanumeric() ||
+                    line.at(i-1) == Some('*')               ||
+                    line.at(i-1) == Some('>')
+                )
             };
             if skip {
                 continue;
@@ -339,7 +381,11 @@ pub fn remove_reference_spaces(line: String) -> String {
                 c == ' ' &&
                 line.at(i+1) == Some('&') &&
                 line.at(i+2) != Some('&') &&
-                (line.at(i-1).unwrap().is_alphanumeric() || line.at(i-1) == Some('>'))
+                (
+                    line.at(i-1).unwrap().is_alphanumeric() ||
+                    line.at(i-1) == Some('>')               ||
+                    line.at(i-1) == Some('*')
+                )
             };
             if skip { continue; }
         }
@@ -371,16 +417,21 @@ pub fn remove_unnecessary_spaces(line: String) -> String {
     let ending_tokens = vec![')', '[', ']', ' ', ',', ';'];
     let mut result = String::new();
     let mut skip = false;
+    let mut in_string = false;
     for (i, c) in line.char_indices() {
         if skip {
             skip = false;
             continue;
         }
         if let Some(next) = line.at(i+1) {
-            if ending_tokens.contains(&next) {
+            if next == '"' && c != '\\'{
+                if in_string { in_string = false; }
+                else { in_string = true; }
+            }
+            if ending_tokens.contains(&next) && !in_string {
                 if c == ' ' { continue; }
             }
-            if leading_tokens.contains(&c) {
+            if leading_tokens.contains(&c) && !in_string {
                 if next == ' ' { skip = true; }
             }
         }
@@ -406,7 +457,7 @@ pub fn add_leading_whitespace(src: String, amount: usize) -> String {
     return format!("{}{}", prefix, src);
 }
 
-pub fn count_leading_whitespace(src: String, target: char) -> usize {
+pub fn count_leading_chars(src: &String, target: char) -> usize {
     let mut count = 0;
     for c in src.chars() {
         if c != target {

@@ -1162,7 +1162,7 @@ fn handle_comment(root: Node, src: String) -> String {
         let mut lines: Vec<&str> = content.lines().collect();
         if lines.len() > 1 {
             if lines[1].starts_with(" ") && !lines[0].starts_with(" ") {
-                let num_whitespace = utils::count_leading_whitespace(lines[1].to_string(), ' ');
+                let num_whitespace = utils::count_leading_chars(&lines[1].to_string(), ' ');
                 let temp = utils::add_leading_whitespace(lines[0].to_string(), num_whitespace);
                 lines[0] = temp.as_str();
                 result = lines.join("\n");
