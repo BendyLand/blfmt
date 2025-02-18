@@ -18,10 +18,13 @@ Start by building the project via cargo:
 ```bash
 cargo build -r
 ```
-If you would like to use the tool from anywhere in the terminal, move the binary to your system's PATH:
+If you would like to use the tool from anywhere in the terminal, move the binary to your local binary directory, or add the directory to your system's PATH:
 ```bash
 # For Unix-like systems
-sudo mv src/target/release/blfmt /usr/local/bin
+sudo mv target/release/blfmt /usr/local/bin
+# OR 
+echo 'export PATH="$PATH:$(pwd)/target/release"' >> ~/.bashrc
+source ~/.bashrc # apply changes immediately
 ```
 
 #### Go Files:
