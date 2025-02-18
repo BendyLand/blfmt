@@ -2929,7 +2929,7 @@ fn handle_preproc_function_def(root: Node, src: String) -> String {
             "preproc_arg" => {
                 result += node.utf8_text(src.as_bytes()).unwrap();
             },
-            _ =>  println!("You shouldn't be here (preproc_function_def): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (preproc_function_def): {}\n", node.grammar_name()),
         }
     }
     return result;

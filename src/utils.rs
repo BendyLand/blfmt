@@ -114,10 +114,49 @@ fn spaces_to_tabs(line: &String) -> String {
     return line.replace("    ", "\t");
 }
 
+fn format_long_lines(file: &mut String, target_len: usize) {
+    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let mut temp = String::new();
+    for (i, entry) in lines.clone().iter().enumerate() {
+        if entry.len() > target_len {
+            if entry.chars().filter(|x| *x == '\"').count() == 2 && !entry.contains("{") {
+                dbg!(&entry);
+                lines[i] = format_long_string_line(&entry, target_len);
+            }
+        }
+    }
+    *file = lines.join("\n");
+}
+
+//todo: create functions/algorithms to format specific kinds of long lines.
+//this kind of almost works for certain cases
+fn format_long_string_line(line: &String, target_len: usize) -> String {
+    let mut result = line.clone();
+    if let Some(idx) = line.find("\"") {
+        let indents = count_leading_chars(&line, '\t');
+        let mut s = "\n".to_string();
+        for _ in 0..indents+1 { s.push('\t'); }
+        result.insert_str(idx-1, s.as_str());
+        let r_idx = result.rfind("\"").unwrap();
+        if r_idx != idx && line.chars().nth(r_idx) == Some(')') {
+            s = s[..s.len()-1].to_string();
+            result.insert_str(r_idx+1, s.as_str());
+        }
+    }
+    return result;
+}
+// fn format_long_array_line(line: String, target_len: usize) -> String {
+    
+// }
+// fn format_long_function_definition_line(line: String, target_len: usize) -> String {
+    
+// }
+
+
 // This function works unless the code jumps by more lines than the following block contains.
 pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)>) {
     let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
-    println!("{:#?}", &target_lines);
+    // prinln!("{:#?}", &target_lines);
     for mut entry in target_lines.clone() {
         if lines.len() > entry.0+1 {
             let line = spaces_to_tabs(&entry.1);
@@ -163,9 +202,10 @@ pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<(usiz
         }
     }
     *file = lines.join("\n");
+    format_long_lines(file, 100);
     add_blank_lines_back(file, lines_before_blank_lines);
     ensure_no_consecutive_blank_lines(file);
-    shift_back_preproc_lines(file);
+    // shift_back_preproc_lines(file);
 }
 
 fn shift_back_preproc_lines(file: &mut String) {
