@@ -2,10 +2,6 @@
 
 A minimally customizable, polyglot text-formatter written in Rust!
 
-**blfmt is still in development and is functional for .go, .py, .txt, and fairly basic .c and .cpp files. Go and Python files are formatted using gofmt and Black respectively, so you must have them installed before using this tool for those file types.**
-
-*Note: C/C++ files are currently supported, but certain constructs may not work perfectly. Always make a copy of your original file before formatting.*
-
 ### About
 
 `blfmt` stands for *Bland Formatter*. While you could see this as a way to describe its lack of fancy features, it is really just an abbreviation of my name: B. Land(rette).
@@ -18,19 +14,26 @@ However, unlike gofmt, I would like `blfmt` to be very slightly customizable in 
 
 ## Usage
 
-Eventually, I would like this program to be its own executable which can be run from anywhere. 
-However, in its current state, the easiest way to run this program is by using cargo:
+Start by building the project via cargo:
+```bash
+cargo build -r
+```
+If you would like to use the tool from anywhere in the terminal, move the binary to your system's PATH:
+```bash
+# For Unix-like systems
+sudo mv src/target/release/blfmt /usr/local/bin
+```
 
 #### Go Files:
 ```bash
-cargo run -- path/to/file.go
+blfmt path/to/file.go
 ```
  - The underlying Go implementation simply runs gofmt on the specified path, 
     so no additional information is required.
 
 #### Txt Files:
 ```bash
-cargo run -- path/to/file.txt -o 80 1 -t "Any optional" "Titles" "For where" "You want" "The file split"
+blfmt path/to/file.txt -o 80 1 -t "Any optional" "Titles" "For where" "You want" "The file split"
 ```
  - -o is short for --opts (meaning "options").
  - The arguments for the options are the columns and spacing. 
@@ -46,8 +49,8 @@ cargo run -- path/to/file.txt -o 80 1 -t "Any optional" "Titles" "For where" "Yo
 If you have a text file with *extremely* clearly defined paragraphs, 
 or if you're just doing a very simple reformat, then you may be lucky enough 
 to witness the glory of:
-```
-cargo run -- path/to/file.txt
+```bash
+blfmt path/to/file.txt
 ```
  - In the cases where this works as intended, it basically feels like magic. 
     - However, these cases are exceptionally rare.
@@ -59,8 +62,11 @@ cargo run -- path/to/file.txt
  > As cool as it would be, this program does *not* utilize actual magic to function.
 
 #### C/C++ files:
+
+**Note:** *Basic C/C++ files are currently supported, but certain constructs may not work properly. Always make a copy of your files before formatting.*
+
 ```bash
-cargo run -- path/to/file.c(pp)
+blfmt path/to/file.c(pp)
 ```
 
  - C/C++ files will be formatted using my personal favorite style. 
@@ -96,8 +102,8 @@ variant of K&R) and K&R (can be typed KnR or knr as well). The style can be spec
 like so:
 
 ```bash
-cargo run -- path/to/file.c -s knr
-cargo run -- path/to/file.c --style stroustrup
+blfmt path/to/file.c -s knr
+blfmt path/to/file.c --style stroustrup
 ```
 In the future, Allman style will be supported. If no style is specified, the 
 Stroustrup option will be used by default.
