@@ -33,30 +33,23 @@ fn main() {
     let res_arg = options::check_restore_arg(&args);
     if res_arg == 1 { return; }
 
+    let write_arg = options::check_write_arg(&args);
     let file_type = utils::infer_file_type(&filepath);
     match file_type.as_str() {
         ".txt" => {
             let opts: options::TxtOpts = options::get_txt_opts(&args);
-            format::format_txt_file(filepath, opts, &args);
+            format::format_txt_file(filepath, opts, &args, write_arg);
         },
         ".go" => {
             format::format_go_file(filepath);
         },
-        ".cpp" => {
+        ".cpp" | ".cc" | ".C" | ".hpp" | ".hh" | ".H" => {
             let style = options::get_c_style(&args);
-            format::format_cpp_file(filepath, style);
+            format::format_cpp_file(filepath, style, write_arg);
         },
-        ".hpp" => {
+        ".c" | ".h" => {
             let style = options::get_c_style(&args);
-            format::format_cpp_file(filepath, style);
-        },
-        ".c" => {
-            let style = options::get_c_style(&args);
-            format::format_c_file(filepath, style);
-        },
-        ".h" => {
-            let style = options::get_c_style(&args);
-            format::format_c_file(filepath, style);
+            format::format_c_file(filepath, style, write_arg);
         },
         ".py" => {
             format::format_py_file(filepath);

@@ -611,7 +611,7 @@ pub fn infer_file_type(filepath: &String) -> String {
 pub fn get_file_extensions_list() -> Vec<String> {
     // .cpp has to stay before .c, otherwise it breaks
     let exts = {
-        vec![".cpp", ".cc", ".c", ".hpp", ".hh", ".h", ".go", ".py", ".txt"]
+        vec![".cpp", ".cc", ".C", ".c", ".hpp", ".hh", ".H", ".h", ".go", ".py", ".txt"]
             .into_iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>()
@@ -637,3 +637,16 @@ pub fn check_valid_file_ext(path: &String) -> bool {
 pub fn print_usage() {
     println!("USAGE:\nblfmt <file-path> <flags + opts>");
 }
+
+pub fn write_results(path: &String, results: String) {
+    let ok = write_file(path, results.as_bytes());
+    match ok {
+        Ok(_) => println!("Successfully wrote: '{}'", path),
+        Err(e) => println!("Error during `format_txt_file()`: {}", e),
+    };
+}
+
+pub fn print_results(results: &String) {
+    println!("{}", results);
+}
+
