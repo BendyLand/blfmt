@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command;
 
-pub fn format_c_file(path: String, style: utils::Style) {
+pub fn format_c_file(path: String, style: utils::Style, write_arg: bool) {
     let ast = c_format::parse_c_file(path.clone());
     let contents = std::fs::read_to_string(&path).unwrap_or("NOFILE".to_string());
     if contents == "NOFILE".to_string() {
@@ -12,14 +12,11 @@ pub fn format_c_file(path: String, style: utils::Style) {
         return;
     }
     let result = c_ast::traverse_c_ast(ast, contents, style);
-    let ok = utils::write_file(&path, result.as_bytes());
-    match ok {
-        Ok(_) => println!("Successfully wrote: '{}'", path),
-        Err(e) => println!("Error during `format_c_file()`: {}", e),
-    };
+    if write_arg { utils::write_results(&path, result); }
+    else { utils::print_results(&result); }
 }
 
-pub fn format_cpp_file(path: String, style: utils::Style) {
+pub fn format_cpp_file(path: String, style: utils::Style, write_arg: bool) {
     let ast = cpp_format::parse_cpp_file(path.clone());
     let contents = std::fs::read_to_string(&path).unwrap_or("NOFILE".to_string());
     if contents == "NOFILE".to_string() {
@@ -27,11 +24,8 @@ pub fn format_cpp_file(path: String, style: utils::Style) {
         return;
     }
     let result = cpp_ast::traverse_cpp_ast(ast, contents, style);
-    let ok = utils::write_file(&path, result.as_bytes());
-    match ok {
-        Ok(_) => println!("Successfully wrote: '{}'", path),
-        Err(e) => println!("Error during `format_cpp_file()`: {}", e),
-    };
+    if write_arg { utils::write_results(&path, result); }
+    else { utils::print_results(&result); }
 }
 
 pub fn format_py_file(path: String) {
@@ -53,7 +47,7 @@ pub fn format_go_file(path: String) {
     }
 }
 
-pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String]) {
+pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String], write_arg: bool) {
     let path_clone = path.clone();
     let file_contents = fs::read_to_string(&path).unwrap();
     let result = String::new();
@@ -69,9 +63,6 @@ pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[Strin
         sep += "\n";
     }
     let paragraphs = result.join(sep.as_str());
-    let ok = utils::write_file(&path, paragraphs.as_bytes());
-    match ok {
-        Ok(_) => println!("Successfully wrote: '{}'", path_clone),
-        Err(e) => println!("Error during `format_txt_file()`: {}", e),
-    };
+    if write_arg { utils::write_results(&path, paragraphs); }
+    else { utils::print_results(&paragraphs); }
 }

@@ -1,3 +1,19 @@
+(new c)
+You shouldn't be here (field_expression): parenthesized_expression
+
+You shouldn't be here (field_expression): parenthesized_expression
+
+You shouldn't be here (parenthesized_expression): subscript_expression
+
+You shouldn't be here (field_expression): parenthesized_expression
+
+You shouldn't be here (field_expression): parenthesized_expression
+
+You shouldn't be here (field_expression): parenthesized_expression
+
+Successfully wrote: 'todo.c'
+
+(old cpp?)
 You shouldn't be here (type_descriptor): abstract_reference_declarator
 
 You shouldn't be here (function_declarator): ...
