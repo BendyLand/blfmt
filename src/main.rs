@@ -27,8 +27,7 @@ fn main() {
             None => (String::new(), Vec::<String>::new()),
         }
     };
-    let help_arg = options::check_help_arg(&args);
-    if help_arg == 1 { return; }
+    let help_arg = options::check_help_arg(&args); if help_arg == 1 { return; }
 
     let res_arg = options::check_restore_arg(&args);
     if res_arg == 1 { return; }

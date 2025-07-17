@@ -120,7 +120,8 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
     }
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
-    result = result.trim_start().to_string();
+    result = utils::fix_stars(result);
+    utils::tidy_up_loose_ends(&mut result);
     return result;
 }
 
@@ -405,7 +406,10 @@ fn handle_function_definition(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (function_definition): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_pointer_spaces(result);
+    // result = utils::remove_pointer_spaces(result);
+    // result = utils::remove_reference_spaces(result);
+    // result = utils::remove_dereference_spaces(result);
+    result = utils::ensure_space_after_char(&result, '=');
     result = result.trim_end().to_string();
     return result;
 }
@@ -428,6 +432,9 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             },
             "binary_expression" => {
                 result = handle_binary_expression(node, src.clone());
+            },
+            "unary_expression" => {
+                result = handle_unary_expression(node, src.clone());
             },
             "pointer_expression" => {
                 result = handle_pointer_expression(node, src.clone());
@@ -1274,6 +1281,8 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (pointer_declarator): {}\n", node.kind()),
         }
     }
+    // In order to properly format the stars, first they *all* need to be pushed forward
+    result = utils::remove_dereference_spaces(result);
     return result;
 }
 
@@ -1456,6 +1465,8 @@ fn handle_inner_binary_expression(root: Node, src: String) -> String {
                 let subscript_expression = handle_subscript_expression(node, src.clone());
                 parts.push(subscript_expression);
             },
+            "true" => parts.push("true".to_string()),
+            "false" => parts.push("false".to_string()),
             "+" => parts.push("+".to_string()),
             "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
@@ -1559,6 +1570,14 @@ fn handle_parenthesized_expression(root: Node, src: String) -> String {
                 let update_expression = handle_update_expression(node, src.clone());
                 result += update_expression.as_str();
             },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                result += subscript_expression.as_str();
+            },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                result += format!("{} ", error).as_str();
+            },
             "(" => result += "(",
             ")" => result += ")",
             _ => println!("You shouldn't be here (parenthesized_expression): {}\n", node.grammar_name()),
@@ -1598,6 +1617,10 @@ fn handle_pointer_expression(root: Node, src: String) -> String {
             "cast_expression" => {
                 let cast_expression = handle_cast_expression(node, src.clone());
                 result += cast_expression.as_str();
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node, src.clone());
+                result += unary_expression.as_str();
             },
             "*" => result += "* ",
             "&" => result += "&",
@@ -1740,6 +1763,10 @@ fn handle_field_expression(root: Node, src: String) -> String {
                 let field_expression = handle_inner_field_expression(node, src.clone());
                 result += field_expression.as_str();
             },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
+            },
             "->" => result += "->",
             "." => result += ".",
             _ => println!("You shouldn't be here (field_expression): {}\n", node.grammar_name()),
@@ -1758,6 +1785,9 @@ fn handle_error(root: Node, src: String) -> String {
             "binary_expression" => {
                 result = handle_binary_expression(node, src.clone());
             },
+            "compound_statement" => {
+                result = handle_compound_statement(node, src.clone());
+            },
             "ERROR" => {
                 result = node.utf8_text(src.as_bytes()).unwrap().to_string();
             },
@@ -1765,6 +1795,10 @@ fn handle_error(root: Node, src: String) -> String {
             "}" => result = "}".to_string(),
             ";" => result = ";".to_string(),
             "=" => result = "=".to_string(),
+            "(" => result = "(".to_string(),
+            ")" => result = ")".to_string(),
+            "-" => result = "-".to_string(),
+            ">" => result = ">".to_string(),
             _ => println!("You shouldn't be here (ERROR): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
     }
@@ -2009,6 +2043,10 @@ fn handle_conditional_expression(root: Node, src: String) -> String {
                 let call_expression = handle_call_expression(node, src.clone());
                 parts.push(call_expression);
             },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                parts.push(cast_expression);
+            },
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
                 parts.push(field_expression);
@@ -2087,6 +2125,18 @@ fn handle_unary_expression(root: Node, src: String) -> String {
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
                 result += number_literal.as_str();
+            },
+            "assignment_expression" => {
+                let assignment_expression = handle_assignment_expression(node, src.clone());
+                result += assignment_expression.as_str();
+            },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                result += subscript_expression.as_str();
+            },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                result += format!("{} ", error).as_str();
             },
             "!" => result += "!",
             "~" => result += "~",
