@@ -67,6 +67,20 @@ fn check_line_is_blank(line: &String) -> bool {
     return line.is_empty() || line.chars().all(|x| x.is_whitespace() || x == '\t');
 }
 
+fn remove_blank_lines_from_blocks(file: &mut String) {
+    let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
+    let mut result = Vec::<String>::new();
+    let mut in_block = false;
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        let at_block_end = in_block && (line == "}".to_string() || line == "};".to_string());
+        if !in_block && line == "{".to_string() { in_block = true; }
+        else if at_block_end { in_block = false; }
+        if in_block && !check_line_is_blank(&line) { result.push(line.clone()); }
+        else if !in_block { result.push(line.clone()); }
+    }
+    *file = result.join("\n").trim_end().to_string() + "\n";
+}
+
 fn ensure_no_consecutive_blank_lines(file: &mut String) {
     let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
     let mut result = Vec::<String>::new();
@@ -85,7 +99,7 @@ fn ensure_no_consecutive_blank_lines(file: &mut String) {
     *file = result.join("\n").trim_end().to_string() + "\n";
 }
 
-//todo: make a function that scans for the specific constructs that get aggressively formatted (e.g., maps)
+//TODO: make a function that scans for the specific constructs that get aggressively formatted (e.g., maps)
 pub fn scan_for_lines_before_blank_lines(file: String) -> Vec<(usize, String)> {
     let mut result = Vec::<(usize, String)>::new();
     let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
@@ -120,7 +134,6 @@ fn format_long_lines(file: &mut String, target_len: usize) {
     for (i, entry) in lines.clone().iter().enumerate() {
         if entry.len() > target_len {
             if entry.chars().filter(|x| *x == '\"').count() == 2 && !entry.contains("{") {
-                dbg!(&entry);
                 lines[i] = format_long_string_line(&entry, target_len);
             }
         }
@@ -128,7 +141,7 @@ fn format_long_lines(file: &mut String, target_len: usize) {
     *file = lines.join("\n");
 }
 
-//todo: create functions/algorithms to format specific kinds of long lines.
+//TODO: create functions/algorithms to format specific kinds of long lines.
 //this kind of almost works for certain cases
 fn format_long_string_line(line: &String, target_len: usize) -> String {
     let mut result = line.clone();
@@ -193,7 +206,7 @@ pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)
     *file = lines.join("\n");
 }
 
-pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<(usize, String)>) {
+pub fn tidy_up_loose_ends(file: &mut String/*, lines_before_blank_lines: Vec<(usize, String)>*/) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_clone: Vec<String> = lines.clone();
     for (i, line) in lines_clone.into_iter().enumerate() {
@@ -202,10 +215,11 @@ pub fn tidy_up_loose_ends(file: &mut String, lines_before_blank_lines: Vec<(usiz
         }
     }
     *file = lines.join("\n");
-    format_long_lines(file, 100);
-    add_blank_lines_back(file, lines_before_blank_lines);
-    ensure_no_consecutive_blank_lines(file);
-    // shift_back_preproc_lines(file);
+    // format_long_lines(file, 100);
+    // add_blank_lines_back(file, lines_before_blank_lines);
+    // ensure_no_consecutive_blank_lines(file);
+    remove_blank_lines_from_blocks(file);
+    shift_back_preproc_lines(file);
 }
 
 fn shift_back_preproc_lines(file: &mut String) {
@@ -238,7 +252,53 @@ pub fn format_else_lines(file: &mut String, style: &Style) {
 }
 
 fn format_to_allman(file: &mut String) {
-    //todo: implement
+    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
+    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i].trim_start();
+        // Skip comments
+        if line.starts_with("//") || line.starts_with("/*") {
+            i += 1;
+            continue;
+        }
+        // Handle `else`
+        if pattern.is_match(&lines[i]) {
+            if let Some(idx) = lines[i].find("else") {
+                let indents = lines[i].chars().take_while(|&c| c == '\t').count();
+                lines[i].insert(idx, '\n');
+                for _ in 0..indents {
+                    lines[i].insert(idx + 1, '\t');
+                }
+            }
+        }
+        // Handle `catch`
+        else if catch_pattern.is_match(&lines[i]) {
+            if let Some(idx) = lines[i].find("catch") {
+                let indents = lines[i].chars().take_while(|&c| c == '\t').count();
+                lines[i].insert(idx, '\n');
+                for _ in 0..indents {
+                    lines[i].insert(idx + 1, '\t');
+                }
+            }
+        }
+        // Handle opening braces `{` on the same line as code (Allman conversion)
+        if let Some(pos) = lines[i].find('{') {
+            // Make sure it's not the only thing on the line already
+            if lines[i].trim() != "{" {
+                let indent = lines[i].chars().take_while(|&c| c == '\t').collect::<String>();
+                let before = lines[i][..pos].trim_end().to_string();
+                let after = &lines[i][pos + 1..].to_string().clone(); // Skip over the brace
+                lines[i] = before;
+                lines.insert(i + 1, format!("{}{{{}", indent, after));
+                i += 1; // skip over the inserted line
+            }
+        }
+        i += 1;
+    }
+    let result = lines.join("\n");
+    *file = result;
 }
 
 fn format_to_stroustrup(file: &mut String) {
@@ -341,6 +401,73 @@ pub fn add_all_leading_tabs(text: String) -> String {
         temp_vec.push(temp_str);
     }
     return temp_vec.join("\n");
+}
+
+pub fn fix_stars(file: String) -> String {
+    let lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let mut parts = Vec::<String>::new();
+    for line in lines {
+        let mut temp_line = String::new();
+        for (i, c) in line.char_indices() {
+            if line.len() > 1 {
+                if i <= line.len()-2 && i > 0 {
+                    let deref = {
+                        c == ' ' &&
+                        line.at(i-1).unwrap() == '*' &&
+                        line.at(i+1).unwrap().is_alphanumeric() &&
+                        (
+                            line.at(i-2).unwrap() == '(' ||
+                            line.at(i-2).unwrap() == '\t'
+                        )
+                    };
+                    if deref { continue; }
+                    let ok = {
+                        c == '*' &&
+                        line.at(i-1).unwrap() == ' ' &&
+                        line.at(i+1).unwrap() == ' '
+                    };
+                    if ok {
+                        temp_line.push(c);
+                        continue;
+                    }
+                    let ptr = {
+                        c == '*' &&
+                        line.at(i+1).unwrap().is_alphanumeric() &&
+                        (
+                            line.at(i-1).unwrap().is_alphanumeric() ||
+                            line.at(i-1).unwrap() == '*' 
+                        )
+                    };
+                    if ptr {
+                        temp_line += format!("{} ", c).as_str();
+                        continue;
+                    }
+                    let fix = {
+                        c == '*' &&
+                        line.at(i-1).unwrap().is_alphanumeric() &&
+                        line.at(i+1).unwrap().is_whitespace()
+                    };
+                    if fix {
+                        temp_line += format!(" {}", c).as_str();
+                        continue;
+                    }
+                    let fix_ptr = {
+                        c == '*' &&
+                        line.at(i-1).unwrap().is_whitespace() &&
+                        line.at(i+1).unwrap().is_alphanumeric()
+                    };
+                    if fix_ptr {
+                        temp_line.pop();
+                        temp_line += format!("{} ", c).as_str();
+                        continue
+                    }
+                }
+            }
+            temp_line.push(c);
+        }
+        parts.push(temp_line);
+    }
+    return parts.join("\n");
 }
 
 pub fn remove_dereference_spaces(line: String) -> String {

@@ -171,7 +171,8 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
     utils::close_empty_curly_brace_blocks(&mut result);
-    utils::tidy_up_loose_ends(&mut result, lines_before_blank_lines);
+    result = utils::fix_stars(result);
+    utils::tidy_up_loose_ends(&mut result/*, lines_before_blank_lines*/);
     result = result.trim_start().to_string();
     return result;
 }
@@ -500,9 +501,7 @@ fn handle_function_definition(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (function_definition): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_pointer_spaces(result);
     result = utils::remove_reference_spaces(result);
-    result = utils::remove_dereference_spaces(result);
     result = utils::ensure_space_after_char(&result, '=');
     result = result.trim_end().to_string();
     return result;
@@ -527,6 +526,9 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             "binary_expression" => {
                 result = handle_binary_expression(node, src.clone());
             },
+            "unary_expression" => {
+                result = handle_unary_expression(node, src.clone());
+            },
             "pointer_expression" => {
                 result = handle_pointer_expression(node, src.clone());
             },
@@ -548,7 +550,6 @@ fn handle_expression_statement(root: Node, src: String) -> String {
         }
     }
     result = utils::remove_unnecessary_spaces(result);
-
     return result;
 }
 
@@ -606,6 +607,10 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
             "conditional_expression" => {
                 let conditional_expression = handle_conditional_expression(node, src.clone());
                 parts.push(conditional_expression);
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                parts.push(qualified_identifier);
             },
             _ => println!("You shouldn't be here (assignment_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
@@ -781,6 +786,11 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
             "labeled_statement" => {
                 let labeled_statement = handle_labeled_statement(node, src.clone());
                 parts.push(labeled_statement);
+            },
+            "preproc_if" => {
+                let mut preproc_if = handle_preproc_if(node, src.clone());
+                preproc_if = utils::add_all_leading_tabs(preproc_if);
+                parts.push(preproc_if);
             },
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
@@ -1389,6 +1399,7 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                         let comment = handle_comment(node, src.clone());
                         temp += format!("{} ", comment).as_str();
                     },
+                    "..." => temp += " ...",
                     _ => println!("You shouldn't be here (function_declarator): {}\n", subnode.grammar_name()),
                 }
             }
@@ -1441,6 +1452,7 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (pointer_declarator): {}\n", node.kind()),
         }
     }
+    result = utils::remove_dereference_spaces(result);
     return result;
 }
 
@@ -2134,6 +2146,10 @@ fn handle_type_descriptor(root: Node, src: String) -> String {
                 let type_qualifier = handle_type_qualifier(node, src.clone());
                 result += format!("{} ", type_qualifier).as_str();
             },
+            "abstract_reference_declarator" => {
+                let abstract_reference_declarator = handle_abstract_reference_declarator(node, src.clone());
+                result += format!("{} ", abstract_reference_declarator).as_str();
+            },
             _ => println!("You shouldn't be here (type_descriptor): {}\n", node.grammar_name()),
         }
     }
@@ -2340,6 +2356,10 @@ fn handle_unary_expression(root: Node, src: String) -> String {
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
                 result += number_literal.as_str();
+            },
+            "assignment_expression" => {
+                let assignment_expression = handle_assignment_expression(node, src.clone());
+                result += assignment_expression.as_str();
             },
             "!" => result += "!",
             "~" => result += "~",
@@ -2706,7 +2726,7 @@ fn handle_enum_specifier(root: Node, src: String) -> String {
             },
             "enumerator_list" => {
                 let enumerator_list = handle_enumerator_list(node, src.clone());
-                result += format!("{} ", enumerator_list).as_str();
+                result += format!("\n{}", enumerator_list).as_str();
             },
             "field_declaration_list" => {
                 let field_declaration_list = handle_field_declaration_list(node, src.clone());
@@ -3667,6 +3687,10 @@ fn handle_preproc_elif(root: Node, src: String) -> String {
             "preproc_else" => {
                 let preproc_else = handle_preproc_else(node, src.clone());
                 result += format!("{}\n", preproc_else).as_str();
+            },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                result += format!("{}\n", expression_statement).as_str();
             },
             _ => println!("You shouldn't be here (preproc_elif): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
