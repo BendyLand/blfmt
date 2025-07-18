@@ -66,13 +66,12 @@ blfmt path/to/file.txt
 
 #### C/C++ files:
 
-**Note:** *Basic C/C++ files are currently supported, but certain constructs may not work properly. Always make a copy of your files before formatting.*
+**Note:** *Most C/C++ constructs are currently supported, but certain rare cases may not work properly. Always make a copy of your files before formatting.*
 
 ```bash
 blfmt path/to/file.c(pp)
 ```
-
- - C/C++ files will be formatted using my personal favorite style. 
+ - C/C++ files will be formatted using my personal favorite style (basically the Stroustrup variant of K&R). 
  - It is easier to show you than to try to explain it:
 ```c
 // Example C/C++ file format
@@ -100,13 +99,33 @@ Make sense? Good!
 Don't like it? That's actually pretty reasonable; it's not for everyone. 
 But you're in luck! There is support for specifying other styles!
 
-At the moment, the only available styles are the one above (known as the Stroustrup 
-variant of K&R) and K&R (can be typed KnR or knr as well). The style can be specified 
-like so:
-
+Currently, the formats supported are Allman, K&R, and Stroustrup:
 ```bash
 blfmt path/to/file.c -s knr
 blfmt path/to/file.c --style stroustrup
+blfmt path/to/file.c -s allman
 ```
-In the future, Allman style will be supported. If no style is specified, the 
-Stroustrup option will be used by default.
+(Note: top level statements will still get newline braces in K&R style. E.g. function and struct definitions)
+Stroustrup will be used by default.
+
+**Known limitations:**
+ - Mid-expression preprocessor directives:
+
+```c
+// source: https://github.com/torvalds/linux/blob/master/certs/blacklist.c (line: 335)
+        blacklist_keyring =                                                                               
+                keyring_alloc(".blacklist",                                                               
+                              GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),                           
+                              KEY_POS_VIEW | KEY_POS_READ | KEY_POS_SEARCH |                              
+                              KEY_POS_WRITE |                                                             
+                              KEY_USR_VIEW | KEY_USR_READ | KEY_USR_SEARCH                                
+#ifdef CONFIG_SYSTEM_BLACKLIST_AUTH_UPDATE                                                                
+                              | KEY_USR_WRITE                                                             
+#endif                                                                                                    
+                              , KEY_ALLOC_NOT_IN_QUOTA |                                                  
+                              KEY_ALLOC_SET_KEEP,                                                         
+                              restriction, NULL); 
+```
+   - Since tree-sitter currently cannot parse preprocessor directives mid-argument like that, the formatter simply removes them right now.
+     - **This is a destructive action**
+

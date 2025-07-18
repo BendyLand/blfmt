@@ -60,8 +60,7 @@ int main(int argc, char** argv)
 		if (res3.first == 0) cout << "Captions added successfully!\n" << endl;
 		std::string remove_cmd = "rm " + output;
 		std::pair<int, std::string> res4 = OS::run_command(remove_cmd);
-	}
-	else {
+	} else {
 		cout << "Usage: blcap <video_file>" << endl;
 	}
 	return 0;
@@ -187,8 +186,7 @@ std::string get_caption_cmd(int argc, char** argv, str_arg filename, str_arg tra
 			cout << "Invlaid flag." << endl;
 			break;
 		}
-	}
-	else {
+	} else {
 		result = format_str("ffmpeg -y -i %s -i %s -c:v copy -c:a copy -c:s mov_text %s_w_captions.mp4", filename.c_str(), transcript_path.c_str(), get_output_name(filename).c_str());
 	}
 	return result;
