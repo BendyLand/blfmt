@@ -417,8 +417,8 @@ fn handle_declaration(root: Node, src: String) -> String {
         }
     }
     result = parts.join(" ");
-    if result.contains(",") { result = utils::remove_whitespace_before_commas(result); }
-    result = utils::remove_unnecessary_spaces(result);
+    if result.contains(",") { result = utils::remove_whitespace_before_commas(&result); }
+    result = utils::remove_unnecessary_spaces(&result);
     if result.contains("= \t[") {
         let idx = result.find("= \t[").unwrap();
         result.remove(idx+2);
@@ -549,7 +549,7 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1304,7 +1304,7 @@ fn handle_return_statement(root: Node, src: String) -> String {
         }
     }
     result = parts.join(" ");
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1346,7 +1346,7 @@ fn handle_comment(root: Node, src: String) -> String {
     else {
         result = parts.join(" ");
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1864,7 +1864,7 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
         }
     }
     let mut result = parts.join(" ");
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -2661,7 +2661,7 @@ fn handle_field_declaration(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (field_declaration): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -3643,7 +3643,7 @@ fn handle_namespace_alias_definition(root: Node, src: String) -> String {
         }
     }
     let mut result = parts.join(" ");
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -3734,7 +3734,7 @@ fn handle_alias_declaration(root: Node, src: String) -> String {
         }
     }
     let mut result = parts.join(" ");
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 

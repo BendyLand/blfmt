@@ -347,8 +347,8 @@ fn handle_declaration(root: Node, src: String) -> String {
         }
     }
     result = parts.join(" ");
-    if result.contains(",") { result = utils::remove_whitespace_before_commas(result); }
-    result = utils::remove_unnecessary_spaces(result);
+    if result.contains(",") { result = utils::remove_whitespace_before_commas(&result); }
+    result = utils::remove_unnecessary_spaces(&result);
     if result.contains("**") { result = utils::remove_pointer_spaces(result); }
     return result;
 }
@@ -406,9 +406,6 @@ fn handle_function_definition(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (function_definition): {}\n", node.grammar_name()),
         }
     }
-    // result = utils::remove_pointer_spaces(result);
-    // result = utils::remove_reference_spaces(result);
-    // result = utils::remove_dereference_spaces(result);
     result = utils::ensure_space_after_char(&result, '=');
     result = result.trim_end().to_string();
     return result;
@@ -440,13 +437,32 @@ fn handle_expression_statement(root: Node, src: String) -> String {
                 result = handle_pointer_expression(node, src.clone());
             },
             "ERROR" => {
-                result = handle_error(node, src.clone());
+                    println!(
+                        "Warning: encountered ERROR node, likely due to preprocessor macro interrupt.\n\t--> {:?}\n",
+                        node.utf8_text(src.as_bytes()).unwrap_or("[unreadable]")
+                    );
+                /*
+                This is likely a preproc macros mid-declaration:
+                        blacklist_keyring =                                                                                   
+                                keyring_alloc(".blacklist",                                                                   
+                                              GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),                               
+                                              KEY_POS_VIEW | KEY_POS_READ | KEY_POS_SEARCH |                                  
+                                              KEY_POS_WRITE |                                                                 
+                                              KEY_USR_VIEW | KEY_USR_READ | KEY_USR_SEARCH                                    
+                #ifdef CONFIG_SYSTEM_BLACKLIST_AUTH_UPDATE                                                                    
+                                              | KEY_USR_WRITE                                                                 
+                #endif                                                                                                        
+                                              , KEY_ALLOC_NOT_IN_QUOTA |                                                      
+                                              KEY_ALLOC_SET_KEEP,                                                             
+                                              restriction, NULL);
+                */
+                // result = handle_error(node, src.clone());
             },
             ";" => result += ";",
             _ => println!("You shouldn't be here (expression_statement): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -525,8 +541,27 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
                 parts.push(sizeof_expression);
             },
             "ERROR" => {
-                let error = handle_error(node, src.clone());
-                parts.push(error);
+                println!(
+                    "Warning: encountered ERROR node, likely due to preprocessor macro interrupt.\n\t--> {:?}\n",
+                    node.utf8_text(src.as_bytes()).unwrap_or("[unreadable]")
+                );
+                /*
+                This is likely a preproc macros mid-declaration:
+                        blacklist_keyring =                                                                                   
+                                keyring_alloc(".blacklist",                                                                   
+                                              GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),                               
+                                              KEY_POS_VIEW | KEY_POS_READ | KEY_POS_SEARCH |                                  
+                                              KEY_POS_WRITE |                                                                 
+                                              KEY_USR_VIEW | KEY_USR_READ | KEY_USR_SEARCH                                    
+                #ifdef CONFIG_SYSTEM_BLACKLIST_AUTH_UPDATE                                                                    
+                                              | KEY_USR_WRITE                                                                 
+                #endif                                                                                                        
+                                              , KEY_ALLOC_NOT_IN_QUOTA |                                                      
+                                              KEY_ALLOC_SET_KEEP,                                                             
+                                              restriction, NULL);
+                */
+                // let error = handle_error(node, src.clone());
+                // parts.push(error);
             },
             _ => println!("You shouldn't be here (assignment_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
@@ -596,8 +631,23 @@ fn handle_inner_assignment_expression(root: Node, src: String) -> String {
                 parts.push(sizeof_expression);
             },
             "ERROR" => {
-                let error = handle_error(node, src.clone());
-                parts.push(error);
+                /*
+                This is likely a preproc macros mid-declaration:
+                        blacklist_keyring =                                                                                   
+                                keyring_alloc(".blacklist",                                                                   
+                                              GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),                               
+                                              KEY_POS_VIEW | KEY_POS_READ | KEY_POS_SEARCH |                                  
+                                              KEY_POS_WRITE |                                                                 
+                                              KEY_USR_VIEW | KEY_USR_READ | KEY_USR_SEARCH                                    
+                #ifdef CONFIG_SYSTEM_BLACKLIST_AUTH_UPDATE                                                                    
+                                              | KEY_USR_WRITE                                                                 
+                #endif                                                                                                        
+                                              , KEY_ALLOC_NOT_IN_QUOTA |                                                      
+                                              KEY_ALLOC_SET_KEEP,                                                             
+                                              restriction, NULL);
+                */
+                // let error = handle_error(node, src.clone());
+                // parts.push(error);
             },
             "true" => parts.push("true".to_string()),
             "false" => parts.push("false".to_string()),
@@ -803,7 +853,6 @@ fn handle_if_statement(root: Node, src: String) -> String {
     return result;
 }
 
-//todo: Eventually make a parameter to handle else style
 fn handle_else_clause(root: Node, src: String) -> String {
     let mut pieces = Vec::<String>::new();
     for node in root.children(&mut root.walk()) {
@@ -813,7 +862,6 @@ fn handle_else_clause(root: Node, src: String) -> String {
                 pieces.push(inner_compound_statement);
             }
             "else" => {
-                //* This is where placement of "else" happens
                 pieces.push("else".to_string());
             },
             "switch_statement" => {
@@ -1058,6 +1106,10 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let concatenated_string = handle_concatenated_string(node, src.clone());
                 result += concatenated_string.as_str();
             },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                result += error.as_str();
+            },
             _ => println!("You shouldn't be here (argument_list): {}\n", node.grammar_name()),
         }
     }
@@ -1143,7 +1195,7 @@ fn handle_return_statement(root: Node, src: String) -> String {
         }
     }
     result = parts.join(" ");
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1185,7 +1237,7 @@ fn handle_comment(root: Node, src: String) -> String {
     else {
         result = parts.join(" ");
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1269,6 +1321,10 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
             "type_identifier" => {
                 let type_identifier = handle_type_identifier(node, src.clone());
                 result += type_identifier.as_str();
+            },
+            "type_qualifier" => {
+                let type_qualifier = handle_type_qualifier(node, src.clone());
+                result += type_qualifier.as_str();
             },
             "field_identifier" => {
                 let field_identifier = handle_field_identifier(node, src.clone());
@@ -1363,8 +1419,26 @@ fn handle_binary_expression(root: Node, src: String) -> String {
                 parts.push(call_expression);
             },
             "ERROR" => {
-                let error = handle_error(node, src.clone());
-                parts.push(error);
+                /*
+                    This is likely the condition being checked by some kind
+                    of preproc check mid-expression. In:
+
+                    keyring_alloc(".blacklist",                                                                   
+                                  GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),                               
+                                  KEY_POS_VIEW | KEY_POS_READ | KEY_POS_SEARCH |                                  
+                                  KEY_POS_WRITE |                                                                 
+                                  KEY_USR_VIEW | KEY_USR_READ | KEY_USR_SEARCH                                    
+                #ifdef CONFIG_SYSTEM_BLACKLIST_AUTH_UPDATE                                                                    
+                                 | KEY_USR_WRITE                                                                 
+                #endif                                                                                                        
+                                  , KEY_ALLOC_NOT_IN_QUOTA |                                                      
+                                  KEY_ALLOC_SET_KEEP,                                                             
+                                  restriction, NULL);
+
+                    The ERROR would be CONFIG_SYSTEM_BLACKLIST_AUTH_UPDATE                    
+                */
+                // let error = handle_error(node, src.clone());
+                // parts.push(error);
             },
             "update_expression" => {
                 let update_expression = handle_update_expression(node, src.clone());
@@ -1379,7 +1453,8 @@ fn handle_binary_expression(root: Node, src: String) -> String {
                 parts.push(binary_expression);
             },
             "pointer_expression" => {
-                let pointer_expression = handle_pointer_expression(node, src.clone());
+                let mut pointer_expression = handle_pointer_expression(node, src.clone());
+                pointer_expression = utils::remove_dereference_spaces(pointer_expression);
                 parts.push(pointer_expression);
             },
             "cast_expression" => {
@@ -1413,7 +1488,8 @@ fn handle_binary_expression(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (binary_expression): {}\n", node.grammar_name()),
         }
     }
-    let result = parts.join(" ");
+    let mut result = parts.join(" ");
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1682,11 +1758,19 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
                 let array_declarator = handle_array_declarator(node, src.clone());
                 parts.push(array_declarator);
             },
+            "enum_specifier" => {
+                let enum_specifier = handle_enum_specifier(node, src.clone());
+                parts.push(enum_specifier);
+            },
+            "union_specifier" => {
+                let union_specifier = handle_union_specifier(node, src.clone());
+                parts.push(union_specifier);
+            },
             _ => println!("You shouldn't be here (parameter_declaration): {}\n", node.grammar_name()),
         }
     }
     let mut result = parts.join(" ");
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -1788,6 +1872,13 @@ fn handle_error(root: Node, src: String) -> String {
             "compound_statement" => {
                 result = handle_compound_statement(node, src.clone());
             },
+            /*NOTE
+                These two become errors when they are used mid-expression.
+                This usually breaks the surrounding syntax, so they are simply removed. 
+                *This is a destructive action and code behavior **will** change*
+            */
+            "#ifdef" => {}, // result = "#ifdef".to_string(); },
+            "#endif" => {}, // result = "#endif".to_string(); },
             "ERROR" => {
                 result = node.utf8_text(src.as_bytes()).unwrap().to_string();
             },
@@ -1857,6 +1948,10 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
                 parts.push(number_literal);
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                parts.push(string_literal);
             },
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
@@ -1970,6 +2065,10 @@ fn handle_initializer_list(root: Node, src: String) -> String {
             "initializer_list" => {
                 let initializer_list = handle_initializer_list(node, src.clone());
                 result += initializer_list.as_str();
+            },
+            "initializer_pair" => {
+                let initializer_pair = handle_initializer_pair(node, src.clone());
+                result += initializer_pair.as_str();
             },
             "string_literal" => {
                 let string_literal = handle_string_literal(node, src.clone());
@@ -2223,6 +2322,7 @@ fn handle_labeled_statement(root: Node, src: String) -> String {
         match node.grammar_name() {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
+                result += format!("\n\t{}", expression_statement).as_str();
             },
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
@@ -2230,11 +2330,11 @@ fn handle_labeled_statement(root: Node, src: String) -> String {
             },
             "return_statement" => {
                 let return_statement = handle_return_statement(node, src.clone());
-                result += return_statement.as_str();
+                result += format!("\n\t{}", return_statement).as_str();
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
-                result += if_statement.as_str();
+                result += format!("\n\t{}", if_statement).as_str();
             },
             ":" => result += ": ",
             _ => println!("You shouldn't be here (labeled_statement): {}\n", node.grammar_name()),
@@ -2269,12 +2369,17 @@ fn handle_for_statement(root: Node, src: String) -> String {
             },
             "assignment_expression" => {
                 let assignment_expression = handle_assignment_expression(node, src.clone());
-                vec.push(assignment_expression);
+                if !reached_compound {
+                    temp += assignment_expression.as_str();
+                }
+                else {
+                    vec.push(assignment_expression);
+                }
             },
             "binary_expression" => {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 if !reached_compound {
-                    temp += format!(" {}", binary_expression).as_str();
+                    temp += binary_expression.as_str();
                 }
                 else {
                     vec.push(binary_expression);
@@ -2292,6 +2397,15 @@ fn handle_for_statement(root: Node, src: String) -> String {
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
                 vec.push(expression_statement);
+            },
+            "pointer_expression" => {
+                let mut pointer_expression = handle_pointer_expression(node, src.clone());
+                pointer_expression = utils::remove_dereference_spaces(pointer_expression);
+                temp += pointer_expression.as_str();
+            },
+            "comma_expression" => {
+                let comma_expression = handle_comma_expression(node, src.clone());
+                temp += comma_expression.as_str();
             },
             ";" => temp += "; ",
             "(" => temp += "(",
@@ -2440,7 +2554,7 @@ fn handle_field_declaration(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (field_declaration): {}\n", node.grammar_name()),
         }
     }
-    result = utils::remove_unnecessary_spaces(result);
+    result = utils::remove_unnecessary_spaces(&result);
     return result;
 }
 
@@ -2581,6 +2695,7 @@ fn handle_storage_class_specifier(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "static" => result += "static",
+            "extern" => result += "extern",
             _ => println!("You shouldn't be here (storage_class_specifier): {}\n", node.grammar_name()),
         }
     }
@@ -2622,6 +2737,31 @@ fn handle_preproc_ifdef(root: Node, src: String) -> String {
                 let preproc_include = handle_preproc_include(node, src.clone());
                 parts.push(preproc_include);
                 last_kind = "preproc_include";
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
+                last_kind = "comment";
+            },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                parts.push(expression_statement);
+                last_kind = "expression_statement";
+            },
+            "function_definition" => {
+                let function_definition = handle_function_definition(node, src.clone());
+                parts.push(function_definition);
+                last_kind = "function_definition";
+            },
+            "if_statement" => {
+                let if_statement = handle_if_statement(node, src.clone());
+                parts.push(if_statement);
+                last_kind = "if_statement";
+            },
+            "preproc_else" => {
+                let preproc_else = handle_preproc_else(node, src.clone());
+                parts.push(preproc_else);
+                last_kind = "preproc_else";
             },
             "declaration" => {
                 let mut declaration = handle_declaration(node, src.clone());
@@ -2703,6 +2843,7 @@ fn handle_preproc_function_def(root: Node, src: String) -> String {
             },
             "preproc_params" => {
                 let preproc_params = handle_preproc_params(node, src.clone());
+                result.pop();
                 result += format!("{} ", preproc_params).as_str();
             },
             "preproc_arg" => {
@@ -2725,6 +2866,14 @@ fn handle_preproc_else(root: Node, src: String) -> String {
                 let return_statement = handle_return_statement(node, src.clone());
                 parts.push(return_statement);
             },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
+            },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                parts.push(expression_statement);
+            },
             _ => println!("You shouldn't be here (preproc_else): {}\n", node.grammar_name()),
         }
     }
@@ -2738,6 +2887,21 @@ fn handle_variadic_parameter(root: Node, src: String) -> String {
         match node.grammar_name() {
             "..." => result += "...",
             _ => println!("You shouldn't be here (variadic_parameter): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
+fn handle_comma_expression(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "update_expression" => {
+                let update_expression = handle_update_expression(node, src.clone());
+                result += update_expression.as_str();
+            },
+            "," => result += ", ",
+            _ => println!("You shouldn't be here (comma_expression): {}\n", node.grammar_name()),
         }
     }
     return result;
@@ -2829,6 +2993,26 @@ fn handle_parameter_list(root: Node, src: String) -> String {
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             _ => println!("Parameter list: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_initializer_pair(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "field_designator" => result += format!("{} ", node.utf8_text(src.as_bytes()).unwrap()).as_str(),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                result += string_literal.as_str();
+            },
+            "=" => result += format!("= ").as_str(),
+            _ => println!("Initializer Pair: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;

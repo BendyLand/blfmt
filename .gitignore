@@ -8,3 +8,6 @@ safe_example_file.c
 example_header.h
 debug
 release
+summary*
+output*
+
