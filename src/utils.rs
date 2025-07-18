@@ -50,6 +50,204 @@ pub enum Style {
     Stroustrup,
 }
 
+pub fn format_else_lines(file: &mut String, style: &Style) {
+    match style {
+        Style::KnR => return,
+        Style::Allman => format_to_allman(file),
+        Style::Stroustrup => format_to_stroustrup(file),
+    }
+}
+
+fn format_to_allman(file: &mut String) {
+    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
+    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
+    let mut i = 0;
+    while i < lines.len() {
+        let line = lines[i].trim_start();
+        // Skip comments
+        if line.starts_with("//") || line.starts_with("/*") {
+            i += 1;
+            continue;
+        }
+        // Handle `else`
+        if pattern.is_match(&lines[i]) {
+            if let Some(idx) = lines[i].find("else") {
+                let indents = lines[i].chars().take_while(|&c| c == '\t').count();
+                lines[i].insert(idx, '\n');
+                for _ in 0..indents {
+                    lines[i].insert(idx + 1, '\t');
+                }
+            }
+        }
+        // Handle `catch`
+        else if catch_pattern.is_match(&lines[i]) {
+            if let Some(idx) = lines[i].find("catch") {
+                let indents = lines[i].chars().take_while(|&c| c == '\t').count();
+                lines[i].insert(idx, '\n');
+                for _ in 0..indents {
+                    lines[i].insert(idx + 1, '\t');
+                }
+            }
+        }
+        // Handle opening braces `{` on the same line as code (Allman conversion)
+        if let Some(pos) = lines[i].find('{') {
+            // Make sure it's not the only thing on the line already
+            if lines[i].trim() != "{" {
+                let indent = lines[i].chars().take_while(|&c| c == '\t').collect::<String>();
+                let before = lines[i][..pos].trim_end().to_string();
+                let after = &lines[i][pos + 1..].to_string().clone(); // Skip over the brace
+                lines[i] = before;
+                lines.insert(i + 1, format!("{}{{{}", indent, after));
+                i += 1; // skip over the inserted line
+            }
+        }
+        i += 1;
+    }
+    let result = lines.join("\n");
+    *file = result;
+}
+
+fn format_to_stroustrup(file: &mut String) {
+    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
+    let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
+    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
+    for i in 0..lines.len() {
+        if lines[i].trim_start().starts_with("//") || lines[i].trim_start().starts_with("/*") { continue; }
+        if pattern.is_match(&lines[i]) {
+            let idx = lines[i].find("else").unwrap();
+            let indents = lines[i].chars().filter(|x| *x == '\t').count();
+            lines[i].insert(idx-1, '\n');
+            lines[i].remove(idx);
+            for _ in 0..indents { lines[i].insert(idx, '\t'); }
+        }
+        else if catch_pattern.is_match(&lines[i]) {
+            let idx = lines[i].find("catch").unwrap();
+            let indents = lines[i].chars().filter(|x| *x == '\t').count();
+            lines[i].insert(idx-1, '\n');
+            lines[i].remove(idx);
+            for _ in 0..indents { lines[i].insert(idx, '\t'); }
+        }
+    }
+    let result = lines.join("\n");
+    *file = result;
+}
+
+pub fn tidy_up_loose_ends(file: &mut String/*, lines_before_blank_lines: Vec<(usize, String)>*/) {
+    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
+    let mut lines_clone: Vec<String> = lines.clone();
+    for (i, line) in lines_clone.into_iter().enumerate() {
+        if line.contains(",") {
+            lines[i] = ensure_space_after_char(&line, ',');
+        }
+    }
+    *file = lines.join("\n");
+    // format_long_lines(file, 100);
+    // add_blank_lines_back(file, lines_before_blank_lines);
+    remove_blank_lines_from_blocks(file);
+    ensure_no_consecutive_blank_lines(file);
+    ensure_proper_doc_comment_spacing(file);
+    fix_indentation_levels(file);
+    shift_back_preproc_lines(file);
+}
+
+pub fn detect_indentation(line: &String) -> usize {
+    let mut result = 0;
+    for c in line.chars() {
+        if c != '\t' { break; }
+        result += 1;
+    }
+    return result;
+}
+
+fn fix_indentation(line: &String, current: usize, target: usize) -> String {
+    let mut prefix = String::new();
+    let result: String;
+    if current < target {
+        for _ in current..target {
+            prefix += "\t";
+        }        
+        result = format!("{}{}", prefix, line);
+    }
+    else {
+        let mut temp = line.clone();
+        for _ in target..current {
+            temp = remove_single_tab(line);
+        }
+        result = temp;
+    }
+    return result;
+}
+
+fn fix_indentation_levels(file: &mut String) {
+    let lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let mut result = Vec::<String>::new();
+    let mut indent_level = 0;
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        if line == "}" || line.trim_start().starts_with("}") {
+            indent_level -= 1;
+        }
+        let current_level = detect_indentation(&line);
+        if current_level != indent_level {
+            let temp = fix_indentation(&line, current_level, indent_level);
+            result.push(temp);
+        }
+        else {
+            let temp = line.clone();
+            result.push(temp);
+        }
+        if line == "{" || line.ends_with("{") {
+            indent_level += 1;
+        }
+    }
+    *file = result.join("\n");
+}
+
+fn line_is_function_def(line: &String, pattern: &regex::Regex) -> bool {
+    return pattern.is_match(line)
+}
+
+fn line_is_doc_comment(line: &String) -> bool {
+    return line.trim_start().starts_with("*") && line.contains("*/");
+}
+
+fn find_next_function_def(remaining_lines: &[String], pattern: &regex::Regex) -> i32 {
+    for (i, line) in remaining_lines.into_iter().enumerate() {
+        if line_is_function_def(line, &pattern) {
+            return i as i32;
+        }
+    }
+    return -1;
+}
+
+fn find_next_doc_comment(remaining_lines: &[String]) -> i32 {
+    for (i, line) in remaining_lines.into_iter().enumerate() {
+        if line.trim_start().starts_with("*") && line.contains("*/") {
+            return i as i32;
+        }
+    }
+    return -1;
+}
+
+fn ensure_proper_doc_comment_spacing(file: &mut String) {
+    let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
+    let mut result = Vec::<String>::new();
+    let pattern = Regex::new("^(\\w*\\s*)*\\w+\\s+\\w+\\(.*\\)\\s*;?\\s*$").unwrap();
+    let mut lines_to_remove = Vec::<usize>::new();
+    for (i, line) in lines.clone().into_iter().enumerate() {
+        if i > 0 && i < lines.len()-1 {
+            if line.trim().is_empty() {
+                if line_is_doc_comment(lines.iter().nth(i-1).unwrap()) &&
+                   line_is_function_def(lines.iter().nth(i+1).unwrap(), &pattern) {
+                   continue;
+               }
+            }
+        }
+        result.push(line);
+    }
+    *file = result.join("\n").trim_end().to_string() + "\n";
+}
+
 pub fn ensure_space_after_char(line: &String, target: char) -> String {
     let mut result = String::new();
     for (i, c) in line.char_indices() {
@@ -63,9 +261,6 @@ pub fn ensure_space_after_char(line: &String, target: char) -> String {
     return result;
 }
 
-fn check_line_is_blank(line: &String) -> bool {
-    return line.is_empty() || line.chars().all(|x| x.is_whitespace() || x == '\t');
-}
 
 fn remove_blank_lines_from_blocks(file: &mut String) {
     let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
@@ -161,10 +356,10 @@ fn format_long_string_line(line: &String, target_len: usize) -> String {
 // fn format_long_array_line(line: String, target_len: usize) -> String {
     
 // }
+
 // fn format_long_function_definition_line(line: String, target_len: usize) -> String {
     
 // }
-
 
 // This function works unless the code jumps by more lines than the following block contains.
 pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)>) {
@@ -206,28 +401,13 @@ pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)
     *file = lines.join("\n");
 }
 
-pub fn tidy_up_loose_ends(file: &mut String/*, lines_before_blank_lines: Vec<(usize, String)>*/) {
-    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
-    let mut lines_clone: Vec<String> = lines.clone();
-    for (i, line) in lines_clone.into_iter().enumerate() {
-        if line.contains(",") {
-            lines[i] = ensure_space_after_char(&line, ',');
-        }
-    }
-    *file = lines.join("\n");
-    // format_long_lines(file, 100);
-    // add_blank_lines_back(file, lines_before_blank_lines);
-    // ensure_no_consecutive_blank_lines(file);
-    remove_blank_lines_from_blocks(file);
-    shift_back_preproc_lines(file);
-}
-
 fn shift_back_preproc_lines(file: &mut String) {
     let lines: Vec<String> = file.split("\n").map(|x| x.to_string()).collect();
     let mut parts = Vec::<String>::new();
     for line in lines {
-        if line.trim_start().starts_with("#") {
-            let temp = remove_single_tab(line);
+        // Labels are also shifted back here because it just made sense
+        if line.trim_start().starts_with("#") || line.trim_end().ends_with(":") {
+            let temp = remove_single_tab(&line);
             parts.push(temp);
         }
         else {
@@ -235,95 +415,6 @@ fn shift_back_preproc_lines(file: &mut String) {
         }
     }
     *file = parts.join("\n");
-}
-
-fn remove_single_tab(line: String) -> String {
-    let mut line = line.clone();
-    if line.starts_with("\t") { line.remove(0); }
-    return line;
-}
-
-pub fn format_else_lines(file: &mut String, style: &Style) {
-    match style {
-        Style::KnR => return,
-        Style::Allman => format_to_allman(file),
-        Style::Stroustrup => format_to_stroustrup(file),
-    }
-}
-
-fn format_to_allman(file: &mut String) {
-    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
-    let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
-    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
-    let mut i = 0;
-    while i < lines.len() {
-        let line = lines[i].trim_start();
-        // Skip comments
-        if line.starts_with("//") || line.starts_with("/*") {
-            i += 1;
-            continue;
-        }
-        // Handle `else`
-        if pattern.is_match(&lines[i]) {
-            if let Some(idx) = lines[i].find("else") {
-                let indents = lines[i].chars().take_while(|&c| c == '\t').count();
-                lines[i].insert(idx, '\n');
-                for _ in 0..indents {
-                    lines[i].insert(idx + 1, '\t');
-                }
-            }
-        }
-        // Handle `catch`
-        else if catch_pattern.is_match(&lines[i]) {
-            if let Some(idx) = lines[i].find("catch") {
-                let indents = lines[i].chars().take_while(|&c| c == '\t').count();
-                lines[i].insert(idx, '\n');
-                for _ in 0..indents {
-                    lines[i].insert(idx + 1, '\t');
-                }
-            }
-        }
-        // Handle opening braces `{` on the same line as code (Allman conversion)
-        if let Some(pos) = lines[i].find('{') {
-            // Make sure it's not the only thing on the line already
-            if lines[i].trim() != "{" {
-                let indent = lines[i].chars().take_while(|&c| c == '\t').collect::<String>();
-                let before = lines[i][..pos].trim_end().to_string();
-                let after = &lines[i][pos + 1..].to_string().clone(); // Skip over the brace
-                lines[i] = before;
-                lines.insert(i + 1, format!("{}{{{}", indent, after));
-                i += 1; // skip over the inserted line
-            }
-        }
-        i += 1;
-    }
-    let result = lines.join("\n");
-    *file = result;
-}
-
-fn format_to_stroustrup(file: &mut String) {
-    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
-    let pattern = Regex::new("^.*[^\\\"]\\belse\\b[^\\\"].*$").unwrap();
-    let catch_pattern = Regex::new("^.*[^\\\"]\\bcatch\\b[^\\\"].*$").unwrap();
-    for i in 0..lines.len() {
-        if lines[i].trim_start().starts_with("//") || lines[i].trim_start().starts_with("/*") { continue; }
-        if pattern.is_match(&lines[i]) {
-            let idx = lines[i].find("else").unwrap();
-            let indents = lines[i].chars().filter(|x| *x == '\t').count();
-            lines[i].insert(idx-1, '\n');
-            lines[i].remove(idx);
-            for _ in 0..indents { lines[i].insert(idx, '\t'); }
-        }
-        else if catch_pattern.is_match(&lines[i]) {
-            let idx = lines[i].find("catch").unwrap();
-            let indents = lines[i].chars().filter(|x| *x == '\t').count();
-            lines[i].insert(idx-1, '\n');
-            lines[i].remove(idx);
-            for _ in 0..indents { lines[i].insert(idx, '\t'); }
-        }
-    }
-    let result = lines.join("\n");
-    *file = result;
 }
 
 pub fn close_empty_curly_brace_blocks(file: &mut String) {
@@ -411,6 +502,7 @@ pub fn fix_stars(file: String) -> String {
         for (i, c) in line.char_indices() {
             if line.len() > 1 {
                 if i <= line.len()-2 && i > 0 {
+                    // dereferences *must* be in parenthesis or at the start of the line
                     let deref = {
                         c == ' ' &&
                         line.at(i-1).unwrap() == '*' &&
@@ -421,12 +513,26 @@ pub fn fix_stars(file: String) -> String {
                         )
                     };
                     if deref { continue; }
-                    let ok = {
+                    let ok_mult = {
                         c == '*' &&
                         line.at(i-1).unwrap() == ' ' &&
                         line.at(i+1).unwrap() == ' '
                     };
-                    if ok {
+                    if ok_mult {
+                        temp_line.push(c);
+                        continue;
+                    }
+                    let ok_deref = {
+                        c == '*' &&
+                        line.at(i+1).unwrap().is_alphabetic() &&
+                        line.at(i-1).unwrap() == ' ' &&
+                        (
+                            line.at(i-2).unwrap() == ' ' || 
+                            line.at(i-2).unwrap() == ';' || 
+                            line.at(i-3).unwrap() == ';'  
+                        )
+                    };
+                    if ok_deref {
                         temp_line.push(c);
                         continue;
                     }
@@ -451,12 +557,12 @@ pub fn fix_stars(file: String) -> String {
                         temp_line += format!(" {}", c).as_str();
                         continue;
                     }
-                    let fix_ptr = {
+                    let swap_ptr = {
                         c == '*' &&
                         line.at(i-1).unwrap().is_whitespace() &&
                         line.at(i+1).unwrap().is_alphanumeric()
                     };
-                    if fix_ptr {
+                    if swap_ptr {
                         temp_line.pop();
                         temp_line += format!("{} ", c).as_str();
                         continue
@@ -561,6 +667,12 @@ pub fn remove_reference_spaces(line: String) -> String {
     return result;
 }
 
+fn remove_single_tab(line: &String) -> String {
+    let mut line = line.clone();
+    if line.starts_with("\t") { line.remove(0); }
+    return line;
+}
+
 pub fn remove_all_spaces(line: String) -> String {
     let chars: Vec<char> = line.chars().filter(|c| *c != ' ').collect();
     let mut result = String::new();
@@ -579,7 +691,7 @@ pub fn remove_object_constructor_space(line: String) -> String {
     return result;
 }
 
-pub fn remove_unnecessary_spaces(line: String) -> String {
+pub fn remove_unnecessary_spaces(line: &String) -> String {
     let leading_tokens = vec!['(', '[', ' ', '!'];
     let ending_tokens = vec![')', '[', ']', ' ', ',', ';'];
     let mut result = String::new();
@@ -607,7 +719,18 @@ pub fn remove_unnecessary_spaces(line: String) -> String {
     return result.trim().to_string();
 }
 
-pub fn remove_whitespace_before_commas(line: String) -> String {
+pub fn remove_double_spaces(line: &String) -> String {
+    let mut result = "".to_string();
+    for (i, c) in line.chars().enumerate() {
+        if i < line.len()-1 {
+            if c == ' ' && line.at(i+1) == Some(' ') { continue; }
+        }
+        result += c.to_string().as_str();
+    }
+    return result;
+}
+
+pub fn remove_whitespace_before_commas(line: &String) -> String {
     let mut result = "".to_string();
     for (i, c) in line.chars().enumerate() {
         if i < line.len()-1 {
@@ -723,6 +846,10 @@ pub fn check_for_even_line_length(lines: &Vec<&str>) -> bool {
 
 pub fn ends_with_brace(line: &String) -> bool {
     return line.trim_end().ends_with("{");
+}
+
+fn check_line_is_blank(line: &String) -> bool {
+    return line.is_empty() || line.chars().all(|x| x.is_whitespace() || x == '\t');
 }
 
 pub fn infer_file_type(filepath: &String) -> String {
