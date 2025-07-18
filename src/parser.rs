@@ -5,6 +5,9 @@ use crate::utils;
 pub fn parse_args() -> Option<(String, Vec<String>)> {
     let args: Vec<String> = env::args().collect();
     // restore and help are special commands
+    if args.contains(&"-".to_string()) || args.contains(&"--stdin".to_string()) {
+        return Some((String::new(), vec!["-".to_string()]));
+    }
     if args.contains(&"-r".to_string()) || args.contains(&"--restore".to_string()) {
         return Some((String::new(), vec!["-r".to_string()]));
     }

@@ -3025,3 +3025,4 @@ fn handle_type_identifier(root: Node, src: String) -> String {
 fn handle_field_identifier(root: Node, src: String) -> String {
     return root.utf8_text(src.as_bytes()).unwrap().to_string();
 }
+
