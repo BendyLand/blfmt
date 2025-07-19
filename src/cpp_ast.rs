@@ -172,7 +172,7 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     utils::format_else_lines(&mut result, &style);
     utils::close_empty_curly_brace_blocks(&mut result);
     result = utils::fix_stars(result);
-    utils::tidy_up_loose_ends(&mut result/*, lines_before_blank_lines*/);
+    utils::tidy_up_loose_ends(&mut result, style);
     result = result.trim_start().to_string();
     return result;
 }
@@ -1964,13 +1964,33 @@ fn handle_error(root: Node, src: String) -> String {
             "binary_expression" => {
                 result = handle_binary_expression(node, src.clone());
             },
+            "compound_statement" => {
+                result = handle_compound_statement(node, src.clone());
+            },
+            /*NOTE
+                These two become errors when they are used mid-expression.
+                This usually breaks the surrounding syntax, so they are simply removed. 
+                *This is a destructive action and code behavior **will** change*
+            */
+            "#ifdef" => {}, // result = "#ifdef".to_string(); },
+            "#endif" => {}, // result = "#endif".to_string(); },
             "ERROR" => {
                 result = node.utf8_text(src.as_bytes()).unwrap().to_string();
+            },
+            "parenthesized_expression" => {
+                result += handle_parenthesized_expression(node, src.clone()).as_str();
+            },
+            "switch" => {
+                result += "switch ";
             },
             "{" => result = "{".to_string(),
             "}" => result = "}".to_string(),
             ";" => result = ";".to_string(),
             "=" => result = "=".to_string(),
+            "(" => result = "(".to_string(),
+            ")" => result = ")".to_string(),
+            "-" => result = "-".to_string(),
+            ">" => result = ">".to_string(),
             _ => println!("You shouldn't be here (ERROR): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
     }
@@ -3814,3 +3834,39 @@ fn handle_structured_binding_declarator(root: Node, src: String) -> String {
     }
     return result;
 }
+
+fn handle_initializer_pair(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "field_designator" => result += format!("{} ", node.utf8_text(src.as_bytes()).unwrap()).as_str(),
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                result += string_literal.as_str();
+            },
+            "=" => result += format!("= ").as_str(),
+            _ => println!("Initializer Pair: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_comma_expression(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "update_expression" => {
+                let update_expression = handle_update_expression(node, src.clone());
+                result += update_expression.as_str();
+            },
+            "," => result += ", ",
+            _ => println!("You shouldn't be here (comma_expression): {}\n", node.grammar_name()),
+        }
+    }
+    return result;
+}
+
