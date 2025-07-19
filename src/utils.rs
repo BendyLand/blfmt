@@ -133,7 +133,7 @@ fn format_to_stroustrup(file: &mut String) {
     *file = result;
 }
 
-pub fn tidy_up_loose_ends(file: &mut String/*, lines_before_blank_lines: Vec<(usize, String)>*/) {
+pub fn tidy_up_loose_ends(file: &mut String, style: Style) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_clone: Vec<String> = lines.clone();
     for (i, line) in lines_clone.into_iter().enumerate() {
@@ -149,6 +149,7 @@ pub fn tidy_up_loose_ends(file: &mut String/*, lines_before_blank_lines: Vec<(us
     ensure_proper_doc_comment_spacing(file);
     fix_indentation_levels(file);
     shift_back_preproc_lines(file);
+    join_single_line_constructs(file, style);
 }
 
 pub fn detect_indentation(line: &String) -> usize {
@@ -399,6 +400,52 @@ pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)
         }
     }
     *file = lines.join("\n");
+}
+
+fn join_single_line_constructs(file: &mut String, style: Style) {
+    let mut allman = false;
+    match style {
+        Style::Allman => allman = true, 
+        _ => (),
+    };
+    let lines: Vec<String> = file.split("\n").map(|x| x.to_string()).collect();
+    let mut parts = Vec::<String>::new();
+    let mut temp = String::new();
+    let mut end = true;
+    let mut indent = 0;
+    for (i, line) in lines.iter().enumerate() {
+        if allman && i < lines.len()-1 {
+            let check = line.trim();
+            let check2 = lines.iter().nth(i+1).unwrap().trim();
+            if check.starts_with("switch") && (!check2.ends_with("{") && !check.ends_with(";")) {
+                // must be added here to preserve indentation
+                temp += format!("{} ", line.trim_end()).as_str();
+                end = false;
+                continue;
+            }
+        }
+        else {
+            let check = line.trim();
+            if check.starts_with("switch") && (!check.ends_with("{") && !check.ends_with(";")) {
+                temp += format!("{} ", line.trim_end()).as_str();
+                end = false;
+                continue;
+            }
+        }
+        if !end && line.trim_end().ends_with(";") {
+            end = true;
+            temp += line.trim();
+            parts.push(temp);
+            temp = "".to_string();
+            continue;
+        }
+        else if !end {
+            temp += format!("{} ", line.trim()).as_str();
+            continue;
+        }
+        parts.push(line.clone());
+    }
+    *file = parts.join("\n");
 }
 
 fn shift_back_preproc_lines(file: &mut String) {
