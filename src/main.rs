@@ -27,13 +27,17 @@ fn main() {
             None => (String::new(), Vec::<String>::new()),
         }
     };
-    let help_arg = options::check_help_arg(&args); if help_arg == 1 { return; }
+    let help_arg = options::check_help_arg(&args);
+    if help_arg == 1 { return; }
 
     let res_arg = options::check_restore_arg(&args);
     if res_arg == 1 { return; }
 
+    let stdin_arg = options::check_stdin_arg(&args);
+
     let write_arg = options::check_write_arg(&args);
-    let file_type = utils::infer_file_type(&filepath);
+    let file_type = if stdin_arg.len() > 0 { filepath.clone() } // the variable is called "filepath", but this is where the ext is returned earlier
+                    else { utils::infer_file_type(&filepath) }; 
     match file_type.as_str() {
         ".txt" => {
             let opts: options::TxtOpts = options::get_txt_opts(&args);
@@ -44,11 +48,11 @@ fn main() {
         },
         ".cpp" | ".cc" | ".C" | ".hpp" | ".hh" | ".H" => {
             let style = options::get_c_style(&args);
-            format::format_cpp_file(filepath, style, write_arg);
+            format::format_cpp_file(filepath, style, write_arg, stdin_arg);
         },
         ".c" | ".h" => {
             let style = options::get_c_style(&args);
-            format::format_c_file(filepath, style, write_arg);
+            format::format_c_file(filepath, style, write_arg, stdin_arg);
         },
         ".py" => {
             format::format_py_file(filepath);
