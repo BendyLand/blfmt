@@ -1,3 +1,5 @@
+import difflib
+
 c_file = ""
 cpp_file = ""
 cpp_specifics = [
@@ -70,8 +72,58 @@ def get_diffs(c, cpp):
     return diffs
 
 
-diffs = get_diffs(c_fns, cpp_fns)
+def separate_fns(c, cpp):
+    start = False
+    temp = ""
+    result = []
+    result2 = []
+    for line in c_file.split("\n"):
+        if line in c_fns:
+            start = True
+        if start:
+            temp += line + "\n"
+        if len(line) > 0 and line[0] == "}":
+            start = False
+            result.append(temp)
+            temp = ""
+    for line in cpp_file.split("\n"):
+        if line in cpp_fns:
+            start = True
+        if start:
+            temp += line + "\n"
+        if len(line) > 0 and line[0] == "}":
+            start = False
+            result2.append(temp)
+            temp = ""
+    return result, result2
 
-for line in diffs:
-    print(line)
+
+diffs = get_diffs(c_fns, cpp_fns)
+sep_c_fns, sep_cpp_fns = separate_fns(c_file, cpp_file)
+sep_c_fns.sort()
+sep_cpp_fns.sort()
+
+
+def get_differences(a, b):
+    a_lines = a.strip().splitlines()
+    b_lines = b.strip().splitlines()
+    diff = difflib.unified_diff(a_lines, b_lines, lineterm="")
+    return "\n".join(diff)
+
+
+matched_functions = [
+    fn
+    for fn in c_fns
+    if fn in cpp_fns
+    and any(fn in f for f in sep_c_fns)
+    and any(fn in f for f in sep_cpp_fns)
+]
+
+with open("diffs", "w+") as file:
+    for fn in matched_functions:
+        full_c = next(f for f in sep_c_fns if fn in f)
+        full_cpp = next(f for f in sep_cpp_fns if fn in f)
+        if full_c != full_cpp:
+            file.write(f"Function: {fn}\n")
+            file.write(get_differences(full_c, full_cpp) + "\n\n")
 
