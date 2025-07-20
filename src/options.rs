@@ -1,3 +1,5 @@
+use std::io::Read;
+
 use crate::restore;
 use crate::utils;
 
@@ -39,11 +41,17 @@ pub fn get_txt_opts(args: &Vec<String>) -> TxtOpts {
 }
 
 pub fn check_write_arg(args: &Vec<String>) -> bool {
-    let contains_write_arg = {
-        args.contains(&"-w".to_string()) || 
-        args.contains(&"--write".to_string())
-    };
+    let contains_write_arg = args.contains(&"-w".to_string());
     return contains_write_arg;
+}
+
+pub fn check_stdin_arg(args: &Vec<String>) -> String {
+    let has_flag = args.contains(&"-".to_string());
+    let mut text = String::new();
+    if has_flag {
+        _ = std::io::stdin().read_to_string(&mut text);
+    }
+    return text;
 }
 
 pub fn check_restore_arg(args: &Vec<String>) -> usize {

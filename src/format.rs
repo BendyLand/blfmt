@@ -4,10 +4,11 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command;
 
-pub fn format_c_file(path: String, style: utils::Style, write_arg: bool) {
-    let ast = c_format::parse_c_file(path.clone());
-    let contents = std::fs::read_to_string(&path).unwrap_or("NOFILE".to_string());
-    if contents == "NOFILE".to_string() {
+pub fn format_c_file(path: String, style: utils::Style, write_arg: bool, text: String) {
+    let ast = if text.len() > 0 { c_format::parse_existing_c_file(text.clone()) }
+              else { c_format::parse_c_file(path.clone()) };
+    let contents = std::fs::read_to_string(&path).unwrap_or(text);
+    if contents == "".to_string() {
         println!("'{}' not found.", path);
         return;
     }
@@ -16,10 +17,12 @@ pub fn format_c_file(path: String, style: utils::Style, write_arg: bool) {
     else { utils::print_results(&result); }
 }
 
-pub fn format_cpp_file(path: String, style: utils::Style, write_arg: bool) {
+pub fn format_cpp_file(path: String, style: utils::Style, write_arg: bool, text: String) {
+    let ast = if text.len() > 0 { cpp_format::parse_existing_cpp_file(text.clone()) }
+              else { cpp_format::parse_cpp_file(path.clone()) };
     let ast = cpp_format::parse_cpp_file(path.clone());
-    let contents = std::fs::read_to_string(&path).unwrap_or("NOFILE".to_string());
-    if contents == "NOFILE".to_string() {
+    let contents = std::fs::read_to_string(&path).unwrap_or(text);
+    if contents == "".to_string() {
         println!("'{}' not found.", path);
         return;
     }

@@ -936,7 +936,22 @@ pub fn check_valid_file_ext(path: &String) -> bool {
 }
 
 pub fn print_usage() {
-    println!("USAGE:\nblfmt <file-path> <flags + opts>");
+println!(
+"
+USAGE:\nblfmt <file-path> <flags + opts>
+
+FLAGS:
+    -h or --help
+(Code only):
+    -  or --stdin <file-ext>
+(C/C++ only):
+    -s or --style allman|knr|stroustrup(default)
+(Txt only):
+    -o or --options <columns> <spacing> (numbers)
+    -t or --titles \"Places\" \"where\" \"you\" \"want\" \"paragraphs\" ...
+    (The txt flags may be combined)
+"
+);
 }
 
 pub fn write_results(path: &String, results: String) {
