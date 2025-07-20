@@ -1848,6 +1848,10 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
                 let abstract_array_declarator = handle_abstract_array_declarator(node, src.clone());
                 parts.push(abstract_array_declarator);
             },
+            "abstract_pointer_declarator" => {
+                let abstract_pointer_declarator = handle_abstract_pointer_declarator(node, src.clone());
+                parts.push(abstract_pointer_declarator);
+            },
             "sized_type_specifier" => {
                 let sized_type_specifier = handle_sized_type_specifier(node, src.clone());
                 parts.push(sized_type_specifier);
