@@ -7,7 +7,6 @@ use std::io::stdin;
 use tree_sitter::{Parser, Language};
 extern "C" { pub fn tree_sitter_c() -> Language; }
 
-mod restore;
 mod parser;
 mod format;
 mod group;
@@ -24,19 +23,16 @@ fn main() {
     let (filepath, args) = {
         match maybe_args {
             Some((a, b)) => (a, b),
-            None => (String::new(), Vec::<String>::new()),
+            None => return,
         }
     };
     let help_arg = options::check_help_arg(&args);
     if help_arg == 1 { return; }
-
-    let res_arg = options::check_restore_arg(&args);
-    if res_arg == 1 { return; }
-
     let stdin_arg = options::check_stdin_arg(&args);
-
     let write_arg = options::check_write_arg(&args);
-    let file_type = if stdin_arg.len() > 0 { filepath.clone() } // the variable is called "filepath", but this is where the ext is returned earlier
+    // the variable being operated on is called "filepath",
+    // but that is where the ext was saved if stdin.len > 0
+    let file_type = if stdin_arg.len() > 0 { filepath.clone() } 
                     else { utils::infer_file_type(&filepath) }; 
     match file_type.as_str() {
         ".txt" => {
@@ -58,9 +54,11 @@ fn main() {
             format::format_py_file(filepath);
         },
         _ => {
-            println!("Unknown file type");
-            println!("Valid file types are:");
+            println!("Unsupported file type.");
+            utils::print_usage();
+            println!("The available file types are:");
             utils::display_file_extensions();
         },
     };
 }
+

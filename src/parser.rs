@@ -4,11 +4,20 @@ use crate::utils;
 
 pub fn parse_args() -> Option<(String, Vec<String>)> {
     let args: Vec<String> = env::args().collect();
-    // restore and help are special commands
+    // stdin and help are special commands
     if args.contains(&"-".to_string()) || args.contains(&"--stdin".to_string()) {
         let mut most_likely = String::new();
         for arg in args {
-            if !arg.contains("-") && !arg.contains(".") { most_likely = arg; }
+            if !arg.contains("-") {
+                if !arg.contains(".") {
+                    most_likely = arg;
+                }  
+                else {
+                    if most_likely.is_empty() {
+                        most_likely = arg;
+                    }
+                }
+            } 
         }
         if most_likely.is_empty() {
             utils::print_usage();
@@ -16,9 +25,6 @@ pub fn parse_args() -> Option<(String, Vec<String>)> {
         }
         if !most_likely.starts_with(".") { most_likely = format!(".{}", most_likely) };
         return Some((most_likely, vec!["-".to_string()]));
-    }
-    if args.contains(&"-r".to_string()) || args.contains(&"--restore".to_string()) {
-        return Some((String::new(), vec!["-r".to_string()]));
     }
     if args.contains(&"-h".to_string()) || args.contains(&"--help".to_string()) {
         return Some((String::new(), vec!["-h".to_string()]));

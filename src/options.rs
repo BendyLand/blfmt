@@ -1,6 +1,5 @@
 use std::io::Read;
 
-use crate::restore;
 use crate::utils;
 
 #[derive(Clone, Copy, Debug)]
@@ -54,21 +53,6 @@ pub fn check_stdin_arg(args: &Vec<String>) -> String {
     return text;
 }
 
-pub fn check_restore_arg(args: &Vec<String>) -> usize {
-    let contains_restore_arg = {
-        args.contains(&"-r".to_string()) || 
-        args.contains(&"--restore".to_string())
-    };
-    if contains_restore_arg {
-        // restore::restore_example_txt_files();
-        // restore::restore_example_c_file();
-        restore::restore_example_cpp_file();
-        println!("Example file restored.");
-        return 1; 
-    }
-    return 0;
-}
-
 pub fn check_help_arg(args: &Vec<String>) -> usize {
     let contains_help_arg = {
         args.contains(&"-h".to_string()) || 
@@ -77,7 +61,7 @@ pub fn check_help_arg(args: &Vec<String>) -> usize {
     if contains_help_arg {
         println!("Welcome to the blfmt help menu!");
         utils::print_usage();
-        println!("Here are the available file types:");
+        println!("The available file types are:");
         utils::display_file_extensions();
         return 1;
     }
