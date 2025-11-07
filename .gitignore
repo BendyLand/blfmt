@@ -1,15 +1,19 @@
-/target
+target
 main.go
 script.py
-storage/**
+storage
 example_file.go
 example_file.c
 safe_example_file.c
 example_header.h
 debug
 release
-summary*
-output*
+*summary*
+*output*
+*test*
+*safe*
 mine
 theirs
+diffs
+lashfile
 

@@ -6,7 +6,11 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let mut result = String::new();
     let mut last_group_kind = String::new();
     let lines_before_blank_lines = utils::scan_for_lines_before_blank_lines(src.clone());
+    let mut i = 0;
+    dbg!(&src);
+    dbg!(&root.named_child_count());
     for child in root.children(&mut root.walk()) {
+        i += 1;
         match child.grammar_name() {
             "preproc_include" => {
                 if !last_group_kind.contains("preproc") { result += "\n"; }
@@ -167,6 +171,9 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
             ";" => (), // handled in functions above
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
+    }
+    if result.is_empty() {
+        panic!("Fatal: Unable to parse language grammar");
     }
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
