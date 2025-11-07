@@ -1,6 +1,0 @@
-txt
-c
-cpp
-cc
-go
-rs
