@@ -118,6 +118,9 @@ pub fn traverse_c_ast(ast: Tree, src: String, style: utils::Style) -> String {
             _ => println!("Unknown grammar name 1: {}\n", &child.grammar_name()),
         }
     }
+    if result.is_empty() {
+        panic!("Fatal: Unable to parse language grammar");
+    }
     result = utils::sort_include_groups(result);
     utils::format_else_lines(&mut result, &style);
     result = utils::fix_stars(result);

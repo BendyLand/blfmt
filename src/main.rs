@@ -19,20 +19,20 @@ mod cpp_ast;
 mod txt_format;
 
 fn main() {
-    let maybe_args = parser::parse_args();
+    let maybe_args: Option<(String, Vec<String>)> = parser::parse_args();
     let (filepath, args) = {
         match maybe_args {
             Some((a, b)) => (a, b),
             None => return,
         }
     };
-    let help_arg = options::check_help_arg(&args);
+    let help_arg: usize = options::check_help_arg(&args);
     if help_arg == 1 { return; }
-    let stdin_arg = options::check_stdin_arg(&args);
-    let write_arg = options::check_write_arg(&args);
+    let stdin_arg: String = options::check_stdin_arg(&args);
+    let write_arg: bool = options::check_write_arg(&args);
     // the variable being operated on is called "filepath",
     // but that is where the ext was saved if stdin.len > 0
-    let file_type = if stdin_arg.len() > 0 { filepath.clone() } 
+    let file_type: String = if stdin_arg.len() > 0 { filepath.clone() } 
                     else { utils::infer_file_type(&filepath) }; 
     match file_type.as_str() {
         ".txt" => {

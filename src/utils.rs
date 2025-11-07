@@ -142,6 +142,7 @@ pub fn tidy_up_loose_ends(file: &mut String, style: Style) {
         }
     }
     *file = lines.join("\n");
+    //FIX: these two aren't even close right now. 
     // format_long_lines(file, 100);
     // add_blank_lines_back(file, lines_before_blank_lines);
     remove_blank_lines_from_blocks(file);
@@ -467,6 +468,7 @@ fn shift_back_preproc_lines(file: &mut String) {
 pub fn close_empty_curly_brace_blocks(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_to_remove = Vec::<usize>::new();
+    dbg!(&file);
     for i in 0..lines.len()-1 {
         if lines[i].trim_end().ends_with("{") &&
            lines[i+1].trim_start().starts_with("}") &&

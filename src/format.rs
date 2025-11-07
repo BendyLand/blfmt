@@ -20,7 +20,6 @@ pub fn format_c_file(path: String, style: utils::Style, write_arg: bool, text: S
 pub fn format_cpp_file(path: String, style: utils::Style, write_arg: bool, text: String) {
     let ast = if text.len() > 0 { cpp_format::parse_existing_cpp_file(text.clone()) }
               else { cpp_format::parse_cpp_file(path.clone()) };
-    let ast = cpp_format::parse_cpp_file(path.clone());
     let contents = std::fs::read_to_string(&path).unwrap_or(text);
     if contents == "".to_string() {
         println!("'{}' not found.", path);
