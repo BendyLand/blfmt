@@ -42,11 +42,11 @@ fn main() {
         ".go" => {
             format::format_go_file(filepath);
         },
-        ".cpp" | ".cc" | ".C" | ".hpp" | ".hh" | ".H" => {
+        ".cpp" | ".cc" | ".C" | ".h" | ".hpp" | ".hh" | ".H" => {
             let style = options::get_c_style(&args);
             format::format_cpp_file(filepath, style, write_arg, stdin_arg);
         },
-        ".c" | ".h" => {
+        ".c" => {
             let style = options::get_c_style(&args);
             format::format_c_file(filepath, style, write_arg, stdin_arg);
         },
