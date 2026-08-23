@@ -4,7 +4,7 @@ A minimally customizable, polyglot text-formatter written in Rust!
 
 ### About
 
-`blfmt` stands for *Bland Formatter*. While you could see this as a way to describe its lack of fancy features, it is really just an abbreviation of my name: B. Land(rette).
+`blfmt` stands for *Bland Formatter*. While you could see this as a way to describe its lack of fancy features, it is mainly just named after my game studio: Bland Logic LLC.
 
 It is a text file formatter which accepts the path to a file and some optional information as arguments, then applies the configured formatting to the matching file, if it exists.  Nice and simple, at least in theory. 
 
