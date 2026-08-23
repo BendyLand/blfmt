@@ -22,8 +22,8 @@ fn main() {
     let maybe_args: Option<(String, Vec<String>)> = parser::parse_args();
     let (filepath, args) = {
         match maybe_args {
-            Some((a, b)) => (a, b),
-            None => return,
+            Option::Some((a, b)) => (a, b),
+            Option::None => return,
         }
     };
     let help_arg: usize = options::check_help_arg(&args);

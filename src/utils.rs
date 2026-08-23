@@ -33,7 +33,7 @@ impl StringUtils for str {
             }
             else { break; }
         }
-        &self[byte_start..byte_end]
+        return self.get(byte_start..byte_end).unwrap();
     }
 
     fn at(&self, current: usize) -> Option<char> {
@@ -184,10 +184,12 @@ fn fix_indentation(line: &String, current: usize, target: usize) -> String {
 fn fix_indentation_levels(file: &mut String) {
     let lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
     let mut result = Vec::<String>::new();
-    let mut indent_level = 0;
+    let mut indent_level: usize = 0;
     for (i, line) in lines.clone().into_iter().enumerate() {
         if line == "}" || line.trim_start().starts_with("}") {
-            indent_level -= 1;
+            if indent_level > 0 {
+                indent_level -= 1;
+            }
         }
         let current_level = detect_indentation(&line);
         if current_level != indent_level {
@@ -468,7 +470,6 @@ fn shift_back_preproc_lines(file: &mut String) {
 pub fn close_empty_curly_brace_blocks(file: &mut String) {
     let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
     let mut lines_to_remove = Vec::<usize>::new();
-    dbg!(&file);
     for i in 0..lines.len()-1 {
         if lines[i].trim_end().ends_with("{") &&
            lines[i+1].trim_start().starts_with("}") &&
@@ -477,6 +478,7 @@ pub fn close_empty_curly_brace_blocks(file: &mut String) {
             lines_to_remove.push(i+1);
         }
     }
+    lines_to_remove.reverse();
     for n in lines_to_remove {
         lines.remove(n);
     }

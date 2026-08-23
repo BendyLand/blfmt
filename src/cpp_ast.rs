@@ -6,11 +6,9 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let mut result = String::new();
     let mut last_group_kind = String::new();
     let lines_before_blank_lines = utils::scan_for_lines_before_blank_lines(src.clone());
-    let mut i = 0;
-    dbg!(&src);
-    dbg!(&root.named_child_count());
+    // let mut i = 0;
     for child in root.children(&mut root.walk()) {
-        i += 1;
+        // i += 1;
         match child.grammar_name() {
             "preproc_include" => {
                 if !last_group_kind.contains("preproc") { result += "\n"; }
