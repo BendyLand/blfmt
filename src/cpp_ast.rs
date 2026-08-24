@@ -1,6 +1,29 @@
 use tree_sitter::{Tree, Node};
 use crate::{cpp_format, utils};
 
+//FIX: 
+/*
+This case:
+```cpp
+CPPSPMD_DECL(const uint32_t, g_lane_masks_128[4][4]) = 
+{ 
+	{ UINT32_MAX, 0, 0, 0 },
+	{ 0, UINT32_MAX, 0, 0 },
+	{ 0, 0, UINT32_MAX, 0 },
+	{ 0, 0, 0, UINT32_MAX },
+};
+```
+
+Turns into:
+```cpp
+CPPSPMD_DECL(const uint32_t, g_lane_masks_128[4][4])
+
+=
+
+{
+};
+```
+*/
 pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
     let root = ast.root_node();
     let mut result = String::new();
@@ -170,7 +193,26 @@ pub fn traverse_cpp_ast(ast: Tree, src: String, style: utils::Style) -> String {
                 result += format!("{}\n\n", static_assert_declaration).as_str();
                 last_group_kind = "static_assert_declaration".to_string();
             },
+            "namespace" => {
+                if last_group_kind != "namespace" { result += "\n"; }
+                let namespace = handle_namespace(child, src.clone());
+                result += format!("{}\n\n", namespace).as_str();
+                last_group_kind = "namespace".to_string();
+            },
+            "identifier" => {
+                if last_group_kind != "identifier" { result += "\n"; }
+                let identifier = handle_identifier(child, src.clone());
+                result += format!("{}\n\n", identifier).as_str();
+                last_group_kind = "identifier".to_string();
+            },
+            "function_declarator" => {
+                if last_group_kind != "function_declarator" { result += "\n"; }
+                let function_declarator = handle_function_declarator(child, src.clone());
+                result += format!("{}\n\n", function_declarator).as_str();
+                last_group_kind = "function_declarator".to_string();
+            },
             ";" => (), // handled in functions above
+            "{" => (), // handled in functions above
             _ => println!("Unknown cpp grammar name 1: {}\n", &child.grammar_name()),
         }
     }
@@ -330,6 +372,11 @@ fn handle_compound_statement(root: Node, src: String) -> String {
                 try_statement = utils::add_all_leading_tabs(try_statement);
                 result += format!("{}\n", try_statement).as_str();
             },
+            "alias_declaration" => {
+                let mut alias_declaration = handle_alias_declaration(node, src.clone());
+                alias_declaration = utils::add_all_leading_tabs(alias_declaration);
+                result += format!("{}\n", alias_declaration).as_str();
+            },
             "return" => {
                 dbg!(node.utf8_text(src.as_bytes()).unwrap());
             },
@@ -419,10 +466,15 @@ fn handle_declaration(root: Node, src: String) -> String {
                 let qualified_identifier = handle_qualified_identifier(node, src.clone());
                 parts.push(qualified_identifier);
             },
+            "operator_cast" => {
+                let operator_cast = handle_operator_cast(node, src.clone());
+                parts.push(operator_cast);
+            },
             "placeholder_type_specifier" => parts.push("auto".to_string()),
+            "virtual" => parts.push("virtual".to_string()),
             ";" => parts.push(";".to_string()),
             "," => parts.push(",".to_string()),
-            _ => println!("You shouldn't be here (cpp declaration): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = parts.join(" ");
@@ -472,6 +524,10 @@ fn handle_function_definition(root: Node, src: String) -> String {
                 let function_declarator = handle_function_declarator(node, src.clone());
                 result += format!("{}\n", function_declarator).as_str();
             },
+            "default_method_clause" => {
+                let default_method_clause = handle_default_method_clause(node, src.clone());
+                result += format!("{}\n", default_method_clause).as_str();
+            },
             "pointer_declarator" => {
                 let pointer_declarator = handle_pointer_declarator(node, src.clone());
                 result = result.trim_end().to_string();
@@ -501,6 +557,14 @@ fn handle_function_definition(root: Node, src: String) -> String {
                 let reference_declarator = handle_reference_declarator(node, src.clone());
                 result += format!("{} ", reference_declarator).as_str();
             },
+            "optional_parameter_declaration" => {
+                let optional_parameter_declaration = handle_optional_parameter_declaration(node, src.clone());
+                result += format!("{} ", optional_parameter_declaration).as_str();
+            },
+            "operator_cast" => {
+                let operator_cast = handle_operator_cast(node, src.clone());
+                result += format!("{} ", operator_cast).as_str();
+            },
             "placeholder_type_specifier" => {
                 let placeholder_type_specifier = handle_placeholder_type_specifier(node, src.clone());
                 result += format!("{} ", placeholder_type_specifier).as_str();
@@ -511,7 +575,8 @@ fn handle_function_definition(root: Node, src: String) -> String {
                 result = result.trim_end().to_string();
                 result += "\n";
             },
-            _ => println!("You shouldn't be here (cpp function_definition): {}\n", node.grammar_name()),
+            "virtual" => result += "virtual ",
+            _ => println!("You shouldn't be here (cpp function_definition): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = utils::remove_reference_spaces(result);
@@ -545,6 +610,12 @@ fn handle_expression_statement(root: Node, src: String) -> String {
             "pointer_expression" => {
                 result = handle_pointer_expression(node, src.clone());
             },
+            "new_expression" => {
+                result = handle_new_expression(node, src.clone());
+            },
+            "comma_expression" => {
+                result = handle_comma_expression(node, src.clone());
+            },
             "ERROR" => {
                 result = handle_error(node, src.clone());
             },
@@ -559,7 +630,7 @@ fn handle_expression_statement(root: Node, src: String) -> String {
                 result = format!("{}\n{}", head, temp);
             },
             ";" => result += ";",
-            _ => println!("You shouldn't be here (cpp expression_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp expression_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = utils::remove_unnecessary_spaces(&result);
@@ -572,15 +643,19 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
         match node.grammar_name() {
             ";" => parts.push(";".to_string()),
             "=" => parts.push("=".to_string()),
-            "+=" => parts.push("=".to_string()),
-            "-=" => parts.push("=".to_string()),
-            "*=" => parts.push("=".to_string()),
-            "/=" => parts.push("=".to_string()),
-            "%=" => parts.push("=".to_string()),
-            "<<=" => parts.push("=".to_string()),
-            ">>=" => parts.push("=".to_string()),
-            "&=" => parts.push("=".to_string()),
-            "|=" => parts.push("=".to_string()),
+            "+=" => parts.push("+=".to_string()),
+            "-=" => parts.push("-=".to_string()),
+            "*=" => parts.push("*=".to_string()),
+            "/=" => parts.push("/=".to_string()),
+            "%=" => parts.push("%=".to_string()),
+            "<<=" => parts.push("<<=".to_string()),
+            ">>=" => parts.push(">>=".to_string()),
+            "&=" => parts.push("&=".to_string()),
+            "|=" => parts.push("|=".to_string()),
+            "this" => parts.push("this".to_string()),
+            "true" => parts.push("true".to_string()),
+            "false" => parts.push("false".to_string()),
+            "null" => parts.push("nullptr".to_string()),
             "assignment_expression" => {
                 let assignment_expression = handle_inner_assignment_expression(node, src.clone());
                 parts.push(assignment_expression);
@@ -588,6 +663,14 @@ fn handle_assignment_expression(root: Node, src: String) -> String {
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
                 parts.push(call_expression);
+            },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                parts.push(cast_expression);
+            },
+            "pointer_expression" => {
+                let pointer_expression = handle_pointer_expression(node, src.clone());
+                parts.push(pointer_expression);
             },
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
@@ -713,7 +796,7 @@ fn handle_inner_assignment_expression(root: Node, src: String) -> String {
             "&=" => parts.push("&=".to_string()),
             ">>=" => parts.push(">>=".to_string()),
             "<<=" => parts.push("<<=".to_string()),
-            _ => println!("You shouldn't be here (cpp inner_assignment_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp inner_assignment_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ").to_string();
@@ -807,7 +890,7 @@ fn handle_inner_compound_statement(root: Node, src: String) -> String {
             },
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
-            _ => println!("You should't be here (inner_compound_statement): {}\n", node.grammar_name()),
+            _ => println!("You should't be here (inner_compound_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("\n");
@@ -848,7 +931,7 @@ fn handle_call_expression(root: Node, src: String) -> String {
                             let field_expression = handle_field_expression(subnode, src.clone());
                             temp += field_expression.as_str();
                         },
-                        _ => println!("You shouldn't be here (cpp middle of call_expression): {}\n", subnode.grammar_name()),
+                        _ => println!("You shouldn't be here (cpp middle of call_expression): {}: {}\n", subnode.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
                     }
                 }
                 result += temp.as_str();
@@ -856,6 +939,10 @@ fn handle_call_expression(root: Node, src: String) -> String {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
+            },
+            "primitive_type" => {
+                let primitive_type = handle_primitive_type(node, src.clone());
+                result += primitive_type.as_str();
             },
             "qualified_identifier" => {
                 let qualified_identifier = handle_qualified_identifier(node, src.clone());
@@ -878,7 +965,7 @@ fn handle_call_expression(root: Node, src: String) -> String {
                 result += template_function.as_str();
             },
             ";" => result += ";",
-            _ => println!("You shouldn't be here (cpp call_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp call_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -935,7 +1022,7 @@ fn handle_if_statement(root: Node, src: String) -> String {
             "break_statement" => {
                 parts.push("break;".to_string());
             },
-            _ => println!("You shouldn't be here (cpp if_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp if_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -973,7 +1060,7 @@ fn handle_else_clause(root: Node, src: String) -> String {
                 let for_statement = handle_for_statement(node, src.clone());
                 pieces.push(for_statement);
             },
-            _ => println!("You shouldn't be here (cpp else_clause): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp else_clause): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = pieces.join(" ");
@@ -997,7 +1084,7 @@ fn handle_switch_statement(root: Node, src: String) -> String {
                 let condition_clause = handle_condition_clause(node, src.clone());
                 result += format!("{} ", condition_clause).as_str();
             },
-            _ => println!("You shouldn't be here (cpp switch_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp switch_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1068,7 +1155,7 @@ fn handle_case_statement(root: Node, src: String) -> String {
                 result = result.trim_end().to_string();
                 result += ": \n"
             },
-            _ => println!("You shouldn't be here (cpp case_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp case_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1089,7 +1176,7 @@ fn handle_goto_statement(root: Node, src: String) -> String {
                 result = result.trim_end().to_string();
                 result += ";";
             },
-            _ => println!("You shouldn't be here (cpp goto_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp goto_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1122,7 +1209,7 @@ fn handle_while_statement(root: Node, src: String) -> String {
                 let condition_clause = handle_condition_clause(node, src.clone());
                 parts.push(condition_clause);
             },
-            _ => println!("You shouldn't be here (cpp while_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp while_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -1139,6 +1226,7 @@ fn handle_argument_list(root: Node, src: String) -> String {
             "null" => result += "NULL",
             "true" => result += "true",
             "false" => result += "false",
+            "this" => result += "this",
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
@@ -1223,6 +1311,10 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let new_expression = handle_new_expression(node, src.clone());
                 result += new_expression.as_str();
             },
+            "parameter_pack_expansion" => {
+                let parameter_pack_expansion = handle_parameter_pack_expansion(node, src.clone());
+                result += parameter_pack_expansion.as_str();
+            },
             "lambda_expression" => {
                 let mut lambda_expression = handle_lambda_expression(node, src.clone());
                 lambda_expression = utils::add_all_leading_tabs(lambda_expression).trim_start().to_string();
@@ -1232,7 +1324,7 @@ fn handle_argument_list(root: Node, src: String) -> String {
                 let error = handle_error(node, src.clone());
                 result += error.as_str();
             },
-            _ => println!("You shouldn't be here (cpp argument_list): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp argument_list): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1246,6 +1338,10 @@ fn handle_return_statement(root: Node, src: String) -> String {
             "compound_statement" => {
                 let compound_statement = handle_compound_statement(node, src.clone());
                 parts.push(compound_statement);
+            },
+            "compound_literal_expression" => {
+                let compound_literal_expression = handle_compound_literal_expression(node, src.clone());
+                parts.push(compound_literal_expression);
             },
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
@@ -1262,6 +1358,10 @@ fn handle_return_statement(root: Node, src: String) -> String {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 parts.push(identifier);
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                parts.push(qualified_identifier);
             },
             "conditional_expression" => {
                 let conditional_expression = handle_conditional_expression(node, src.clone());
@@ -1316,7 +1416,7 @@ fn handle_return_statement(root: Node, src: String) -> String {
                 parts.push(";".to_string());
             },
             _ => {
-                println!("You shouldn't be here (cpp return statement): {}\n", node.grammar_name());
+                println!("You shouldn't be here (cpp return_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or(""));
             },
         }
     }
@@ -1394,21 +1494,67 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                     ")" => temp += ")",
                     "()" => temp += "()",
                     "::" => temp += "::",
-                    "<<" => temp += "<<",
+                    "<<" => temp += "operator<<",
+                    ">>" => temp += "operator>>",
+                    "^" => temp += "operator^",
+                    "&" => temp += "operator&",
+                    "<" => temp += "operator<",
+                    "<=" => temp += "operator<=",
+                    ">" => temp += "operator>",
+                    ">=" => temp += "operator>=",
+                    "+" => temp += "operator+",
+                    "-" => temp += "operator-",
+                    "*" => temp += "operator*",
+                    "/" => temp += "operator/",
+                    "%" => temp += "operator%",
+                    "&&" => temp += "operator&&",
+                    "|" => temp += "operator|",
+                    "||" => temp += "operator||",
+                    "!" => temp += "operator!",
+                    "[]" => temp += "operator[]",
+                    "=" => temp += "operator=",
+                    "==" => temp += "operator==",
+                    "!=" => temp += "operator!=",
                     "operator" => temp += "operator",
                     "const" => temp += " const",
                     "pointer_declarator" => {
                         let pointer_declarator = handle_pointer_declarator(subnode, src.clone());
                         temp += pointer_declarator.as_str();
                     },
+                    "argument_list" => {
+                        let argument_list = handle_argument_list(subnode, src.clone());
+                        temp += argument_list.as_str();
+                    },
+                    "__attribute__" => {
+                        let attribute = handle_attribute(subnode, src.clone());
+                        temp += attribute.as_str();
+                    },
+                    "pointer_type_declarator" => {
+                        let pointer_type_declarator = handle_pointer_type_declarator(subnode, src.clone());
+                        temp += pointer_type_declarator.as_str();
+                    },
                     "parameter_declaration" => {
                         let mut parameter_declaration = handle_parameter_declaration(subnode, src.clone());
                         parameter_declaration = utils::remove_pointer_spaces(parameter_declaration);
                         temp += parameter_declaration.as_str();
                     },
+                    "variadic_parameter_declaration" => {
+                        let mut variadic_parameter_declaration = handle_variadic_parameter_declaration(subnode, src.clone());
+                        variadic_parameter_declaration = utils::remove_pointer_spaces(variadic_parameter_declaration);
+                        temp += variadic_parameter_declaration.as_str();
+                    },
+                    "optional_parameter_declaration" => {
+                        let mut optional_parameter_declaration = handle_optional_parameter_declaration(subnode, src.clone());
+                        optional_parameter_declaration = utils::remove_pointer_spaces(optional_parameter_declaration);
+                        temp += optional_parameter_declaration.as_str();
+                    },
                     "identifier" => {
                         let identifier = handle_identifier(subnode, src.clone());
                         temp += identifier.as_str();
+                    },
+                    "qualified_identifier" => {
+                        let qualified_identifier = handle_qualified_identifier(subnode, src.clone());
+                        temp += qualified_identifier.as_str();
                     },
                     "variadic_parameter" => {
                         let variadic_parameter = handle_variadic_parameter(subnode, src.clone());
@@ -1418,8 +1564,12 @@ fn handle_function_declarator(root: Node, src: String) -> String {
                         let comment = handle_comment(node, src.clone());
                         temp += format!("{} ", comment).as_str();
                     },
+                    "destructor_name" => {
+                        let destructor_name = handle_destructor_name(node, src.clone());
+                        temp += format!("{} ", destructor_name).as_str();
+                    },
                     "..." => temp += " ...",
-                    _ => println!("You shouldn't be here (cpp function_declarator): {}\n", subnode.grammar_name()),
+                    _ => println!("You shouldn't be here (cpp function_declarator): {}: {}\n", subnode.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
                 }
             }
             result += temp.as_str();
@@ -1448,6 +1598,10 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
                 let identifier = handle_identifier(node, src.clone());
                 result += format!(" {}", identifier).as_str();
             },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                result += format!(" {}", qualified_identifier).as_str();
+            },
             "function_declarator" => {
                 let function_declarator = handle_function_declarator(node, src.clone());
                 result += format!(" {}", function_declarator).as_str();
@@ -1468,7 +1622,7 @@ fn handle_pointer_declarator(root: Node, src: String) -> String {
                 let reference_declarator = handle_reference_declarator(node, src.clone());
                 result += format!(" {}", reference_declarator).as_str();
             },
-            _ => println!("You shouldn't be here (cpp pointer_declarator): {}\n", node.kind()),
+            _ => println!("You shouldn't be here (cpp pointer_declarator): {}: {}\n", node.kind(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = utils::remove_dereference_spaces(result);
@@ -1489,7 +1643,7 @@ fn handle_identifier(root: Node, src: String) -> String {
             ";" => {
                 result = ";".to_string();
             },
-            _ => println!("You shouldn't be here (cpp identifier): {}\n", root.grammar_name()),
+            _ => println!("You shouldn't be here (cpp identifier): {}: {}\n", root.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     if result.len() == 0 {
@@ -1512,7 +1666,7 @@ fn handle_nested_inner_compound_statement(root: Node, src: String) -> String {
             }
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
-            _ => println!("You shouldn't be here (cpp nested_inner_compound_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp nested_inner_compound_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("\n");
@@ -1594,6 +1748,7 @@ fn handle_binary_expression(root: Node, src: String) -> String {
             "null" => parts.push("NULL".to_string()),
             "true" => parts.push("true".to_string()),
             "false" => parts.push("false".to_string()),
+            "this" => parts.push("this".to_string()),
             "+" => parts.push("+".to_string()),
             "-" => parts.push("-".to_string()),
             "*" => parts.push("*".to_string()),
@@ -1613,7 +1768,7 @@ fn handle_binary_expression(root: Node, src: String) -> String {
             "&&" => parts.push("&&".to_string()),
             "^" => parts.push("^".to_string()),
             ";" => parts.push(";".to_string()),
-            _ => println!("You shouldn't be here (cpp binary_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp binary_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -1635,6 +1790,10 @@ fn handle_inner_binary_expression(root: Node, src: String) -> String {
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
                 parts.push(field_expression);
+            },
+            "unary_expression" => {
+                let unary_expression = handle_unary_expression(node, src.clone());
+                parts.push(unary_expression);
             },
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
@@ -1699,7 +1858,7 @@ fn handle_inner_binary_expression(root: Node, src: String) -> String {
             "&&" => parts.push("&&".to_string()),
             "^" => parts.push("^".to_string()),
             ";" => parts.push(";".to_string()),
-            _ => println!("You shouldn't be here (cpp inner_binary_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp inner_binary_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -1721,7 +1880,7 @@ fn handle_parenthesized_declarator(root: Node, src: String) -> String {
             },
             "(" => result += "(",
             ")" => result += ")",
-            _ => println!("You shouldn't be here (cpp parenthesized_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp parenthesized_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1751,6 +1910,10 @@ fn handle_parenthesized_expression(root: Node, src: String) -> String {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 result += binary_expression.as_str();
             },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                result += cast_expression.as_str();
+            },
             "assignment_expression" => {
                 let assignment_expression = handle_assignment_expression(node, src.clone());
                 result += assignment_expression.as_str();
@@ -1773,7 +1936,7 @@ fn handle_parenthesized_expression(root: Node, src: String) -> String {
             },
             "(" => result += "(",
             ")" => result += ")",
-            _ => println!("You shouldn't be here (cpp parenthesized_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp parenthesized_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1816,9 +1979,10 @@ fn handle_pointer_expression(root: Node, src: String) -> String {
                 result += cast_expression.as_str();
             },
             "*" => result += "* ",
+            "this" => result += "this",
             "&" => result += "&",
             ";" => result += ";",
-            _ => println!("You shouldn't be here (cpp pointer_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp pointer_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1833,7 +1997,7 @@ fn handle_inner_pointer_expression(root: Node, src: String) -> String {
                 let identifier = handle_identifier(node, src.clone());
                 result += identifier.as_str();
             },
-            _ => println!("You shouldn't be here (cpp inner_pointer_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp inner_pointer_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1855,6 +2019,10 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
                 let pointer_declarator = handle_pointer_declarator(node, src.clone());
                 parts.push(pointer_declarator);
             },
+            "array_declarator" => {
+                let array_declarator = handle_array_declarator(node, src.clone());
+                parts.push(array_declarator);
+            },
             "primitive_type" => {
                 let primitive_type = handle_primitive_type(node, src.clone());
                 parts.push(primitive_type);
@@ -1862,6 +2030,10 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
             "type_qualifier" => {
                 let type_qualifier = handle_type_qualifier(node, src.clone());
                 parts.push(type_qualifier);
+            },
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                parts.push(template_type);
             },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
@@ -1887,7 +2059,7 @@ fn handle_parameter_declaration(root: Node, src: String) -> String {
                 let reference_declarator = handle_reference_declarator(node, src.clone());
                 parts.push(reference_declarator);
             },
-            _ => println!("You shouldn't be here (cpp parameter_declaration): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp parameter_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let mut result = parts.join(" ");
@@ -1945,7 +2117,7 @@ fn handle_subscript_expression(root: Node, src: String) -> String {
                 let subscript_argument_list = handle_subscript_argument_list(node, src.clone());
                 result += subscript_argument_list.as_str();
             },
-            _ => println!("You shouldn't be here (cpp subscript_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp subscript_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = utils::remove_all_spaces(result);
@@ -1964,6 +2136,10 @@ fn handle_field_expression(root: Node, src: String) -> String {
                 let subscript_expression = handle_subscript_expression(node, src.clone());
                 result += subscript_expression.as_str();
             },
+            "parenthesized_expression" => {
+                let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
+                result += parenthesized_expression.as_str();
+            },
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
                 result += call_expression.as_str();
@@ -1972,10 +2148,14 @@ fn handle_field_expression(root: Node, src: String) -> String {
                 let field_expression = handle_inner_field_expression(node, src.clone());
                 result += field_expression.as_str();
             },
+            "destructor_name" => {
+                let destructor_name = handle_destructor_name(node, src.clone());
+                result += destructor_name.as_str();
+            },
             "this" => result += "this",
             "->" => result += "->",
             "." => result += ".",
-            _ => println!("You shouldn't be here (cpp field_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp field_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -1994,18 +2174,24 @@ fn handle_error(root: Node, src: String) -> String {
             "compound_statement" => {
                 result = handle_compound_statement(node, src.clone());
             },
-            /*NOTE
-                These two become errors when they are used mid-expression.
-                This usually breaks the surrounding syntax, so they are simply removed. 
-                *This is a destructive action and code behavior **will** change*
-            */
-            "#ifdef" => {}, // result = "#ifdef".to_string(); },
-            "#endif" => {}, // result = "#endif".to_string(); },
-            "ERROR" => {
-                result = node.utf8_text(src.as_bytes()).unwrap().to_string();
+            "bitfield_clause" => {
+                result = handle_bitfield_clause(node, src.clone());
             },
             "parenthesized_expression" => {
                 result += handle_parenthesized_expression(node, src.clone()).as_str();
+            },
+            /*NOTE
+                This is where mid-expression parsing becomes an issue.
+                The easiest fix is to simply remove the #ifdef and #endif lines,
+                  but doing so is a destructive action and breaks code behavior.
+            */
+            "#ifdef" => { result = "#ifdef".to_string(); },
+            "#endif" => { result = "#endif".to_string(); },
+            "ERROR" => {
+                result = node.utf8_text(src.as_bytes()).unwrap().to_string();
+            },
+            "operator" => {
+                result = "operator".to_string();
             },
             "switch" => {
                 result += "switch ";
@@ -2019,6 +2205,7 @@ fn handle_error(root: Node, src: String) -> String {
             ")" => result = ")".to_string(),
             "-" => result = "-".to_string(),
             ">" => result = ">".to_string(),
+            "," => result = ",".to_string(),
             _ => println!("You shouldn't be here (cpp ERROR): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap()),
         }
     }
@@ -2060,7 +2247,7 @@ fn handle_cast_expression(root: Node, src: String) -> String {
                 let parenthesized_expression = handle_parenthesized_expression(node, src.clone());
                 result += parenthesized_expression.as_str();
             },
-            _ => println!("You shouldn't be here (cpp cast_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp cast_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2073,6 +2260,10 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 parts.push(identifier);
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                parts.push(qualified_identifier);
             },
             "number_literal" => {
                 let number_literal = handle_number_literal(node, src.clone());
@@ -2097,6 +2288,10 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "pointer_expression" => {
                 let pointer_expression = handle_pointer_expression(node, src.clone());
                 parts.push(pointer_expression);
+            },
+            "reference_declarator" => {
+                let reference_declarator = handle_reference_declarator(node, src.clone());
+                parts.push(reference_declarator);
             },
             "cast_expression" => {
                 let cast_expression = handle_cast_expression(node, src.clone());
@@ -2151,7 +2346,7 @@ fn handle_init_declarator(root: Node, src: String) -> String {
             "false" => parts.push("false".to_string()),
             "true" => parts.push("true".to_string()),
             "null" => parts.push("NULL".to_string()),
-            _ => println!("You shouldn't be here (cpp init_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp init_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let mut result = parts.join(" ");
@@ -2198,7 +2393,11 @@ fn handle_type_descriptor(root: Node, src: String) -> String {
                 let abstract_reference_declarator = handle_abstract_reference_declarator(node, src.clone());
                 result += format!("{} ", abstract_reference_declarator).as_str();
             },
-            _ => println!("You shouldn't be here (cpp type_descriptor): {}\n", node.grammar_name()),
+            "decltype" => {
+                let decltype = handle_decltype(node, src.clone());
+                result += format!("{} ", decltype).as_str();
+            },
+            _ => println!("You shouldn't be here (cpp type_descriptor): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2240,6 +2439,10 @@ fn handle_initializer_list(root: Node, src: String) -> String {
                 let call_expression = handle_call_expression(node, src.clone());
                 result += call_expression.as_str();
             },
+            "pointer_expression" => {
+                let pointer_expression = handle_pointer_expression(node, src.clone());
+                result += pointer_expression.as_str();
+            },
             "conditional_expression" => {
                 let conditional_expression = handle_conditional_expression(node, src.clone());
                 result += conditional_expression.as_str();
@@ -2251,7 +2454,7 @@ fn handle_initializer_list(root: Node, src: String) -> String {
             "{" => result += "{",
             "}" => result += "}",
             "," => result += ", ",
-            _ => println!("You shouldn't be here (cpp initializer_list): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp initializer_list): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2273,7 +2476,7 @@ fn handle_sizeof_expression(root: Node, src: String) -> String {
                 let type_descriptor = handle_type_descriptor(node, src.clone());
                 result += type_descriptor.as_str();
             },
-            _ => println!("You shouldn't be here (cpp sizeof_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp sizeof_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2283,13 +2486,10 @@ fn handle_type_qualifier(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            "const" => {
-                result = "const".to_string();
-            },
-            "constexpr" => {
-                result = "constexpr".to_string();
-            },
-            _ => println!("You shouldn't be here (cpp type_qualifier): {}\n", node.grammar_name()),
+            "const" => result = "const".to_string(),
+            "constexpr" => result = "constexpr".to_string(),
+            "volatile" => result = "volatile".to_string(),
+            _ => println!("You shouldn't be here (cpp type_qualifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2301,7 +2501,7 @@ fn handle_abstract_pointer_declarator(root: Node, src: String) -> String {
         match node.grammar_name() {
             "abstract_pointer_declarator" => result = "**".to_string(),
             "*" => result = "*".to_string(),
-            _ => println!("You shouldn't be here (cpp abstract_pointer_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp abstract_pointer_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2322,6 +2522,10 @@ fn handle_conditional_expression(root: Node, src: String) -> String {
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
                 parts.push(call_expression);
+            },
+            "cast_expression" => {
+                let cast_expression = handle_cast_expression(node, src.clone());
+                parts.push(cast_expression);
             },
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
@@ -2363,7 +2567,7 @@ fn handle_conditional_expression(root: Node, src: String) -> String {
             "false" => parts.push("false".to_string()),
             ":" => parts.push(":".to_string()),
             "?" => parts.push("?".to_string()),
-            _ => println!("You shouldn't be here (cpp conditional_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp conditional_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -2408,6 +2612,10 @@ fn handle_unary_expression(root: Node, src: String) -> String {
                 let number_literal = handle_number_literal(node, src.clone());
                 result += number_literal.as_str();
             },
+            "compound_literal_expression" => {
+                let compound_literal_expression = handle_compound_literal_expression(node, src.clone());
+                result += compound_literal_expression.as_str();
+            },
             "assignment_expression" => {
                 let assignment_expression = handle_assignment_expression(node, src.clone());
                 result += assignment_expression.as_str();
@@ -2419,7 +2627,7 @@ fn handle_unary_expression(root: Node, src: String) -> String {
             "!" => result += "!",
             "~" => result += "~",
             "-" => result += "-",
-            _ => println!("You shouldn't be here (cpp unary_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp unary_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2441,13 +2649,17 @@ fn handle_array_declarator(root: Node, src: String) -> String {
                 let identifier = handle_identifier(node, src.clone());
                 parts.push(identifier);
             },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                parts.push(qualified_identifier);
+            },
             "binary_expression" => {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 parts.push(binary_expression);
             },
             "[" => parts.push("[".to_string()),
             "]" => parts.push("]".to_string()),
-            _ => println!("You shouldn't be here (cpp array_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp array_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("");
@@ -2465,7 +2677,7 @@ fn handle_string_literal(root: Node, src: String) -> String {
                 parts.push(node.utf8_text(src.as_bytes()).unwrap().to_string());
             },
             "\"" => parts.push("\"".to_string()),
-            _ => println!("You shouldn't be here (cpp string_literal): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp string_literal): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("");
@@ -2484,7 +2696,7 @@ fn handle_concatenated_string(root: Node, src: String) -> String {
                 let identifier = handle_identifier(node, src.clone());
                 parts.push(identifier);
             }
-            _ => println!("You shouldn't be here (cpp concatenated_string): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp concatenated_string): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -2512,7 +2724,7 @@ fn handle_labeled_statement(root: Node, src: String) -> String {
                 result += if_statement.as_str();
             },
             ":" => result += ":\n",
-            _ => println!("You shouldn't be here (cpp labeled_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp labeled_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = utils::add_all_leading_tabs(result);
@@ -2565,7 +2777,7 @@ fn handle_for_statement(root: Node, src: String) -> String {
                 temp = "".to_string();
             },
             "for" => temp += "for ",
-            _ => println!("You shouldn't be here (cpp for_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp for_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = vec.join(" ");
@@ -2579,6 +2791,10 @@ fn handle_struct_specifier(root: Node, src: String) -> String {
             "identifier" => {
                 let identifier = handle_identifier(node, src.clone());
                 result += format!("{} ", identifier).as_str();
+            },
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                result += format!("{} ", template_type).as_str();
             },
             "base_class_clause" => {
                 let base_class_clause = handle_base_class_clause(node, src.clone());
@@ -2595,7 +2811,7 @@ fn handle_struct_specifier(root: Node, src: String) -> String {
                 }
             },
             "struct" => result += "struct ",
-            _ => println!("You shouldn't be here (cpp struct_specifier): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp struct_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2639,7 +2855,7 @@ fn handle_type_definition(root: Node, src: String) -> String {
                 result += enum_specifier.as_str();
             },
             ";" => result += ";",
-            _ => println!("You shouldn't be here (cpp type_definition): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp type_definition): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2654,6 +2870,18 @@ fn handle_field_declaration_list(root: Node, src: String) -> String {
                 let field_declaration = handle_field_declaration(node, src.clone());
                 parts.push(format!("\t{}", field_declaration));
             },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                parts.push(format!("\t{}", declaration));
+            },
+            "template_declaration" => {
+                let template_declaration = handle_template_declaration(node, src.clone());
+                parts.push(format!("\t{}", template_declaration));
+            },
+            "friend_declaration" => {
+                let friend_declaration = handle_friend_declaration(node, src.clone());
+                parts.push(format!("\t{}", friend_declaration));
+            },
             "comment" => {
                 let comment = handle_comment(node, src.clone());
                 parts.push(format!("\t{}", comment));
@@ -2661,6 +2889,18 @@ fn handle_field_declaration_list(root: Node, src: String) -> String {
             "access_specifier" => {
                 let access_specifier = handle_access_specifier(node, src.clone());
                 parts.push(access_specifier);
+            },
+            "type_definition" => {
+                let type_definition = handle_type_definition(node, src.clone());
+                parts.push(type_definition);
+            },
+            "preproc_ifdef" => {
+                let preproc_ifdef = handle_preproc_ifdef(node, src.clone());
+                parts.push(preproc_ifdef);
+            },
+            "preproc_call" => {
+                let preproc_call = handle_preproc_call(node, src.clone());
+                parts.push(preproc_call);
             },
             "function_definition" => {
                 let mut function_definition = handle_function_definition(node, src.clone());
@@ -2699,13 +2939,29 @@ fn handle_field_declaration(root: Node, src: String) -> String {
                 let primitive_type = handle_primitive_type(node, src.clone());
                 result += format!("{} ", primitive_type).as_str();
             },
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                result += format!("{} ", template_type).as_str();
+            },
+            "type_qualifier" => {
+                let type_qualifier = handle_type_qualifier(node, src.clone());
+                result += format!("{} ", type_qualifier).as_str();
+            },
             "array_declarator" => {
                 let array_declarator = handle_array_declarator(node, src.clone());
                 result += format!("{} ", array_declarator).as_str();
             },
+            "reference_declarator" => {
+                let reference_declarator = handle_reference_declarator(node, src.clone());
+                result += format!("{} ", reference_declarator).as_str();
+            },
             "pointer_declarator" => {
                 let pointer_declarator = handle_pointer_declarator(node, src.clone());
                 result += format!("{} ", pointer_declarator).as_str();
+            },
+            "compound_literal_expression" => {
+                let compound_literal_expression = handle_compound_literal_expression(node, src.clone());
+                result += format!("{} ", compound_literal_expression).as_str();
             },
             "function_declarator" => {
                 let function_declarator = handle_function_declarator(node, src.clone());
@@ -2715,9 +2971,30 @@ fn handle_field_declaration(root: Node, src: String) -> String {
                 let storage_class_specifier = handle_storage_class_specifier(node, src.clone());
                 result += format!("{} ", storage_class_specifier).as_str();
             },
+            "struct_specifier" => {
+                let struct_specifier = handle_struct_specifier(node, src.clone());
+                result += format!("{} ", struct_specifier).as_str();
+            },
+            "enum_specifier" => {
+                let enum_specifier = handle_enum_specifier(node, src.clone());
+                result += format!("{} ", enum_specifier).as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += format!("{} ", number_literal).as_str();
+            },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                result += format!("{} ", error).as_str();
+            },
+            "virtual" => result += "virtual ",
+            "true" => result += "true",
+            "false" => result += "false",
+            "null" => result += "nullptr",
             ";" => result += ";",
+            "=" => result += " = ",
             "," => result += ", ",
-            _ => println!("You shouldn't be here (cpp field_declaration): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp field_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = utils::remove_unnecessary_spaces(&result);
@@ -2735,7 +3012,7 @@ fn handle_preproc_def(root: Node, src: String) -> String {
                 parts.push(node.utf8_text(src.as_bytes()).unwrap().to_string());
             },
             "#define" => parts.push("#define".to_string()),
-            _ => println!("You shouldn't be here (cpp preproc_def): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp preproc_def): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -2758,9 +3035,13 @@ fn handle_abstract_array_declarator(root: Node, src: String) -> String {
                 let abstract_parenthesized_declarator = handle_abstract_parenthesized_declarator(node, src.clone());
                 result += abstract_parenthesized_declarator.as_str();
             },
+            "abstract_array_declarator" => {
+                let abstract_array_declarator = handle_abstract_array_declarator(node, src.clone());
+                result += abstract_array_declarator.as_str();
+            },
             "[" => result += "[",
             "]" => result += "]",
-            _ => println!("You shouldn't be here (cpp abstract_array_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp abstract_array_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2776,7 +3057,7 @@ fn handle_sized_type_specifier(root: Node, src: String) -> String {
             },
             "long" => parts.push("long".to_string()),
             "unsigned" => parts.push("unsigned".to_string()),
-            _ => println!("You shouldn't be here (cpp sized_type_specifier): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp sized_type_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join(" ");
@@ -2807,7 +3088,7 @@ fn handle_enum_specifier(root: Node, src: String) -> String {
             },
             "enum" => result += "enum ",
             "class" => result += "class ",
-            _ => println!("You shouldn't be here (cpp enum_specifier): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp enum_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2832,7 +3113,7 @@ fn handle_union_specifier(root: Node, src: String) -> String {
                 }
             },
             "union" => result += "union ",
-            _ => println!("You shouldn't be here (cpp union_specifier): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp union_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -2853,7 +3134,7 @@ fn handle_enumerator_list(root: Node, src: String) -> String {
             },
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
-            _ => println!("You shouldn't be here (cpp enumerator_list): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp enumerator_list): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     if temp.len() > 0 {
@@ -2871,7 +3152,7 @@ fn handle_storage_class_specifier(root: Node, src: String) -> String {
         match node.grammar_name() {
             "static" => result += "static ",
             "inline" => result += "inline ",
-            _ => println!("You shouldn't be here (cpp storage_class_specifier): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp storage_class_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     result = result.trim_end().to_string();
@@ -2903,9 +3184,25 @@ fn handle_preproc_ifdef(root: Node, src: String) -> String {
                 let preproc_def = handle_preproc_def(node, src.clone());
                 parts.push(preproc_def);
             },
+            "field_declaration" => {
+                let field_declaration = handle_field_declaration(node, src.clone());
+                parts.push(field_declaration);
+            },
+            "expression_statement" => {
+                let expression_statement = handle_expression_statement(node, src.clone());
+                parts.push(expression_statement);
+            },
+            "preproc_include" => {
+                let preproc_include = handle_preproc_include(node, src.clone());
+                parts.push(preproc_include);
+            },
             "preproc_if" => {
                 let preproc_if = handle_preproc_if(node, src.clone());
                 parts.push(preproc_if);
+            },
+            "preproc_ifdef" => {
+                let preproc_ifdef = handle_preproc_ifdef(node, src.clone());
+                parts.push(preproc_ifdef);
             },
             "preproc_else" => {
                 let preproc_else = handle_preproc_else(node, src.clone());
@@ -2915,7 +3212,19 @@ fn handle_preproc_ifdef(root: Node, src: String) -> String {
                 let preproc_function_def = handle_preproc_function_def(node, src.clone());
                 parts.push(preproc_function_def);
             },
-            _ => println!("You shouldn't be here (cpp preproc_ifdef): {}\n", node.grammar_name()),
+            "function_definition" => {
+                let function_definition = handle_function_definition(node, src.clone());
+                parts.push(function_definition);
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
+            },
+            "return_statement" => {
+                let return_statement = handle_return_statement(node, src.clone());
+                parts.push(return_statement);
+            },
+            _ => println!("You shouldn't be here (cpp preproc_ifdef): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("\n");
@@ -2943,9 +3252,17 @@ fn handle_preproc_if(root: Node, src: String) -> String {
                 let return_statement = handle_return_statement(node, src.clone());
                 parts.push(return_statement);
             },
+            "preproc_if" => {
+                let preproc_if = handle_preproc_if(node, src.clone());
+                parts.push(preproc_if);
+            },
             "declaration" => {
                 let declaration = handle_declaration(node, src.clone());
                 parts.push(declaration);
+            },
+            "template_declaration" => {
+                let template_declaration = handle_template_declaration(node, src.clone());
+                parts.push(template_declaration);
             },
             "if_statement" => {
                 let if_statement = handle_if_statement(node, src.clone());
@@ -3014,7 +3331,7 @@ fn handle_preproc_if(root: Node, src: String) -> String {
                 temp = String::new();
             },
             "\n" => (),
-            _ => println!("You shouldn't be here (cpp preproc_if): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp preproc_if): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("\n");
@@ -3042,7 +3359,7 @@ fn handle_preproc_function_def(root: Node, src: String) -> String {
             "preproc_arg" => {
                 result += node.utf8_text(src.as_bytes()).unwrap();
             },
-            _ => println!("You shouldn't be here (cpp preproc_function_def): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp preproc_function_def): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -3068,6 +3385,22 @@ fn handle_preproc_else(root: Node, src: String) -> String {
                 let expression_statement = handle_expression_statement(node, src.clone());
                 parts.push(expression_statement);
             },
+            "template_declaration" => {
+                let template_declaration = handle_template_declaration(node, src.clone());
+                parts.push(template_declaration);
+            },
+            "if_statement" => {
+                let if_statement = handle_if_statement(node, src.clone());
+                parts.push(if_statement);
+            },
+            "preproc_if" => {
+                let preproc_if = handle_preproc_if(node, src.clone());
+                parts.push(preproc_if);
+            },
+            "preproc_call" => {
+                let preproc_call = handle_preproc_call(node, src.clone());
+                parts.push(preproc_call);
+            },
             "binary_expression" => {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 temp += binary_expression.as_str();
@@ -3077,6 +3410,18 @@ fn handle_preproc_else(root: Node, src: String) -> String {
             "preproc_def" => {
                 let preproc_def = handle_preproc_def(node, src.clone());
                 parts.push(preproc_def);
+            },
+            "preproc_ifdef" => {
+                let preproc_ifdef = handle_preproc_ifdef(node, src.clone());
+                parts.push(preproc_ifdef);
+            },
+            "preproc_include" => {
+                let preproc_include = handle_preproc_include(node, src.clone());
+                parts.push(preproc_include);
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
             },
             "function_definition" => {
                 let function_definition = handle_function_definition(node, src.clone());
@@ -3094,7 +3439,7 @@ fn handle_preproc_else(root: Node, src: String) -> String {
                 parts.push(temp);
                 temp = String::new();
             },
-            _ => println!("You shouldn't be here (cpp preproc_else): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp preproc_else): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     let result = parts.join("\n");
@@ -3105,8 +3450,8 @@ fn handle_variadic_parameter(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            "..." => result += "...",
-            _ => println!("You shouldn't be here (cpp variadic_parameter): {}\n", node.grammar_name()),
+            "..." => result += "... ",
+            _ => println!("You shouldn't be here (cpp variadic_parameter): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -3123,7 +3468,8 @@ fn handle_preproc_params(root: Node, src: String) -> String {
             "(" => result += "(",
             ")" => result += ")",
             "," => result += ", ",
-            _ => println!("You shouldn't be here (cpp preproc_params): {}\n", node.grammar_name()),
+            "..." => result += "... ",
+            _ => println!("You shouldn't be here (cpp preproc_params): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -3139,7 +3485,7 @@ fn handle_preproc_call(root: Node, src: String) -> String {
             "preproc_arg" => {
                 result += node.utf8_text(src.as_bytes()).unwrap();
             },
-            _ => println!("You shouldn't be here (cpp preproc_call): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp preproc_call): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -3164,7 +3510,7 @@ fn handle_do_statement(root: Node, src: String) -> String {
                 let expression_statement = handle_expression_statement(node, src.clone());
                 result += expression_statement.as_str();
             },
-            _ => println!("You shouldn't be here (cpp do_statement): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp do_statement): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -3188,8 +3534,12 @@ fn handle_inner_field_expression(root: Node, src: String) -> String {
                 let call_expression = handle_call_expression(node, src.clone());
                 result += call_expression.as_str();
             },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                result += subscript_expression.as_str();
+            },
             "this" => result += "this",
-            _ => println!("You shouldn't be here (cpp inner_field_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp inner_field_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -3279,6 +3629,10 @@ fn handle_for_range_loop(root: Node, src: String) -> String {
                 let primitive_type = handle_primitive_type(node, src.clone());
                 temp += format!("{} ", primitive_type).as_str();
             },
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                temp += format!("{} ", template_type).as_str();
+            },
             "field_expression" => {
                 let field_expression = handle_field_expression(node, src.clone());
                 temp += format!("{} ", field_expression).as_str();
@@ -3338,6 +3692,10 @@ fn handle_qualified_identifier(root: Node, src: String) -> String {
                 let template_function = handle_template_function(node, src.clone());
                 result += template_function.as_str();
             },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                result += error.as_str();
+            },
             "::" => result += "::",
             _ => println!("You shouldn't be here (cpp qualified_identifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
@@ -3392,6 +3750,18 @@ fn handle_template_argument_list(root: Node, src: String) -> String {
             "type_descriptor" => {
                 let type_descriptor = handle_type_descriptor(node, src.clone());
                 result += type_descriptor.as_str();
+            },
+            "binary_expression" => {
+                let binary_expression = handle_binary_expression(node, src.clone());
+                result += binary_expression.as_str();
+            },
+            "parameter_pack_expansion" => {
+                let parameter_pack_expansion = handle_parameter_pack_expansion(node, src.clone());
+                result += parameter_pack_expansion.as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
             },
             "<" => result += "<",
             ">" => result += ">",
@@ -3463,6 +3833,18 @@ fn handle_subscript_argument_list(root: Node, src: String) -> String {
                 let binary_expression = handle_binary_expression(node, src.clone());
                 result += binary_expression.as_str();
             },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                result += string_literal.as_str();
+            },
+            "subscript_expression" => {
+                let subscript_expression = handle_subscript_expression(node, src.clone());
+                result += subscript_expression.as_str();
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                result += call_expression.as_str();
+            },
             "[" => result += "[",
             "]" => result += "]",
             _ => println!("You shouldn't be here (cpp subscript_argument_list): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
@@ -3517,11 +3899,16 @@ fn handle_reference_declarator(root: Node, src: String) -> String {
                 let function_declarator = handle_function_declarator(node, src.clone());
                 result += function_declarator.as_str();
             },
+            "variadic_declarator" => {
+                let variadic_declarator = handle_variadic_declarator(node, src.clone());
+                result += variadic_declarator.as_str();
+            },
             "structured_binding_declarator" => {
                 let structured_binding_declarator = handle_structured_binding_declarator(node, src.clone());
                 result += structured_binding_declarator.as_str();
             },
             "&" => result += "& ",
+            "&&" => result += "&& ",
             _ => println!("You shouldn't be here (cpp reference_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
@@ -3569,11 +3956,19 @@ fn handle_template_declaration(root: Node, src: String) -> String {
             "function_definition" => {
                 let function_definition = handle_function_definition(node, src.clone());
                 result += function_definition.as_str();
-            }
+            },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                result += declaration.as_str();
+            },
             "struct_specifier" => {
                 let struct_specifier = handle_struct_specifier(node, src.clone());
                 result += struct_specifier.as_str();
-            }
+            },
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                result += comment.as_str();
+            },
             "template" => result += "template ",
             ";" => result += ";",
             _ => println!("You shouldn't be here (cpp template_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
@@ -3597,6 +3992,14 @@ fn handle_template_parameter_list(root: Node, src: String) -> String {
             "variadic_parameter_declaration" => {
                 let variadic_parameter_declaration = handle_variadic_parameter_declaration(node, src.clone());
                 result += variadic_parameter_declaration.as_str();
+            },
+            "variadic_type_parameter_declaration" => {
+                let variadic_type_parameter_declaration = handle_variadic_type_parameter_declaration(node, src.clone());
+                result += variadic_type_parameter_declaration.as_str();
+            },
+            "optional_type_parameter_declaration" => {
+                let optional_type_parameter_declaration = handle_optional_type_parameter_declaration(node, src.clone());
+                result += optional_type_parameter_declaration.as_str();
             },
             "<" => result += "<",
             ">" => result += ">",
@@ -3628,6 +4031,7 @@ fn handle_access_specifier(root: Node, src: String) -> String {
         match node.grammar_name() {
             "public" => result += "public:",
             "private" => result += "private:",
+            "protected" => result += "protected:",
             _ => println!("You shouldn't be here (cpp access_specifier): {} : {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
@@ -3747,6 +4151,10 @@ fn handle_abstract_function_declarator(root: Node, src: String) -> String {
                 let parameter_list = handle_parameter_list(node, src.clone());
                 parts.push(parameter_list);
             }
+            "type_qualifier" => {
+                let type_qualifier = handle_type_qualifier(node, src.clone());
+                parts.push(type_qualifier);
+            }
             _ => println!("You shouldn't be here (cpp abstract_function_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
@@ -3822,6 +4230,14 @@ fn handle_preproc_elif(root: Node, src: String) -> String {
                 let preproc_else = handle_preproc_else(node, src.clone());
                 result += format!("{}\n", preproc_else).as_str();
             },
+            "preproc_call" => {
+                let preproc_call = handle_preproc_call(node, src.clone());
+                result += format!("{}\n", preproc_call).as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += format!("{}\n", number_literal).as_str();
+            },
             "expression_statement" => {
                 let expression_statement = handle_expression_statement(node, src.clone());
                 result += format!("{}\n", expression_statement).as_str();
@@ -3829,6 +4245,14 @@ fn handle_preproc_elif(root: Node, src: String) -> String {
             "call_expression" => {
                 let call_expression = handle_call_expression(node, src.clone());
                 result += format!("{}\n", call_expression).as_str();
+            },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                result += format!("{}\n", declaration).as_str();
+            },
+            "return_statement" => {
+                let return_statement = handle_return_statement(node, src.clone());
+                result += format!("{}\n", return_statement).as_str();
             },
             _ => println!("You shouldn't be here (cpp preproc_elif): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
@@ -3910,7 +4334,7 @@ fn handle_namespace_definition(root: Node, src: String) -> String {
             "declaration_list" => {
                 let declaration_list = handle_declaration_list(node, src.clone());
                 parts.push(declaration_list);
-            }
+            },
             _ => println!("Namespace definition: {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
@@ -3924,6 +4348,14 @@ fn handle_declaration_list(root: Node, src: String) -> String {
         match node.grammar_name() {
             "{" => parts.push("{".to_string()),
             "}" => parts.push("}".to_string()),
+            "comment" => {
+                let comment = handle_comment(node, src.clone());
+                parts.push(comment);
+            },
+            "preproc_ifdef" => {
+                let preproc_ifdef = handle_preproc_ifdef(node, src.clone());
+                parts.push(preproc_ifdef);
+            },
             "function_definition" => {
                 let mut function_definition = handle_function_definition(node, src.clone());
                 function_definition = utils::add_all_leading_tabs(function_definition);
@@ -3977,12 +4409,32 @@ fn handle_comma_expression(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
+            },
+            "comma_expression" => {
+                let comma_expression = handle_comma_expression(node, src.clone());
+                result += comma_expression.as_str();
+            },
             "update_expression" => {
                 let update_expression = handle_update_expression(node, src.clone());
                 result += update_expression.as_str();
             },
+            "compound_literal_expression" => {
+                let compound_literal_expression = handle_compound_literal_expression(node, src.clone());
+                result += compound_literal_expression.as_str();
+            },
+            "ERROR" => {
+                let error = handle_error(node, src.clone());
+                result += error.as_str();
+            },
             "," => result += ", ",
-            _ => println!("You shouldn't be here (cpp comma_expression): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp comma_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4008,7 +4460,7 @@ fn handle_static_assert_declaration(root: Node, src: String) -> String {
             ")" => result += ")",
             "," => result += ",",
             ";" => result += ";",
-            _ => println!("You shouldn't be here (cpp static_assert_declaration): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp static_assert_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4018,7 +4470,7 @@ fn handle_static_assert(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => println!("You shouldn't be here (cpp static_assert): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp static_assert): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4028,8 +4480,16 @@ fn handle_placeholder_type_specifier(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "decltype" => {
+                let decltype = handle_decltype(node, src.clone());
+                result += decltype.as_str();
+            },
             "auto" => result = "auto ".to_string(),
-            _ => println!("You shouldn't be here (cpp placeholder_type_specifier): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp placeholder_type_specifier): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4039,15 +4499,43 @@ fn handle_variadic_parameter_declaration(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
             "primitive_type" => {
                 let primitive_type = handle_primitive_type(node, src.clone());
                 result += primitive_type.as_str();
+            },
+            "reference_declarator" => {
+                let reference_declarator = handle_reference_declarator(node, src.clone());
+                result += reference_declarator.as_str();
             },
             "variadic_declarator" => {
                 let variadic_declarator = handle_variadic_declarator(node, src.clone());
                 result += variadic_declarator.as_str();
             },
-            _ => println!("You shouldn't be here: (cpp handle_variadic_parameter_declaration): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here: (cpp handle_variadic_parameter_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_variadic_type_parameter_declaration(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "reference_declarator" => {
+                let reference_declarator = handle_reference_declarator(node, src.clone());
+                result += reference_declarator.as_str();
+            },
+            "typename" => result += "typename ",
+            "..." => result += "... ",
+            _ => println!("You shouldn't be here: (cpp handle_variadic_type_parameter_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4065,7 +4553,7 @@ fn handle_abstract_parenthesized_declarator(root: Node, src: String) -> String {
             ")" => result += ")",
             "," => result += ",",
             ";" => result += ";",
-            _ => println!("You shouldn't be here (cpp abstract_parenthesized_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp abstract_parenthesized_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4080,7 +4568,7 @@ fn handle_variadic_declarator(root: Node, src: String) -> String {
                 result += identifier.as_str();
             },
             "..." => result += "... ",
-            _ => println!("You shouldn't be here (cpp variadic_declarator): {}\n", node.grammar_name()),
+            _ => println!("You shouldn't be here (cpp variadic_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;
@@ -4090,7 +4578,279 @@ fn handle_base_class_clause(root: Node, src: String) -> String {
     let mut result = String::new();
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
-            _ => println!("You shouldn't be here (cpp base_class_clause): {}\n", node.grammar_name()),
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                result += template_type.as_str();
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                result += qualified_identifier.as_str();
+            },
+            ":" => result += ":",
+            _ => println!("You shouldn't be here (cpp base_class_clause): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_parameter_pack_expansion(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "type_descriptor" => {
+                let type_descriptor = handle_type_descriptor(node, src.clone());
+                result += type_descriptor.as_str();
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                result += call_expression.as_str();
+            },
+            "..." => result += "... ",
+            _ => println!("You shouldn't be here (cpp parameter_pack_expansion): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_optional_type_parameter_declaration(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "primitive_type" => {
+                let primitive_type = handle_primitive_type(node, src.clone());
+                result += primitive_type.as_str();
+            },
+            "typename" => result += "typename",
+            "=" => result += " = ",
+            _ => println!("You shouldn't be here (cpp optional_type_parameter_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_decltype(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "sizeof_expression" => {
+                let sizeof_expression = handle_sizeof_expression(node, src.clone());
+                result += sizeof_expression.as_str();
+            },
+            "decltype" => {
+                let decltype = handle_decltype(node, src.clone());
+                result += decltype.as_str();
+            },
+            "auto" => result += "auto ",
+            "(" => result += "(",
+            ")" => result += ")",
+            _ => println!("You shouldn't be here (cpp decltype): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_destructor_name(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "destructor_name" => {
+                let destructor_name = handle_destructor_name(node, src.clone());
+                result += destructor_name.as_str();
+            },
+            "::" => result += "::",
+            "~" => result += "~",
+            _ => println!("You shouldn't be here (cpp destructor_name): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_friend_declaration(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "declaration" => {
+                let declaration = handle_declaration(node, src.clone());
+                result += declaration.as_str();
+            },
+            "friend" => result += "friend ",
+            "class" => result += "class ",
+            ";" => result += ";",
+            _ => println!("You shouldn't be here (cpp friend_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_pointer_type_declarator(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "*" => result += "*",
+            _ => println!("You shouldn't be here (cpp pointer_type_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_optional_parameter_declaration(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "qualified_identifier" => {
+                let qualified_identifier = handle_qualified_identifier(node, src.clone());
+                result += qualified_identifier.as_str();
+            },
+            "primitive_type" => {
+                let primitive_type = handle_primitive_type(node, src.clone());
+                result += primitive_type.as_str();
+            },
+            "number_literal" => {
+                let number_literal = handle_number_literal(node, src.clone());
+                result += number_literal.as_str();
+            },
+            "type_qualifier" => {
+                let type_qualifier = handle_type_qualifier(node, src.clone());
+                result += type_qualifier.as_str();
+            },
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                result += template_type.as_str();
+            },
+            "reference_declarator" => {
+                let reference_declarator = handle_reference_declarator(node, src.clone());
+                result += reference_declarator.as_str();
+            },
+            "compound_literal_expression" => {
+                let compound_literal_expression = handle_compound_literal_expression(node, src.clone());
+                result += compound_literal_expression.as_str();
+            },
+            "string_literal" => {
+                let string_literal = handle_string_literal(node, src.clone());
+                result += string_literal.as_str();
+            },
+            "pointer_declarator" => {
+                let pointer_declarator = handle_pointer_declarator(node, src.clone());
+                result += pointer_declarator.as_str();
+            },
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                result += call_expression.as_str();
+            },
+            "null" => result += "nullptr",
+            "=" => result += " = ",
+            "true" => result += "true",
+            "false" => result += "false",
+            _ => println!("You shouldn't be here (cpp optional_parameter_declaration): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_compound_literal_expression(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "initializer_list" => {
+                let initializer_list = handle_initializer_list(node, src.clone());
+                result += initializer_list.as_str();
+            },
+            "template_type" => {
+                let template_type = handle_template_type(node, src.clone());
+                result += template_type.as_str();
+            },
+            _ => println!("You shouldn't be here (cpp compound_literal_expression): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_namespace(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("You shouldn't be here (cpp namespace): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_default_method_clause(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "=" => result += " = ",
+            ";" => result += ";",
+            "default" => result += "default ",
+            _ => println!("You shouldn't be here (cpp default_method_clause): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_bitfield_clause(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "call_expression" => {
+                let call_expression = handle_call_expression(node, src.clone());
+                result += call_expression.as_str();
+            },
+            "=" => result += " = ",
+            ";" => result += ";",
+            "::" => result += "::",
+            ":" => result += ": ",
+            "default" => result += "default ",
+            _ => println!("You shouldn't be here (cpp bitfield_clause): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_operator_cast(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            "identifier" => {
+                let identifier = handle_identifier(node, src.clone());
+                result += identifier.as_str();
+            },
+            "abstract_function_declarator" => {
+                let abstract_function_declarator = handle_abstract_function_declarator(node, src.clone());
+                result += abstract_function_declarator.as_str();
+            },
+            "operator" => result += "operator",
+            _ => println!("You shouldn't be here (cpp operator_cast): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
+        }
+    }
+    return result;
+}
+
+fn handle_attribute(root: Node, src: String) -> String {
+    let mut result = String::new();
+    for node in root.children(&mut root.walk()) {
+        match node.grammar_name() {
+            _ => println!("You shouldn't be here (cpp __attribute__): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
     return result;

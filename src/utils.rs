@@ -552,7 +552,7 @@ pub fn fix_stars(file: String) -> String {
         let mut temp_line = String::new();
         for (i, c) in line.char_indices() {
             if line.len() > 1 {
-                if i <= line.len()-2 && i > 0 {
+                if i <= line.len()-2 && i > 2 {
                     // dereferences *must* be in parenthesis or at the start of the line
                     let deref = {
                         c == ' ' &&
