@@ -12,4 +12,6 @@ lashfile
 *output*
 *test*
 *safe*
-
+blfmt
+rules.md
+diffs_fmt.diff
