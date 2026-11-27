@@ -2231,9 +2231,15 @@ fn handle_function_declarator(root: Node, src: String) -> String {
             result += handle_operator_name(node, src.clone()).as_str();
         }
         else if node.child_count() == 0 {
+            if !result.is_empty() && !result.ends_with(' ') && node.grammar_name() == "identifier" {
+                result += " ";
+            }
             result += node.utf8_text(src.as_bytes()).unwrap();
         }
         else {
+            if node.grammar_name() == "ERROR" && result.ends_with(')') {
+                result += " ";
+            }
             let mut temp = String::new();
             for subnode in node.children(&mut node.walk()) {
                 let text = subnode.utf8_text(src.as_bytes()).unwrap();
@@ -3994,7 +4000,20 @@ fn handle_array_declarator(root: Node, src: String) -> String {
             _ => println!("You shouldn't be here (cpp array_declarator): {}: {}\n", node.grammar_name(), node.utf8_text(src.as_bytes()).unwrap_or("")),
         }
     }
-    let result = parts.join("");
+    let mut result = String::new();
+    for p in parts {
+        if p.is_empty() {
+            continue;
+        }
+        if let (Some(prev), Some(next)) = (result.chars().last(), p.chars().next()) {
+            let prev_word = prev.is_ascii_alphanumeric() || prev == '_' || prev == '>';
+            let next_word = next.is_ascii_alphanumeric() || next == '_';
+            if prev_word && next_word {
+                result.push(' ');
+            }
+        }
+        result.push_str(&p);
+    }
     return result;
 }
 
