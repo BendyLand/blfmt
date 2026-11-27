@@ -1358,11 +1358,18 @@ fn fix_indentation(line: &String, current: usize, target: usize) -> String {
     return result;
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum IndentBraceKind {
+    Normal,
+    NoIndent,
+    CaseBlock,
+}
+
 fn fix_indentation_levels(file: &mut String) {
     let lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
     let mut result = Vec::<String>::new();
     let mut indent_level: usize = 0;
-    let mut brace_stack = Vec::<bool>::new();
+    let mut brace_stack = Vec::<IndentBraceKind>::new();
     let mut pending_no_indent_brace = false;
     let mut in_block_comment = false;
 
@@ -1447,7 +1454,7 @@ fn fix_indentation_levels(file: &mut String) {
             if code_part.ends_with('{') {
                 let current_level = detect_indentation(&line);
                 result.push(fix_indentation(&line, current_level, indent_level));
-                brace_stack.push(false);
+                brace_stack.push(IndentBraceKind::NoIndent);
                 if has_unclosed_block_comment(&line) {
                     in_block_comment = true;
                 }
@@ -1458,7 +1465,7 @@ fn fix_indentation_levels(file: &mut String) {
         } else if code_part.starts_with("extern \"") && code_part.ends_with('{') {
             let current_level = detect_indentation(&line);
             result.push(fix_indentation(&line, current_level, indent_level));
-            brace_stack.push(false);
+            brace_stack.push(IndentBraceKind::NoIndent);
             if has_unclosed_block_comment(&line) {
                 in_block_comment = true;
             }
@@ -1467,15 +1474,33 @@ fn fix_indentation_levels(file: &mut String) {
             pending_no_indent_brace = true;
         }
 
+        let mut closed_case_block = false;
         if code_part == "}" || code_part.starts_with('}') {
-            let did_indent = brace_stack.pop().unwrap_or(true);
-            if did_indent && indent_level > 0 {
-                indent_level -= 1;
+            match brace_stack.pop().unwrap_or(IndentBraceKind::Normal) {
+                IndentBraceKind::Normal => {
+                    if indent_level > 0 {
+                        indent_level -= 1;
+                    }
+                }
+                IndentBraceKind::NoIndent => {}
+                IndentBraceKind::CaseBlock => {
+                    closed_case_block = true;
+                }
             }
         }
 
+        let is_case_block_open = (code_part.starts_with("case ")
+            || code_part.starts_with("case(")
+            || code_part.starts_with("default:")
+            || code_part.starts_with("default :"))
+            && code_part.contains(':')
+            && code_part.ends_with('{')
+            && !code_part.ends_with("{}");
+
         let target_indent = if code_part.starts_with(": ") {
             indent_level + 1
+        } else if closed_case_block || is_case_block_open {
+            indent_level.saturating_sub(1)
         } else {
             indent_level
         };
@@ -1489,10 +1514,12 @@ fn fix_indentation_levels(file: &mut String) {
 
         if code_part == "{" || (code_part.ends_with('{') && !code_part.ends_with("{}")) {
             if pending_no_indent_brace {
-                brace_stack.push(false);
+                brace_stack.push(IndentBraceKind::NoIndent);
                 pending_no_indent_brace = false;
+            } else if is_case_block_open {
+                brace_stack.push(IndentBraceKind::CaseBlock);
             } else {
-                brace_stack.push(true);
+                brace_stack.push(IndentBraceKind::Normal);
                 indent_level += 1;
             }
         } else if code_part != "{" && !code_part.starts_with("namespace") && !code_part.starts_with("inline namespace") && !code_part.starts_with("extern \"") {
@@ -1549,6 +1576,26 @@ fn ensure_proper_doc_comment_spacing(file: &mut String) {
         result.push(line);
     }
     *file = result.join("\n").trim_end().to_string() + "\n";
+}
+
+fn ends_with_overloaded_operator_token(s: &str) -> bool {
+    let Some(op_pos) = s.rfind("operator") else {
+        return false;
+    };
+    if op_pos > 0 {
+        let prev = s[..op_pos].chars().last().unwrap_or(' ');
+        if prev.is_ascii_alphanumeric() || prev == '_' {
+            return false;
+        }
+    }
+    let after = &s[op_pos + "operator".len()..];
+    !after.is_empty()
+        && after.chars().all(|ch| {
+            matches!(
+                ch,
+                '=' | '!' | '<' | '>' | '+' | '-' | '*' | '/' | '%' | '^' | '&' | '|' | ','
+            )
+        })
 }
 
 pub fn ensure_space_after_char(line: &String, target: char) -> String {
@@ -1614,7 +1661,12 @@ pub fn ensure_space_after_char(line: &String, target: char) -> String {
         }
         result.push(c);
         if !in_string && !in_char && i + 1 < chars.len() {
-            if c == target && chars[i + 1] != ' ' && chars[i + 1] != target && chars[i + 1] != '=' {
+            if c == target
+                && chars[i + 1] != ' '
+                && chars[i + 1] != target
+                && chars[i + 1] != '='
+                && !ends_with_overloaded_operator_token(&result)
+            {
                 result.push(' ');
             }
         }
@@ -2191,6 +2243,697 @@ fn try_expand_paren_call(line: &str, target_len: usize, rec_depth: usize) -> Opt
     None
 }
 
+fn find_control_flow_cond_parens(chars: &[char]) -> Option<(usize, usize)> {
+    let n = chars.len();
+    let mut i = 0usize;
+    while i < n && chars[i].is_whitespace() {
+        i += 1;
+    }
+    if i < n && chars[i] == '}' {
+        i += 1;
+        while i < n && chars[i].is_whitespace() {
+            i += 1;
+        }
+    }
+
+    let read_word = |start: usize| -> (&str, usize) {
+        let mut end = start;
+        while end < n && (chars[end].is_ascii_alphanumeric() || chars[end] == '_') {
+            end += 1;
+        }
+        let s: String = chars[start..end].iter().collect();
+        // Match against static keywords so we don't need to return a borrowed String
+        let kw = match s.as_str() {
+            "if" => "if",
+            "else" => "else",
+            "while" => "while",
+            "constexpr" => "constexpr",
+            _ => "",
+        };
+        (kw, end)
+    };
+
+    let (w1, mut pos) = read_word(i);
+    if w1 == "else" {
+        while pos < n && chars[pos].is_whitespace() {
+            pos += 1;
+        }
+        let (w2, pos2) = read_word(pos);
+        if w2 != "if" {
+            return None;
+        }
+        pos = pos2;
+    } else if w1 != "if" && w1 != "while" {
+        return None;
+    }
+
+    while pos < n && chars[pos].is_whitespace() {
+        pos += 1;
+    }
+    if w1 == "if" || w1 == "else" {
+        let (w_ce, pos_ce) = read_word(pos);
+        if w_ce == "constexpr" {
+            pos = pos_ce;
+            while pos < n && chars[pos].is_whitespace() {
+                pos += 1;
+            }
+        }
+    }
+
+    if pos >= n || chars[pos] != '(' {
+        return None;
+    }
+    let open_idx = pos;
+    let mut depth = 0usize;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+    let mut k = open_idx;
+    while k < n {
+        let c = chars[k];
+        if escaped {
+            escaped = false;
+            k += 1;
+            continue;
+        }
+        if c == '\\' && (in_string || in_char) {
+            escaped = true;
+            k += 1;
+            continue;
+        }
+        if c == '"' && !in_char {
+            in_string = !in_string;
+            k += 1;
+            continue;
+        }
+        if c == '\'' && !in_string {
+            in_char = !in_char;
+            k += 1;
+            continue;
+        }
+        if !in_string && !in_char {
+            if k + 1 < n && c == '/' && chars[k + 1] == '*' {
+                k += 2;
+                while k + 1 < n {
+                    if chars[k] == '*' && chars[k + 1] == '/' {
+                        k += 2;
+                        break;
+                    }
+                    k += 1;
+                }
+                continue;
+            }
+            if c == '(' {
+                depth += 1;
+            } else if c == ')' {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return Some((open_idx, k));
+                }
+            }
+        }
+        k += 1;
+    }
+    None
+}
+
+fn align_trailing_logical_ops(lines: &mut [String], target_len: usize) {
+    let mut op_lines: Vec<(usize, String, &'static str, usize)> = Vec::new();
+    for (idx, l) in lines.iter().enumerate() {
+        let op = if l.ends_with(" &&") {
+            Some("&&")
+        } else if l.ends_with(" ||") {
+            Some("||")
+        } else {
+            None
+        };
+        if let Some(op_str) = op {
+            let prefix = l[..l.len() - 3].trim_end().to_string();
+            let pre_w = display_width(&prefix);
+            op_lines.push((idx, prefix, op_str, pre_w));
+        }
+    }
+    if op_lines.len() < 2 {
+        return;
+    }
+    let max_pre_w = op_lines.iter().map(|(_, _, _, w)| *w).max().unwrap_or(0);
+    if max_pre_w + 3 > target_len {
+        return;
+    }
+    for (idx, prefix, op_str, pre_w) in op_lines {
+        let pad = " ".repeat(max_pre_w - pre_w + 1);
+        lines[idx] = format!("{}{}{}", prefix, pad, op_str);
+    }
+}
+
+fn try_wrap_conditional_groups(line: &str, target_len: usize, rec_depth: usize) -> Option<Vec<String>> {
+    let code_only = strip_trailing_comment(line);
+    let code_part = code_only.trim_end();
+    let trailing_comment = &line[code_part.len()..];
+    let trimmed_code = code_part.trim_start();
+    if trimmed_code.starts_with("template ") || trimmed_code.starts_with("template<") {
+        return None;
+    }
+
+    let base_tabs = line.chars().take_while(|&c| c == '\t').count();
+    let cont_indent = "\t".repeat(base_tabs + 1);
+    let chars: Vec<char> = code_part.chars().collect();
+    let (scan_start, scan_end) = match find_control_flow_cond_parens(&chars) {
+        Some((open_idx, close_idx)) => (open_idx + 1, close_idx),
+        None => (0, chars.len()),
+    };
+    if scan_start >= scan_end {
+        return None;
+    }
+
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+    let mut paren_depth = 0usize;
+    let mut bracket_depth = 0usize;
+    let mut brace_depth = 0usize;
+    let mut min_comma_depth: Option<usize> = None;
+    let mut min_ternary_depth: Option<usize> = None;
+    let mut logic_ops: Vec<(usize, usize)> = Vec::new();
+    let mut i = scan_start;
+
+    while i < scan_end {
+        let c = chars[i];
+        if escaped {
+            escaped = false;
+            i += 1;
+            continue;
+        }
+        if c == '\\' && (in_string || in_char) {
+            escaped = true;
+            i += 1;
+            continue;
+        }
+        if c == '"' && !in_char {
+            in_string = !in_string;
+            i += 1;
+            continue;
+        }
+        if c == '\'' && !in_string {
+            in_char = !in_char;
+            i += 1;
+            continue;
+        }
+        if !in_string && !in_char {
+            if i + 1 < scan_end && c == '/' && chars[i + 1] == '*' {
+                i += 2;
+                while i + 1 < scan_end {
+                    if chars[i] == '*' && chars[i + 1] == '/' {
+                        i += 2;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+            match c {
+                '(' => paren_depth += 1,
+                ')' => paren_depth = paren_depth.saturating_sub(1),
+                '[' => bracket_depth += 1,
+                ']' => bracket_depth = bracket_depth.saturating_sub(1),
+                '{' => brace_depth += 1,
+                '}' => brace_depth = brace_depth.saturating_sub(1),
+                ',' if brace_depth == 0 && bracket_depth == 0 => {
+                    min_comma_depth = Some(match min_comma_depth {
+                        Some(d) => d.min(paren_depth),
+                        None => paren_depth,
+                    });
+                }
+                '?' if brace_depth == 0
+                    && bracket_depth == 0
+                    && i > scan_start
+                    && i + 1 < scan_end
+                    && chars[i - 1] == ' '
+                    && chars[i + 1] == ' ' =>
+                {
+                    min_ternary_depth = Some(match min_ternary_depth {
+                        Some(d) => d.min(paren_depth),
+                        None => paren_depth,
+                    });
+                }
+                '&' | '|'
+                    if brace_depth == 0
+                        && bracket_depth == 0
+                        && i > scan_start
+                        && i + 2 < scan_end
+                        && chars[i - 1] == ' '
+                        && chars[i + 1] == c
+                        && chars[i + 2] == ' ' =>
+                {
+                    logic_ops.push((i, paren_depth));
+                }
+                _ => {}
+            }
+        }
+        i += 1;
+    }
+
+    if logic_ops.is_empty() {
+        return None;
+    }
+    let min_d = logic_ops.iter().map(|&(_, d)| d).min().unwrap();
+    if min_d > 1 {
+        return None;
+    }
+    if let Some(cd) = min_comma_depth {
+        if cd <= min_d {
+            return None;
+        }
+    }
+    if let Some(td) = min_ternary_depth {
+        if td < min_d {
+            return None;
+        }
+    }
+
+    let outer_ops: Vec<usize> = logic_ops
+        .iter()
+        .filter(|&&(_, d)| d == min_d)
+        .map(|&(pos, _)| pos)
+        .collect();
+    if outer_ops.is_empty() {
+        return None;
+    }
+    let has_compound_subgroup = logic_ops.iter().any(|&(_, d)| d > min_d);
+
+    let mut clauses: Vec<(String, Option<&'static str>)> = Vec::with_capacity(outer_ops.len() + 1);
+    for (k, &op_pos) in outer_ops.iter().enumerate() {
+        let op_str = if chars[op_pos] == '&' { "&&" } else { "||" };
+        if k == 0 {
+            let first_seg: String = chars[..op_pos].iter().collect();
+            clauses.push((first_seg.trim_end().to_string(), Some(op_str)));
+        } else {
+            let prev_end = outer_ops[k - 1] + 2;
+            let mid_seg: String = chars[prev_end..op_pos].iter().collect();
+            clauses.push((mid_seg.trim().to_string(), Some(op_str)));
+        }
+    }
+    let last_start = *outer_ops.last().unwrap() + 2;
+    let last_seg: String = chars[last_start..].iter().collect();
+    clauses.push((last_seg.trim().to_string(), None));
+
+    let mut packed_lines = Vec::<String>::new();
+    if has_compound_subgroup {
+        for (k, (seg, op)) in clauses.iter().enumerate() {
+            let prefix = if k == 0 { "" } else { cont_indent.as_str() };
+            let formatted = match op {
+                Some(op_s) => format!("{}{} {}", prefix, seg, op_s),
+                None => format!("{}{}", prefix, seg),
+            };
+            packed_lines.push(formatted);
+        }
+    } else {
+        let mut cur_line = match clauses[0].1 {
+            Some(op_s) => format!("{} {}", clauses[0].0, op_s),
+            None => clauses[0].0.clone(),
+        };
+        for (seg, op) in clauses.iter().skip(1) {
+            let piece = match op {
+                Some(op_s) => format!("{} {}", seg, op_s),
+                None => seg.clone(),
+            };
+            let candidate = format!("{} {}", cur_line, piece);
+            if display_width(&candidate) <= target_len {
+                cur_line = candidate;
+            } else {
+                packed_lines.push(cur_line);
+                cur_line = format!("{}{}", cont_indent, piece);
+            }
+        }
+        packed_lines.push(cur_line);
+    }
+
+    if packed_lines.len() < 2 {
+        return None;
+    }
+
+    let mut out_lines = Vec::<String>::new();
+    for pl in packed_lines {
+        if rec_depth < 4 && display_width(&pl) > target_len {
+            out_lines.extend(wrap_single_long_line_depth(&pl, target_len, rec_depth + 1));
+        } else {
+            out_lines.push(pl);
+        }
+    }
+
+    if rec_depth == 0 {
+        align_trailing_logical_ops(&mut out_lines, target_len);
+    }
+
+    if !trailing_comment.is_empty() {
+        if let Some(last) = out_lines.last_mut() {
+            last.push_str(trailing_comment);
+        }
+    }
+
+    Some(out_lines)
+}
+
+fn try_expand_brace_initializer(line: &str, target_len: usize, rec_depth: usize) -> Option<Vec<String>> {
+    let code_only = strip_trailing_comment(line);
+    let code_part = code_only.trim_end();
+    let trailing_comment = &line[code_part.len()..];
+    if !code_part.ends_with("};") {
+        return None;
+    }
+
+    let chars: Vec<char> = code_part.chars().collect();
+    let n = chars.len();
+    if n < 5 {
+        return None;
+    }
+    let close_brace_idx = n - 2; // index of `}` in `};`
+
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+    let mut paren_depth = 0usize;
+    let mut bracket_depth = 0usize;
+    let mut brace_depth = 0usize;
+    let mut eq_brace_open: Option<usize> = None;
+    let mut matching_close: Option<usize> = None;
+    let mut i = 0usize;
+
+    while i < n {
+        let c = chars[i];
+        if escaped {
+            escaped = false;
+            i += 1;
+            continue;
+        }
+        if c == '\\' && (in_string || in_char) {
+            escaped = true;
+            i += 1;
+            continue;
+        }
+        if c == '"' && !in_char {
+            in_string = !in_string;
+            i += 1;
+            continue;
+        }
+        if c == '\'' && !in_string {
+            in_char = !in_char;
+            i += 1;
+            continue;
+        }
+        if !in_string && !in_char {
+            if i + 1 < n && c == '/' && chars[i + 1] == '*' {
+                i += 2;
+                while i + 1 < n {
+                    if chars[i] == '*' && chars[i + 1] == '/' {
+                        i += 2;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+            match c {
+                '(' => paren_depth += 1,
+                ')' => paren_depth = paren_depth.saturating_sub(1),
+                '[' => bracket_depth += 1,
+                ']' => bracket_depth = bracket_depth.saturating_sub(1),
+                '=' if eq_brace_open.is_none()
+                    && paren_depth == 0
+                    && bracket_depth == 0
+                    && brace_depth == 0 =>
+                {
+                    let prev_ok = i == 0 || !matches!(chars[i - 1], '=' | '!' | '<' | '>');
+                    let next_ok = i + 1 < n && chars[i + 1] != '=';
+                    if prev_ok && next_ok {
+                        let mut k = i + 1;
+                        while k < n && chars[k].is_whitespace() {
+                            k += 1;
+                        }
+                        if k < n && chars[k] == '{' {
+                            eq_brace_open = Some(k);
+                        }
+                    }
+                }
+                '{' => brace_depth += 1,
+                '}' => {
+                    brace_depth = brace_depth.saturating_sub(1);
+                    if eq_brace_open.is_some() && brace_depth == 0 && matching_close.is_none() {
+                        matching_close = Some(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+        i += 1;
+    }
+
+    let open_brace_idx = eq_brace_open?;
+    if matching_close != Some(close_brace_idx) || open_brace_idx + 1 >= close_brace_idx {
+        return None;
+    }
+
+    let elems = split_top_level_args(&chars[open_brace_idx + 1..close_brace_idx]);
+    if elems.len() < 2 {
+        return None;
+    }
+
+    let prefix_with_brace: String = chars[..=open_brace_idx].iter().collect();
+    if elems[0].starts_with('{') {
+        let first_inline_width = display_width(&prefix_with_brace) + display_width(&elems[0]) + 1;
+        if first_inline_width <= target_len {
+            return None;
+        }
+    }
+
+    let base_tabs = line.chars().take_while(|&c| c == '\t').count();
+    let elem_indent = "\t".repeat(base_tabs + 1);
+
+    let mut packed_lines = Vec::<String>::new();
+    packed_lines.push(prefix_with_brace);
+
+    let mut cur_line = String::new();
+    for (idx, elem) in elems.iter().enumerate() {
+        let piece = if idx + 1 < elems.len() {
+            format!("{},", elem)
+        } else {
+            format!("{}}};", elem)
+        };
+        if cur_line.is_empty() {
+            cur_line = format!("{}{}", elem_indent, piece);
+        } else {
+            let candidate = format!("{} {}", cur_line, piece);
+            if display_width(&candidate) <= target_len {
+                cur_line = candidate;
+            } else {
+                packed_lines.push(cur_line);
+                cur_line = format!("{}{}", elem_indent, piece);
+            }
+        }
+    }
+    if !cur_line.is_empty() {
+        packed_lines.push(cur_line);
+    }
+
+    let mut out_lines = Vec::<String>::new();
+    for pl in packed_lines {
+        if rec_depth < 4 && display_width(&pl) > target_len {
+            out_lines.extend(wrap_single_long_line_depth(&pl, target_len, rec_depth + 1));
+        } else {
+            out_lines.push(pl);
+        }
+    }
+
+    if !trailing_comment.is_empty() {
+        if let Some(last) = out_lines.last_mut() {
+            last.push_str(trailing_comment);
+        }
+    }
+
+    Some(out_lines)
+}
+
+fn try_wrap_template_declaration(line: &str, target_len: usize, rec_depth: usize) -> Option<Vec<String>> {
+    let code_only = strip_trailing_comment(line);
+    let code_part = code_only.trim_end();
+    let trailing_comment = &line[code_part.len()..];
+    let trimmed_code = code_part.trim_start();
+    if !(trimmed_code.starts_with("template ") || trimmed_code.starts_with("template<")) {
+        return None;
+    }
+
+    let chars: Vec<char> = code_part.chars().collect();
+    let n = chars.len();
+    let base_tabs = line.chars().take_while(|&c| c == '\t').count();
+    let base_indent = "\t".repeat(base_tabs);
+    let cont_indent = "\t".repeat(base_tabs + 1);
+
+    let mut idx = 0usize;
+    while idx < n && chars[idx].is_whitespace() {
+        idx += 1;
+    }
+    // Skip "template"
+    idx += "template".len();
+    while idx < n && chars[idx].is_whitespace() {
+        idx += 1;
+    }
+    if idx >= n || chars[idx] != '<' {
+        return None;
+    }
+    let tmpl_open_idx = idx;
+
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+    let mut paren_depth = 0usize;
+    let mut bracket_depth = 0usize;
+    let mut brace_depth = 0usize;
+    let mut angle_depth = 0usize;
+    let mut tmpl_close_idx: Option<usize> = None;
+    let mut top_commas: Vec<usize> = Vec::new();
+    let mut i = tmpl_open_idx;
+
+    while i < n {
+        let c = chars[i];
+        if escaped {
+            escaped = false;
+            i += 1;
+            continue;
+        }
+        if c == '\\' && (in_string || in_char) {
+            escaped = true;
+            i += 1;
+            continue;
+        }
+        if c == '"' && !in_char {
+            in_string = !in_string;
+            i += 1;
+            continue;
+        }
+        if c == '\'' && !in_string {
+            in_char = !in_char;
+            i += 1;
+            continue;
+        }
+        if !in_string && !in_char {
+            if i + 1 < n && c == '/' && chars[i + 1] == '*' {
+                i += 2;
+                while i + 1 < n {
+                    if chars[i] == '*' && chars[i + 1] == '/' {
+                        i += 2;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+            match c {
+                '(' => paren_depth += 1,
+                ')' => paren_depth = paren_depth.saturating_sub(1),
+                '[' => bracket_depth += 1,
+                ']' => bracket_depth = bracket_depth.saturating_sub(1),
+                '{' => brace_depth += 1,
+                '}' => brace_depth = brace_depth.saturating_sub(1),
+                '<' if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 => {
+                    if i > tmpl_open_idx && i + 1 < n && chars[i + 1] == '<' {
+                        i += 2;
+                        continue;
+                    }
+                    angle_depth += 1;
+                }
+                '>' if paren_depth == 0 && bracket_depth == 0 && brace_depth == 0 => {
+                    if i > 0 && chars[i - 1] == '-' {
+                        i += 1;
+                        continue;
+                    }
+                    angle_depth = angle_depth.saturating_sub(1);
+                    if angle_depth == 0 {
+                        tmpl_close_idx = Some(i);
+                        break;
+                    }
+                }
+                ',' if angle_depth == 1
+                    && paren_depth == 0
+                    && bracket_depth == 0
+                    && brace_depth == 0 =>
+                {
+                    top_commas.push(i);
+                }
+                _ => {}
+            }
+        }
+        i += 1;
+    }
+
+    let close_idx = tmpl_close_idx?;
+    let after_tmpl_raw: String = chars[close_idx + 1..].iter().collect();
+    let after_tmpl = after_tmpl_raw.trim_start();
+
+    // Case A: `template <...> decl` exceeds column limit -> break right after `template <...>` at `base_indent`
+    if !after_tmpl.is_empty() {
+        let tmpl_line: String = chars[..=close_idx].iter().collect();
+        let decl_line = format!("{}{}{}", base_indent, after_tmpl, trailing_comment);
+        let mut out_lines = Vec::<String>::new();
+        if rec_depth < 4 && display_width(&tmpl_line) > target_len {
+            out_lines.extend(wrap_single_long_line_depth(&tmpl_line, target_len, rec_depth + 1));
+        } else {
+            out_lines.push(tmpl_line);
+        }
+        if rec_depth < 4 && display_width(strip_trailing_comment(&decl_line)) > target_len {
+            out_lines.extend(wrap_single_long_line_depth(&decl_line, target_len, rec_depth + 1));
+        } else {
+            out_lines.push(decl_line);
+        }
+        return Some(out_lines);
+    }
+
+    // Case B: `template <...>` alone exceeds column limit -> wrap at top-level template parameter commas
+    if top_commas.is_empty() {
+        return None;
+    }
+
+    let prefix_open: String = chars[..=tmpl_open_idx].iter().collect();
+    let mut params: Vec<String> = Vec::with_capacity(top_commas.len() + 1);
+    let mut seg_start = tmpl_open_idx + 1;
+    for &c_pos in &top_commas {
+        let seg: String = chars[seg_start..c_pos].iter().collect();
+        params.push(seg.trim().to_string());
+        seg_start = c_pos + 1;
+    }
+    let last_seg: String = chars[seg_start..close_idx].iter().collect();
+    params.push(last_seg.trim().to_string());
+
+    let mut packed = Vec::<String>::new();
+    let mut cur_line = String::new();
+    for (k, param) in params.iter().enumerate() {
+        let suffix = if k + 1 < params.len() { "," } else { ">" };
+        let piece = format!("{}{}", param, suffix);
+        if k == 0 {
+            cur_line = format!("{}{}", prefix_open, piece);
+        } else {
+            let candidate = format!("{} {}", cur_line, piece);
+            if display_width(&candidate) <= target_len {
+                cur_line = candidate;
+            } else {
+                packed.push(cur_line);
+                cur_line = format!("{}{}", cont_indent, piece);
+            }
+        }
+    }
+    if !cur_line.is_empty() {
+        packed.push(cur_line);
+    }
+    if packed.len() < 2 {
+        return None;
+    }
+    if !trailing_comment.is_empty() {
+        if let Some(last) = packed.last_mut() {
+            last.push_str(trailing_comment);
+        }
+    }
+    Some(packed)
+}
+
 fn wrap_single_long_line(line: &str, target_len: usize) -> Vec<String> {
     wrap_single_long_line_depth(line, target_len, 0)
 }
@@ -2212,14 +2955,26 @@ fn wrap_single_long_line_depth(line: &str, target_len: usize, rec_depth: usize) 
 
     let base_tabs = line.chars().take_while(|&c| c == '\t').count();
 
+    if let Some(tmpl_lines) = try_wrap_template_declaration(line, target_len, rec_depth) {
+        return tmpl_lines;
+    }
+
     if let Some(str_lines) = try_split_concatenated_strings(line, base_tabs) {
         return str_lines;
+    }
+
+    if let Some(brace_lines) = try_expand_brace_initializer(line, target_len, rec_depth) {
+        return brace_lines;
     }
 
     if rec_depth < 4 && !has_top_level_logical_op(code_only) {
         if let Some(expanded) = try_expand_paren_call(line, target_len, rec_depth) {
             return expanded;
         }
+    }
+
+    if let Some(cond_lines) = try_wrap_conditional_groups(line, target_len, rec_depth) {
+        return cond_lines;
     }
 
     let cont_indent = "\t".repeat(base_tabs + 1);
@@ -2236,8 +2991,9 @@ fn wrap_single_long_line_depth(line: &str, target_len: usize, rec_depth: usize) 
         let mut in_char = false;
         let mut escaped = false;
         let mut best_comma: Option<(usize, usize)> = None; // (char_idx_after_comma, depth)
-        let mut fallback_comma: Option<usize> = None;
-        let mut best_logic: Option<usize> = None;
+        let mut fallback_comma: Option<(usize, usize)> = None;
+        let mut best_logic: Option<(usize, usize)> = None; // (char_idx_after_op, depth)
+        let mut fallback_logic: Option<(usize, usize)> = None;
         let mut depth = 0usize;
 
         for i in 0..chars.len() {
@@ -2275,25 +3031,44 @@ fn wrap_single_long_line_depth(line: &str, target_len: usize, rec_depth: usize) 
                             Some((_, best_d)) if depth <= best_d => best_comma = Some((i + 1, depth)),
                             _ => {}
                         }
-                        fallback_comma = Some(i + 1);
+                        fallback_comma = Some((i + 1, depth));
                     } else if best_comma.is_none() && fallback_comma.is_none() {
-                        fallback_comma = Some(i + 1);
-                        break;
+                        fallback_comma = Some((i + 1, depth));
                     }
                 }
                 '|' | '&' if i + 2 < chars.len() && i > 0 && chars[i - 1] == ' ' && chars[i + 1] == c && chars[i + 2] == ' ' => {
                     if col + 2 <= target_len {
-                        best_logic = Some(i + 2);
+                        match best_logic {
+                            None => best_logic = Some((i + 2, depth)),
+                            Some((_, best_d)) if depth <= best_d => best_logic = Some((i + 2, depth)),
+                            _ => {}
+                        }
+                    } else {
+                        match fallback_logic {
+                            None => fallback_logic = Some((i + 2, depth)),
+                            Some((_, fb_d)) if depth < fb_d => fallback_logic = Some((i + 2, depth)),
+                            _ => {}
+                        }
                     }
                 }
                 _ => {}
             }
         }
 
-        let split_at = best_comma
-            .map(|(idx, _)| idx)
-            .or(fallback_comma)
-            .or(best_logic);
+        let comma_cand = best_comma.or(fallback_comma);
+        let logic_cand = best_logic.or(fallback_logic);
+        let split_at = match (comma_cand, logic_cand) {
+            (Some((c_idx, c_d)), Some((l_idx, l_d))) => {
+                if l_d < c_d {
+                    Some(l_idx)
+                } else {
+                    Some(c_idx)
+                }
+            }
+            (Some((c_idx, _)), None) => Some(c_idx),
+            (None, Some((l_idx, _))) => Some(l_idx),
+            (None, None) => None,
+        };
 
         if let Some(idx) = split_at {
             let left: String = chars[..idx].iter().collect();
@@ -2533,8 +3308,14 @@ pub fn close_empty_curly_brace_blocks(file: &mut String) {
             }
         }
 
-        // Collapse same-line `{` + next-line `}` (empty control flow and empty lambdas)
+        // Collapse same-line `{` + next-line `}` (empty control flow and empty lambdas, excluding `case`/`default`)
+        let code_i_start = strip_trailing_comment(&lines[i]).trim_start();
+        let is_case_or_default = code_i_start.starts_with("case ")
+            || code_i_start.starts_with("case(")
+            || code_i_start.starts_with("default:")
+            || code_i_start.starts_with("default :");
         if i + 1 < lines.len()
+            && !is_case_or_default
             && lines[i].trim_end().ends_with('{')
             && strip_trailing_comment(&lines[i]).trim_end().ends_with('{')
             && lines[i].trim() != "{"
@@ -3019,8 +3800,13 @@ fn remove_reference_spaces_single(line: String) -> String {
         }
         if !in_string && !in_char && i + 1 < chars.len() && i > 0 {
             let after_eq = result.contains('=');
+            let inside_angles = result.matches('<').count() > result.matches('>').count();
             let is_single_ref = chars[i + 1] == '&' && (i + 2 >= chars.len() || chars[i + 2] != '&');
-            let is_rvalue_ref = !after_eq && chars[i + 1] == '&' && i + 2 < chars.len() && chars[i + 2] == '&';
+            let is_rvalue_ref = !after_eq
+                && chars[i + 1] == '&'
+                && i + 2 < chars.len()
+                && chars[i + 2] == '&'
+                && (!inside_angles || i + 3 >= chars.len() || chars[i + 3] != ' ');
             let prev_w = last_word(&result);
             let skip = c == ' '
                 && (is_single_ref || is_rvalue_ref)

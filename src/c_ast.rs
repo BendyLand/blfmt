@@ -1265,6 +1265,7 @@ fn handle_switch_statement(root: Node, src: String) -> String {
 
 fn handle_case_statement(root: Node, src: String) -> String {
     let mut result = String::new();
+    let mut opened_inline_brace = false;
     for node in root.children(&mut root.walk()) {
         match node.grammar_name() {
             "expression_statement" => {
@@ -1273,16 +1274,34 @@ fn handle_case_statement(root: Node, src: String) -> String {
             },
             "compound_statement" => {
                 let compound_statement = handle_inner_compound_statement(node, src.clone());
-                result += format!("{}\n", compound_statement).as_str();
+                if result.ends_with(":\n") {
+                    result.pop();
+                    result += format!(" {}\n", compound_statement).as_str();
+                    opened_inline_brace = true;
+                } else {
+                    result += format!("{}\n", compound_statement).as_str();
+                }
             },
             "case" => {
                 result += "case ";
             },
             "break_statement" => {
-                result += "\tbreak;";
+                if opened_inline_brace && result.ends_with("}\n") {
+                    result.pop();
+                    result += " break;";
+                    opened_inline_brace = false;
+                } else {
+                    result += "\tbreak;";
+                }
             },
             "continue_statement" => {
-                result += "\tcontinue;";
+                if opened_inline_brace && result.ends_with("}\n") {
+                    result.pop();
+                    result += " continue;";
+                    opened_inline_brace = false;
+                } else {
+                    result += "\tcontinue;";
+                }
             },
             "declaration" => {
                 let mut declaration = handle_declaration(node, src.clone());
