@@ -14,6 +14,7 @@ mod utils;
 mod options;
 mod c_format;
 mod cpp_format;
+mod ast;
 mod c_ast;
 mod cpp_ast;
 mod txt_format;
