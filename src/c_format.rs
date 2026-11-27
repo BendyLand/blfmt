@@ -1,15 +1,15 @@
 use tree_sitter::{InputEdit, Parser, Language, Point};
 use crate::{tree_sitter_c, utils, c_ast};
 
-pub fn parse_c_file(path: String) -> tree_sitter::Tree {
+pub fn parse_c_file(path: &str) -> tree_sitter::Tree {
     let mut parser = Parser::new();
     parser.set_language(&tree_sitter_c::LANGUAGE.into()).expect("Error loading C parser.");
-    let contents = std::fs::read_to_string(path).unwrap_or("".to_string());
-    let tree = parser.parse(contents.clone(), None).unwrap();
+    let contents = std::fs::read_to_string(path).unwrap_or_default();
+    let tree = parser.parse(&contents, None).unwrap();
     return tree;
 }
 
-pub fn parse_existing_c_file(text: String) -> tree_sitter::Tree {
+pub fn parse_existing_c_file(text: &str) -> tree_sitter::Tree {
     let mut parser = Parser::new();
     parser.set_language(&tree_sitter_c::LANGUAGE.into()).expect("Error loading C parser.");
     let tree = parser.parse(text, None).unwrap();

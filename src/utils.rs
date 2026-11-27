@@ -1,4 +1,4 @@
-use std::{fs, fs::File, io::Write, io::Error};
+use std::{borrow::Cow, fs, fs::File, io::Write, io::Error};
 use regex::Regex;
 use crate::options::{self, TxtOpts};
 use std::ops::{Bound, RangeBounds};
@@ -44,6 +44,7 @@ impl StringUtils for str {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Style {
     Allman,
     KnR,
@@ -74,13 +75,13 @@ pub fn line_prefix_before(byte_idx: usize, src: &str) -> &str {
     }
 }
 
-pub fn trailing_comment_gap(start_byte: usize, src: &str) -> Option<String> {
+pub fn trailing_comment_gap<'a>(start_byte: usize, src: &'a str) -> Option<&'a str> {
     let before = line_prefix_before(start_byte, src);
     if before.trim().is_empty() {
         return None;
     }
     let trimmed = before.trim_end_matches(|c: char| c == ' ' || c == '\t');
-    Some(before[trimmed.len()..].to_string())
+    Some(&before[trimmed.len()..])
 }
 
 pub fn has_code_after_on_line(end_byte: usize, src: &str) -> bool {
@@ -94,14 +95,14 @@ pub fn has_code_after_on_line(end_byte: usize, src: &str) -> bool {
 }
 
 pub fn format_standalone_comment_indent(
-    raw: String,
+    raw: &str,
     comment_start_byte: usize,
     ref_start_byte: Option<usize>,
     src: &str,
     is_top_level: bool,
 ) -> String {
     if trailing_comment_gap(comment_start_byte, src).is_some() {
-        return raw;
+        return raw.to_string();
     }
     let comment_ws = line_prefix_before(comment_start_byte, src);
     let comment_col = visual_col_width(comment_ws);
@@ -110,7 +111,7 @@ pub fn format_standalone_comment_indent(
         if comment_col > 0 {
             return format!("{}{}{}", COMMENT_OFFSET_SENTINEL, comment_ws, raw);
         }
-        return raw;
+        return raw.to_string();
     }
 
     let Some(ref_byte) = ref_start_byte else {
@@ -121,18 +122,18 @@ pub fn format_standalone_comment_indent(
                 .collect::<Vec<_>>()
                 .join("\n");
         }
-        return raw;
+        return raw.to_string();
     };
 
     let ref_ws = line_prefix_before(ref_byte, src);
     // Only compare if ref_ws really is pure leading indentation
     if !ref_ws.trim().is_empty() {
-        return raw;
+        return raw.to_string();
     }
     let ref_col = visual_col_width(ref_ws);
 
     if comment_col == ref_col {
-        return raw;
+        return raw.to_string();
     }
 
     if comment_col == 0 && ref_col > 0 {
@@ -144,10 +145,10 @@ pub fn format_standalone_comment_indent(
     }
 
     if comment_col > ref_col {
-        let extra_ws = if comment_ws.starts_with(ref_ws) {
-            comment_ws[ref_ws.len()..].to_string()
+        let extra_ws: Cow<'_, str> = if comment_ws.starts_with(ref_ws) {
+            Cow::Borrowed(&comment_ws[ref_ws.len()..])
         } else {
-            " ".repeat(comment_col - ref_col)
+            Cow::Owned(" ".repeat(comment_col - ref_col))
         };
         let mut lines_iter = raw.split('\n');
         let mut out_lines = Vec::<String>::new();
@@ -165,7 +166,7 @@ pub fn format_standalone_comment_indent(
         return out_lines.join("\n");
     }
 
-    raw
+    raw.to_string()
 }
 
 pub fn attach_trailing_comment(
@@ -207,7 +208,7 @@ pub fn append_comment_to_result(
 ) -> bool {
     if !result.trim().is_empty() {
         if let Some(gap) = trailing_comment_gap(start_byte, src) {
-            attach_trailing_comment(result, &gap, comment, ensure_nl_for_line_comment);
+            attach_trailing_comment(result, gap, comment, ensure_nl_for_line_comment);
             return true;
         }
     }
@@ -217,8 +218,8 @@ pub fn append_comment_to_result(
     false
 }
 
-pub fn push_comment_to_parts(
-    parts: &mut Vec<String>,
+pub fn push_comment_to_parts<'a>(
+    parts: &mut Vec<Cow<'a, str>>,
     comment: &str,
     start_byte: usize,
     src: &str,
@@ -227,21 +228,21 @@ pub fn push_comment_to_parts(
     if let Some(last) = parts.last_mut() {
         if !last.trim().is_empty() {
             if let Some(gap) = trailing_comment_gap(start_byte, src) {
-                attach_trailing_comment(last, &gap, comment, false);
+                attach_trailing_comment(last.to_mut(), gap, comment, false);
                 return true;
             }
         }
     }
     if indent_with_tab {
-        parts.push(add_all_leading_tabs(comment.to_string()));
+        parts.push(Cow::Owned(add_all_leading_tabs(comment)));
     } else {
-        parts.push(comment.to_string());
+        parts.push(Cow::Owned(comment.to_string()));
     }
     false
 }
 
-pub fn push_expr_comment(
-    parts: &mut Vec<String>,
+pub fn push_expr_comment<'a>(
+    parts: &mut Vec<Cow<'a, str>>,
     comment: &str,
     start_byte: usize,
     end_byte: usize,
@@ -256,13 +257,14 @@ pub fn push_expr_comment(
 
     if let Some(gap) = trailing_comment_gap(start_byte, src) {
         if let Some(last) = parts.last_mut() {
-            while last.ends_with(' ') || last.ends_with('\t') {
-                last.pop();
+            let s = last.to_mut();
+            while s.ends_with(' ') || s.ends_with('\t') {
+                s.pop();
             }
-            last.push_str(&gap);
-            last.push_str(comment);
+            s.push_str(gap);
+            s.push_str(comment);
             if is_line_comment || !has_after {
-                last.push_str("\n\t");
+                s.push_str("\n\t");
             }
             return;
         }
@@ -271,20 +273,21 @@ pub fn push_expr_comment(
     // Standalone comment inside an expression/header
     if let Some(last) = parts.last_mut() {
         if last.ends_with("\n\t") || last.ends_with('\n') {
-            while last.ends_with('\t') || last.ends_with(' ') {
-                last.pop();
+            let s = last.to_mut();
+            while s.ends_with('\t') || s.ends_with(' ') {
+                s.pop();
             }
-            last.push_str(comment);
+            s.push_str(comment);
             if is_line_comment || !has_after {
-                last.push_str("\n\t");
+                s.push_str("\n\t");
             }
             return;
         }
     }
     if is_line_comment || !has_after {
-        parts.push(format!("\n{}\n\t", comment));
+        parts.push(Cow::Owned(format!("\n{}\n\t", comment)));
     } else {
-        parts.push(format!("\n{}", comment));
+        parts.push(Cow::Owned(format!("\n{}", comment)));
     }
 }
 
@@ -308,11 +311,11 @@ pub fn append_expr_comment(
             while result.ends_with(' ') || result.ends_with('\t') {
                 result.pop();
             }
-            result.push_str(&gap);
+            result.push_str(gap);
             result.push_str(comment);
             if is_line_comment || !has_after {
                 result.push_str("\n\t");
-            } else if had_trailing_space {
+            } else if had_trailing_space || matches!(src.as_bytes().get(end_byte), Some(b' ' | b'\t')) {
                 result.push(' ');
             }
             return;
@@ -564,7 +567,19 @@ fn split_keyword_to_newlines(line: &str, keyword: &str) -> String {
 
 fn format_to_allman(file: &mut String) {
     let mut split_lines = Vec::<String>::new();
+    let mut in_macro_cont = false;
     for line in file.lines() {
+        let trimmed = line.trim_start();
+        if in_macro_cont {
+            split_lines.push(line.to_string());
+            in_macro_cont = line.trim_end().ends_with('\\');
+            continue;
+        }
+        if trimmed.starts_with('#') {
+            split_lines.push(line.to_string());
+            in_macro_cont = line.trim_end().ends_with('\\');
+            continue;
+        }
         let s1 = split_keyword_to_newlines(line, "else");
         for sub in s1.split('\n') {
             let s2 = split_keyword_to_newlines(sub, "catch");
@@ -575,9 +590,20 @@ fn format_to_allman(file: &mut String) {
     }
     let mut lines = split_lines;
     let mut i = 0;
+    in_macro_cont = false;
     while i < lines.len() {
         let line = lines[i].trim_start();
-        if line.starts_with("//") || line.starts_with("/*") || line.starts_with('*') || line.starts_with('#') {
+        if in_macro_cont {
+            in_macro_cont = lines[i].trim_end().ends_with('\\');
+            i += 1;
+            continue;
+        }
+        if line.starts_with('#') {
+            in_macro_cont = lines[i].trim_end().ends_with('\\');
+            i += 1;
+            continue;
+        }
+        if line.starts_with("//") || line.starts_with("/*") || line.starts_with('*') {
             i += 1;
             continue;
         }
@@ -598,7 +624,19 @@ fn format_to_allman(file: &mut String) {
 
 fn format_to_stroustrup(file: &mut String) {
     let mut result_lines = Vec::<String>::new();
+    let mut in_macro_cont = false;
     for line in file.lines() {
+        let trimmed = line.trim_start();
+        if in_macro_cont {
+            result_lines.push(line.to_string());
+            in_macro_cont = line.trim_end().ends_with('\\');
+            continue;
+        }
+        if trimmed.starts_with('#') {
+            result_lines.push(line.to_string());
+            in_macro_cont = line.trim_end().ends_with('\\');
+            continue;
+        }
         let s1 = split_keyword_to_newlines(line, "else");
         for sub in s1.split('\n') {
             let s2 = split_keyword_to_newlines(sub, "catch");
@@ -611,14 +649,17 @@ fn format_to_stroustrup(file: &mut String) {
 }
 
 pub fn tidy_up_loose_ends(file: &mut String, style: Style) {
-    let mut lines: Vec<String> = file.lines().into_iter().map(|x| x.to_string()).collect();
-    let lines_clone: Vec<String> = lines.clone();
-    for (i, line) in lines_clone.into_iter().enumerate() {
-        if line.contains(",") {
-            lines[i] = ensure_space_after_char(&line, ',');
-        }
-    }
-    *file = lines.join("\n");
+    let ensured: Vec<Cow<'_, str>> = file
+        .lines()
+        .map(|line| {
+            if line.contains(',') {
+                Cow::Owned(ensure_space_after_char(line, ','))
+            } else {
+                Cow::Borrowed(line)
+            }
+        })
+        .collect();
+    *file = ensured.join("\n");
     remove_blank_lines_from_blocks(file);
     ensure_no_consecutive_blank_lines(file);
     ensure_proper_doc_comment_spacing(file);
@@ -629,6 +670,7 @@ pub fn tidy_up_loose_ends(file: &mut String, style: Style) {
     ensure_blank_line_between_self_contained_blocks(file);
     ensure_no_consecutive_blank_lines(file);
     format_long_lines(file, 100);
+    align_multiline_define_backslashes(file, 100);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1199,6 +1241,80 @@ fn ensure_blank_line_between_self_contained_blocks(file: &mut String) {
     }
 
     let mut insert_before = vec![false; n];
+
+    // Separate #include groups from #define groups, and ensure blank lines around multiline #define blocks.
+    for i in 0..n {
+        if !in_comment[i] && !in_raw_str[i] {
+            let t = lines[i].trim_start();
+            if t.starts_with("#define") && i > 0 && lines[i - 1].trim_start().starts_with("#include") {
+                insert_before[i] = true;
+            } else if t.starts_with("#include")
+                && i > 0
+                && (lines[i - 1].trim_start().starts_with("#define") || in_macro[i - 1])
+            {
+                insert_before[i] = true;
+            }
+        }
+    }
+
+    let mut m_idx = 0usize;
+    while m_idx < n {
+        let t = lines[m_idx].trim_start();
+        if t.starts_with("#define") && lines[m_idx].trim_end().ends_with('\\') {
+            let start_m = m_idx;
+            let mut end_m = m_idx;
+            let mut in_mc_comment = has_unclosed_block_comment(&lines[m_idx]);
+            while end_m + 1 < n && (lines[end_m].trim_end().ends_with('\\') || in_mc_comment) {
+                end_m += 1;
+                if in_mc_comment {
+                    if lines[end_m].contains("*/") {
+                        in_mc_comment = false;
+                    }
+                } else if has_unclosed_block_comment(&lines[end_m]) {
+                    in_mc_comment = true;
+                }
+            }
+            if end_m > start_m {
+                let mut top = start_m;
+                while top > 0 {
+                    let pt = lines[top - 1].trim();
+                    if pt.starts_with("//") || pt.starts_with("/*") || pt.starts_with('*') || pt.ends_with("*/") {
+                        top -= 1;
+                    } else {
+                        break;
+                    }
+                }
+                if top > 0 {
+                    let prev = lines[top - 1].trim();
+                    if !prev.is_empty()
+                        && prev != "{"
+                        && !prev.starts_with("#ifdef")
+                        && !prev.starts_with("#ifndef")
+                        && !prev.starts_with("#if ")
+                        && !prev.starts_with("#if(")
+                    {
+                        insert_before[top] = true;
+                    }
+                }
+                if end_m + 1 < n {
+                    let next = lines[end_m + 1].trim();
+                    if !next.is_empty()
+                        && next != "}"
+                        && next != "};"
+                        && !next.starts_with("#endif")
+                        && !next.starts_with("#else")
+                        && !next.starts_with("#elif")
+                    {
+                        insert_before[end_m + 1] = true;
+                    }
+                }
+            }
+            m_idx = end_m + 1;
+        } else {
+            m_idx += 1;
+        }
+    }
+
     // Stack of (ScopeKind, is_self_contained_block). Index 0 is the root file scope.
     let mut stack: Vec<(ScopeKind, bool)> = vec![(ScopeKind::StorageContainer, false)];
     let mut preproc_saved_stacks: Vec<Vec<(ScopeKind, bool)>> = Vec::new();
@@ -1330,32 +1446,28 @@ fn ensure_blank_line_between_self_contained_blocks(file: &mut String) {
     *file = out.join("\n") + "\n";
 }
 
-pub fn detect_indentation(line: &String) -> usize {
-    let mut result = 0;
-    for c in line.chars() {
-        if c != '\t' { break; }
-        result += 1;
-    }
-    return result;
+pub fn detect_indentation(line: &str) -> usize {
+    line.bytes().take_while(|&b| b == b'\t').count()
 }
 
-fn fix_indentation(line: &String, current: usize, target: usize) -> String {
-    let mut prefix = String::new();
-    let result: String;
+fn fix_indentation<'a>(line: &'a str, current: usize, target: usize) -> Cow<'a, str> {
+    if current == target {
+        return Cow::Borrowed(line);
+    }
     if current < target {
+        let mut out = String::with_capacity((target - current) + line.len());
         for _ in current..target {
-            prefix += "\t";
-        }        
-        result = format!("{}{}", prefix, line);
-    }
-    else {
-        let mut temp = line.clone();
-        for _ in target..current {
-            temp = remove_single_tab(&temp);
+            out.push('\t');
         }
-        result = temp;
+        out.push_str(line);
+        Cow::Owned(out)
+    } else {
+        let mut rest = line;
+        for _ in target..current {
+            rest = remove_single_tab(rest);
+        }
+        Cow::Borrowed(rest)
     }
-    return result;
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -1366,216 +1478,242 @@ enum IndentBraceKind {
 }
 
 fn fix_indentation_levels(file: &mut String) {
-    let lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
-    let mut result = Vec::<String>::new();
-    let mut indent_level: usize = 0;
-    let mut brace_stack = Vec::<IndentBraceKind>::new();
-    let mut pending_no_indent_brace = false;
-    let mut in_block_comment = false;
+    let updated = {
+        let lines: Vec<&str> = file.lines().collect();
+        let mut result: Vec<Cow<'_, str>> = Vec::with_capacity(lines.len());
+        let mut indent_level: usize = 0;
+        let mut brace_stack = Vec::<IndentBraceKind>::new();
+        let mut pending_no_indent_brace = false;
+        let mut in_block_comment = false;
+        let mut in_macro_cont = false;
+        let mut in_macro_block_comment = false;
 
-    for line in lines.into_iter() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            result.push(String::new());
-            continue;
-        }
+        for line in lines {
+            if in_macro_cont {
+                result.push(Cow::Borrowed(line));
+                if in_macro_block_comment {
+                    if line.contains("*/") {
+                        in_macro_block_comment = false;
+                    }
+                } else if has_unclosed_block_comment(line) {
+                    in_macro_block_comment = true;
+                }
+                in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+                continue;
+            }
 
-        if let Some(pos) = line.find(COMMENT_COL0_SENTINEL) {
-            let payload = &line[pos + COMMENT_COL0_SENTINEL.len_utf8()..];
-            let payload_trim = payload.trim();
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                result.push(Cow::Borrowed(""));
+                continue;
+            }
+
+            if let Some(pos) = line.find(COMMENT_COL0_SENTINEL) {
+                let payload = &line[pos + COMMENT_COL0_SENTINEL.len_utf8()..];
+                let payload_trim = payload.trim();
+                if in_block_comment {
+                    if payload_trim.contains("*/") {
+                        in_block_comment = false;
+                    }
+                } else if payload_trim.starts_with("/*") && !payload_trim.contains("*/") {
+                    in_block_comment = true;
+                }
+                result.push(Cow::Borrowed(payload));
+                continue;
+            }
+
+            if let Some(pos) = line.find(COMMENT_OFFSET_SENTINEL) {
+                let payload = &line[pos + COMMENT_OFFSET_SENTINEL.len_utf8()..];
+                let payload_trim = payload.trim();
+                if in_block_comment {
+                    if payload_trim.contains("*/") {
+                        in_block_comment = false;
+                    }
+                } else if payload_trim.starts_with("/*") && !payload_trim.contains("*/") {
+                    in_block_comment = true;
+                }
+                if indent_level == 0 {
+                    result.push(Cow::Borrowed(payload));
+                } else {
+                    result.push(Cow::Owned(format!("{}{}", "\t".repeat(indent_level), payload)));
+                }
+                continue;
+            }
+
             if in_block_comment {
-                if payload_trim.contains("*/") {
+                if indent_level == 0 {
+                    result.push(Cow::Borrowed(line));
+                } else {
+                    let current_level = detect_indentation(line);
+                    result.push(fix_indentation(line, current_level, indent_level));
+                }
+                if trimmed.contains("*/") {
                     in_block_comment = false;
                 }
-            } else if payload_trim.starts_with("/*") && !payload_trim.contains("*/") {
-                in_block_comment = true;
+                continue;
             }
-            result.push(payload.to_string());
-            continue;
-        }
 
-        if let Some(pos) = line.find(COMMENT_OFFSET_SENTINEL) {
-            let payload = &line[pos + COMMENT_OFFSET_SENTINEL.len_utf8()..];
-            let payload_trim = payload.trim();
-            if in_block_comment {
-                if payload_trim.contains("*/") {
-                    in_block_comment = false;
+            if trimmed.starts_with("/*") {
+                if !trimmed.contains("*/") {
+                    in_block_comment = true;
                 }
-            } else if payload_trim.starts_with("/*") && !payload_trim.contains("*/") {
-                in_block_comment = true;
+                if indent_level == 0 {
+                    result.push(Cow::Borrowed(line));
+                } else {
+                    let current_level = detect_indentation(line);
+                    result.push(fix_indentation(line, current_level, indent_level));
+                }
+                continue;
             }
-            result.push(format!("{}{}", "\t".repeat(indent_level), payload));
-            continue;
-        }
 
-        if in_block_comment {
-            if indent_level == 0 {
-                result.push(line.clone());
-            } else {
-                let current_level = detect_indentation(&line);
-                result.push(fix_indentation(&line, current_level, indent_level));
+            if trimmed.starts_with("//") {
+                let current_level = detect_indentation(line);
+                result.push(fix_indentation(line, current_level, indent_level));
+                continue;
             }
-            if trimmed.contains("*/") {
-                in_block_comment = false;
+
+            if trimmed.starts_with('#') {
+                result.push(Cow::Borrowed(trimmed));
+                in_macro_block_comment = has_unclosed_block_comment(trimmed);
+                in_macro_cont = trimmed.ends_with('\\') || in_macro_block_comment;
+                continue;
             }
-            continue;
-        }
 
-        if trimmed.starts_with("/*") {
-            if !trimmed.contains("*/") {
-                in_block_comment = true;
-            }
-            if indent_level == 0 {
-                result.push(line.clone());
-            } else {
-                let current_level = detect_indentation(&line);
-                result.push(fix_indentation(&line, current_level, indent_level));
-            }
-            continue;
-        }
+            let code_part = strip_trailing_comment(trimmed);
 
-        if trimmed.starts_with("//") {
-            let current_level = detect_indentation(&line);
-            result.push(fix_indentation(&line, current_level, indent_level));
-            continue;
-        }
-
-        if trimmed.starts_with('#') {
-            result.push(trimmed.to_string());
-            continue;
-        }
-
-        let code_part = strip_trailing_comment(trimmed);
-
-        if (code_part.starts_with("namespace ") || code_part == "namespace" || code_part.starts_with("inline namespace "))
-            && !code_part.contains(';')
-            && !code_part.contains('=')
-        {
-            if code_part.ends_with('{') {
-                let current_level = detect_indentation(&line);
-                result.push(fix_indentation(&line, current_level, indent_level));
+            if (code_part.starts_with("namespace ") || code_part == "namespace" || code_part.starts_with("inline namespace "))
+                && !code_part.contains(';')
+                && !code_part.contains('=')
+            {
+                if code_part.ends_with('{') {
+                    let current_level = detect_indentation(line);
+                    result.push(fix_indentation(line, current_level, indent_level));
+                    brace_stack.push(IndentBraceKind::NoIndent);
+                    if has_unclosed_block_comment(line) {
+                        in_block_comment = true;
+                    }
+                    continue;
+                } else {
+                    pending_no_indent_brace = true;
+                }
+            } else if code_part.starts_with("extern \"") && code_part.ends_with('{') {
+                let current_level = detect_indentation(line);
+                result.push(fix_indentation(line, current_level, indent_level));
                 brace_stack.push(IndentBraceKind::NoIndent);
-                if has_unclosed_block_comment(&line) {
+                if has_unclosed_block_comment(line) {
                     in_block_comment = true;
                 }
                 continue;
-            } else {
+            } else if code_part.starts_with("extern \"") && !code_part.contains(';') && !code_part.ends_with("{}") {
                 pending_no_indent_brace = true;
             }
-        } else if code_part.starts_with("extern \"") && code_part.ends_with('{') {
-            let current_level = detect_indentation(&line);
-            result.push(fix_indentation(&line, current_level, indent_level));
-            brace_stack.push(IndentBraceKind::NoIndent);
-            if has_unclosed_block_comment(&line) {
-                in_block_comment = true;
-            }
-            continue;
-        } else if code_part.starts_with("extern \"") && !code_part.contains(';') && !code_part.ends_with("{}") {
-            pending_no_indent_brace = true;
-        }
 
-        let mut closed_case_block = false;
-        if code_part == "}" || code_part.starts_with('}') {
-            match brace_stack.pop().unwrap_or(IndentBraceKind::Normal) {
-                IndentBraceKind::Normal => {
-                    if indent_level > 0 {
-                        indent_level -= 1;
+            let mut closed_case_block = false;
+            if code_part == "}" || code_part.starts_with('}') {
+                match brace_stack.pop().unwrap_or(IndentBraceKind::Normal) {
+                    IndentBraceKind::Normal => {
+                        if indent_level > 0 {
+                            indent_level -= 1;
+                        }
+                    }
+                    IndentBraceKind::NoIndent => {}
+                    IndentBraceKind::CaseBlock => {
+                        closed_case_block = true;
                     }
                 }
-                IndentBraceKind::NoIndent => {}
-                IndentBraceKind::CaseBlock => {
-                    closed_case_block = true;
-                }
             }
-        }
 
-        let is_case_block_open = (code_part.starts_with("case ")
-            || code_part.starts_with("case(")
-            || code_part.starts_with("default:")
-            || code_part.starts_with("default :"))
-            && code_part.contains(':')
-            && code_part.ends_with('{')
-            && !code_part.ends_with("{}");
+            let is_case_block_open = (code_part.starts_with("case ")
+                || code_part.starts_with("case(")
+                || code_part.starts_with("default:")
+                || code_part.starts_with("default :"))
+                && code_part.contains(':')
+                && code_part.ends_with('{')
+                && !code_part.ends_with("{}");
 
-        let target_indent = if code_part.starts_with(": ") {
-            indent_level + 1
-        } else if closed_case_block || is_case_block_open {
-            indent_level.saturating_sub(1)
-        } else {
-            indent_level
-        };
-        let current_level = detect_indentation(&line);
-        if current_level != target_indent {
-            let temp = fix_indentation(&line, current_level, target_indent);
-            result.push(temp);
-        } else {
-            result.push(line.clone());
-        }
-
-        if code_part == "{" || (code_part.ends_with('{') && !code_part.ends_with("{}")) {
-            if pending_no_indent_brace {
-                brace_stack.push(IndentBraceKind::NoIndent);
-                pending_no_indent_brace = false;
-            } else if is_case_block_open {
-                brace_stack.push(IndentBraceKind::CaseBlock);
+            let target_indent = if code_part.starts_with(": ") {
+                indent_level + 1
+            } else if closed_case_block || is_case_block_open {
+                indent_level.saturating_sub(1)
             } else {
-                brace_stack.push(IndentBraceKind::Normal);
-                indent_level += 1;
+                indent_level
+            };
+            let current_level = detect_indentation(line);
+            result.push(fix_indentation(line, current_level, target_indent));
+
+            if code_part == "{" || (code_part.ends_with('{') && !code_part.ends_with("{}")) {
+                if pending_no_indent_brace {
+                    brace_stack.push(IndentBraceKind::NoIndent);
+                    pending_no_indent_brace = false;
+                } else if is_case_block_open {
+                    brace_stack.push(IndentBraceKind::CaseBlock);
+                } else {
+                    brace_stack.push(IndentBraceKind::Normal);
+                    indent_level += 1;
+                }
+            } else if code_part != "{" && !code_part.starts_with("namespace") && !code_part.starts_with("inline namespace") && !code_part.starts_with("extern \"") {
+                pending_no_indent_brace = false;
             }
-        } else if code_part != "{" && !code_part.starts_with("namespace") && !code_part.starts_with("inline namespace") && !code_part.starts_with("extern \"") {
-            pending_no_indent_brace = false;
+
+            if has_unclosed_block_comment(line) {
+                in_block_comment = true;
+            }
         }
-
-        if has_unclosed_block_comment(&line) {
-            in_block_comment = true;
-        }
-    }
-    *file = result.join("\n") + "\n";
+        let mut out = result.join("\n");
+        out.push('\n');
+        out
+    };
+    *file = updated;
 }
 
-fn line_is_function_def(line: &String, pattern: &regex::Regex) -> bool {
-    return pattern.is_match(line)
+fn line_is_function_def(line: &str, pattern: &regex::Regex) -> bool {
+    pattern.is_match(line)
 }
 
-fn line_is_doc_comment(line: &String) -> bool {
-    return line.trim_start().starts_with("*") && line.contains("*/");
+fn line_is_doc_comment(line: &str) -> bool {
+    line.trim_start().starts_with('*') && line.contains("*/")
 }
 
-fn find_next_function_def(remaining_lines: &[String], pattern: &regex::Regex) -> i32 {
-    for (i, line) in remaining_lines.into_iter().enumerate() {
-        if line_is_function_def(line, &pattern) {
+fn find_next_function_def(remaining_lines: &[&str], pattern: &regex::Regex) -> i32 {
+    for (i, line) in remaining_lines.iter().enumerate() {
+        if line_is_function_def(line, pattern) {
             return i as i32;
         }
     }
-    return -1;
+    -1
 }
 
-fn find_next_doc_comment(remaining_lines: &[String]) -> i32 {
-    for (i, line) in remaining_lines.into_iter().enumerate() {
-        if line.trim_start().starts_with("*") && line.contains("*/") {
+fn find_next_doc_comment(remaining_lines: &[&str]) -> i32 {
+    for (i, line) in remaining_lines.iter().enumerate() {
+        if line.trim_start().starts_with('*') && line.contains("*/") {
             return i as i32;
         }
     }
-    return -1;
+    -1
 }
 
 fn ensure_proper_doc_comment_spacing(file: &mut String) {
-    let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
-    let mut result = Vec::<String>::new();
-    let pattern = Regex::new("^(\\w*\\s*)*\\w+\\s+\\w+\\(.*\\)\\s*;?\\s*$").unwrap();
-    let mut lines_to_remove = Vec::<usize>::new();
-    for (i, line) in lines.clone().into_iter().enumerate() {
-        if i > 0 && i < lines.len()-1 {
-            if line.trim().is_empty() {
-                if line_is_doc_comment(lines.iter().nth(i-1).unwrap()) &&
-                   line_is_function_def(lines.iter().nth(i+1).unwrap(), &pattern) {
-                   continue;
-               }
+    let updated = {
+        let lines: Vec<&str> = file.trim().lines().collect();
+        let mut result: Vec<&str> = Vec::with_capacity(lines.len());
+        let mut pattern: Option<Regex> = None;
+        for (i, &line) in lines.iter().enumerate() {
+            if i > 0 && i + 1 < lines.len() && line.trim().is_empty() && line_is_doc_comment(lines[i - 1]) {
+                let pat = pattern.get_or_insert_with(|| {
+                    Regex::new("^(\\w*\\s*)*\\w+\\s+\\w+\\(.*\\)\\s*;?\\s*$").unwrap()
+                });
+                if line_is_function_def(lines[i + 1], pat) {
+                    continue;
+                }
             }
+            result.push(line);
         }
-        result.push(line);
-    }
-    *file = result.join("\n").trim_end().to_string() + "\n";
+        let joined = result.join("\n");
+        let mut out = joined.trim_end().to_string();
+        out.push('\n');
+        out
+    };
+    *file = updated;
 }
 
 fn ends_with_overloaded_operator_token(s: &str) -> bool {
@@ -1598,10 +1736,10 @@ fn ends_with_overloaded_operator_token(s: &str) -> bool {
         })
 }
 
-pub fn ensure_space_after_char(line: &String, target: char) -> String {
+pub fn ensure_space_after_char(line: &str, target: char) -> String {
     let trimmed = line_trimmed_for_comment_check(line);
     if trimmed.starts_with("//") || trimmed.starts_with("/*") || trimmed.starts_with('*') || trimmed.starts_with('#') {
-        return line.clone();
+        return line.to_string();
     }
     let chars: Vec<char> = line.chars().collect();
     let mut result = String::new();
@@ -1677,86 +1815,93 @@ pub fn ensure_space_after_char(line: &String, target: char) -> String {
 
 
 fn remove_blank_lines_from_blocks(file: &mut String) {
-    let lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
-    let mut result = Vec::<String>::new();
-    let mut in_block = false;
-    let mut prev_non_empty = String::new();
-    for line in lines.into_iter() {
-        let trimmed = line.trim();
-        let is_ns_or_extern = prev_non_empty.starts_with("namespace ")
-            || prev_non_empty == "namespace"
-            || prev_non_empty.starts_with("inline namespace ")
-            || prev_non_empty.starts_with("extern \"");
-        let is_type_def = prev_non_empty.starts_with("class ")
-            || prev_non_empty.starts_with("struct ")
-            || prev_non_empty.starts_with("typedef struct")
-            || prev_non_empty.starts_with("union ")
-            || prev_non_empty.starts_with("typedef union")
-            || prev_non_empty.starts_with("enum ")
-            || prev_non_empty.starts_with("typedef enum");
-        let at_block_end = in_block && (line.starts_with('}') || line == "}" || line == "};");
-        if !in_block && line == "{" && !is_ns_or_extern && !is_type_def {
-            in_block = true;
-        } else if at_block_end {
-            in_block = false;
+    let updated = {
+        let lines: Vec<&str> = file.trim().lines().collect();
+        let mut result: Vec<&str> = Vec::with_capacity(lines.len());
+        let mut in_block = false;
+        let mut prev_non_empty: &str = "";
+        for line in lines {
+            let trimmed = line.trim();
+            let is_ns_or_extern = prev_non_empty.starts_with("namespace ")
+                || prev_non_empty == "namespace"
+                || prev_non_empty.starts_with("inline namespace ")
+                || prev_non_empty.starts_with("extern \"");
+            let is_type_def = prev_non_empty.starts_with("class ")
+                || prev_non_empty.starts_with("struct ")
+                || prev_non_empty.starts_with("typedef struct")
+                || prev_non_empty.starts_with("union ")
+                || prev_non_empty.starts_with("typedef union")
+                || prev_non_empty.starts_with("enum ")
+                || prev_non_empty.starts_with("typedef enum");
+            let at_block_end = in_block && (line.starts_with('}') || line == "}" || line == "};");
+            if !in_block && line == "{" && !is_ns_or_extern && !is_type_def {
+                in_block = true;
+            } else if at_block_end {
+                in_block = false;
+            }
+            if !trimmed.is_empty() {
+                prev_non_empty = trimmed;
+            }
+            if in_block && !check_line_is_blank(line) {
+                result.push(line);
+            } else if !in_block {
+                result.push(line);
+            }
         }
-        if !trimmed.is_empty() {
-            prev_non_empty = trimmed.to_string();
-        }
-        if in_block && !check_line_is_blank(&line) {
-            result.push(line);
-        } else if !in_block {
-            result.push(line);
-        }
-    }
-    *file = result.join("\n").trim_end().to_string() + "\n";
+        let joined = result.join("\n");
+        let mut out = joined.trim_end().to_string();
+        out.push('\n');
+        out
+    };
+    *file = updated;
 }
 
 fn ensure_no_consecutive_blank_lines(file: &mut String) {
-    let mut lines: Vec<String> = file.trim().lines().map(|x| x.to_string()).collect();
-    let mut result = Vec::<String>::new();
-    for (i, line) in lines.clone().into_iter().enumerate() {
-        if i < lines.len()-1 {
-            let line_empty = check_line_is_blank(&line);
-            if line_empty {
-                if !check_line_is_blank(&result[result.len()-1]) {
-                    result.push(line.clone());
+    let updated = {
+        let lines: Vec<&str> = file.trim().lines().collect();
+        let mut result: Vec<&str> = Vec::with_capacity(lines.len());
+        for (i, &line) in lines.iter().enumerate() {
+            if i + 1 < lines.len() && check_line_is_blank(line) {
+                if let Some(&prev) = result.last() {
+                    if !check_line_is_blank(prev) {
+                        result.push(line);
+                    }
                 }
                 continue;
             }
+            result.push(line);
         }
-        result.push(line);
-    }
-    *file = result.join("\n").trim_end().to_string() + "\n";
+        let joined = result.join("\n");
+        let mut out = joined.trim_end().to_string();
+        out.push('\n');
+        out
+    };
+    *file = updated;
 }
 
 //TODO: make a function that scans for the specific constructs that get aggressively formatted (e.g., maps)
-pub fn scan_for_lines_before_blank_lines(file: String) -> Vec<(usize, String)> {
+pub fn scan_for_lines_before_blank_lines(file: &str) -> Vec<(usize, String)> {
     let mut result = Vec::<(usize, String)>::new();
-    let mut lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
+    let lines: Vec<&str> = file.lines().collect();
     let mut open_braces = 0;
-    for (i, line) in lines.clone().into_iter().enumerate() {
+    for (i, &line) in lines.iter().enumerate() {
         // only add lines that are inside of blocks
-        if line.contains("{") { open_braces += 1; }
-        if line.contains("}") { open_braces -= 1; }
-        if open_braces > 0 {
-            if i < lines.len()-1  {
-                let has_no_visible_chars = {
-                    lines[i+1]
-                        .chars()
-                        .all(|x| x.is_whitespace() || x == '\t')
-                };
-                if lines[i+1].is_empty() || has_no_visible_chars {
-                    result.push((i+1, line));
-                }
+        if line.contains('{') { open_braces += 1; }
+        if line.contains('}') { open_braces -= 1; }
+        if open_braces > 0 && i + 1 < lines.len() {
+            let has_no_visible_chars = lines[i + 1]
+                .chars()
+                .all(|x| x.is_whitespace() || x == '\t');
+            if lines[i + 1].is_empty() || has_no_visible_chars {
+                result.push((i + 1, line.to_string()));
             }
         }
     }
-    return result;
+    result
 }
 
-fn spaces_to_tabs(line: &String) -> String {
-    return line.replace("    ", "\t");
+fn spaces_to_tabs(line: &str) -> String {
+    line.replace("    ", "\t")
 }
 
 fn display_width(line: &str) -> usize {
@@ -1790,23 +1935,24 @@ pub fn is_standalone_statement_macro_token(tok: &str) -> bool {
     has_upper
 }
 
-pub fn merge_incomplete_decl_into_parts(parts: &mut Vec<String>, continuation: &str) {
+pub fn merge_incomplete_decl_into_parts<'a>(parts: &mut Vec<Cow<'a, str>>, continuation: &str) {
     if let Some(last) = parts.last_mut() {
+        let s = last.to_mut();
         let mut nl_count = 0usize;
-        while last.ends_with('\n') {
-            last.pop();
+        while s.ends_with('\n') {
+            s.pop();
             nl_count += 1;
         }
-        while last.ends_with(' ') || last.ends_with('\t') {
-            last.pop();
+        while s.ends_with(' ') || s.ends_with('\t') {
+            s.pop();
         }
-        last.push(' ');
-        last.push_str(continuation.trim_start());
+        s.push(' ');
+        s.push_str(continuation.trim_start());
         for _ in 0..nl_count {
-            last.push('\n');
+            s.push('\n');
         }
     } else {
-        parts.push(continuation.to_string());
+        parts.push(Cow::Owned(continuation.to_string()));
     }
 }
 
@@ -3098,7 +3244,28 @@ fn wrap_single_long_line_depth(line: &str, target_len: usize, rec_depth: usize) 
 
 fn format_long_lines(file: &mut String, target_len: usize) {
     let mut wrapped = Vec::<String>::new();
+    let mut in_macro_cont = false;
+    let mut in_macro_block_comment = false;
     for line in file.lines() {
+        if in_macro_cont {
+            wrapped.push(line.to_string());
+            if in_macro_block_comment {
+                if line.contains("*/") {
+                    in_macro_block_comment = false;
+                }
+            } else if has_unclosed_block_comment(line) {
+                in_macro_block_comment = true;
+            }
+            in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+            continue;
+        }
+        let trimmed = line.trim_start();
+        if trimmed.starts_with('#') {
+            wrapped.push(line.to_string());
+            in_macro_block_comment = has_unclosed_block_comment(trimmed);
+            in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+            continue;
+        }
         wrapped.extend(wrap_single_long_line(line, target_len));
     }
     *file = wrapped.join("\n").trim().to_string() + "\n";
@@ -3170,69 +3337,107 @@ pub fn add_blank_lines_back(file: &mut String, target_lines: Vec<(usize, String)
 }
 
 fn join_single_line_constructs(file: &mut String, style: Style) {
-    let mut allman = false;
-    match style {
-        Style::Allman => allman = true, 
-        _ => (),
+    let allman = matches!(style, Style::Allman);
+    let updated = {
+        let lines: Vec<&str> = file.split('\n').collect();
+        let mut parts: Vec<Cow<'_, str>> = Vec::with_capacity(lines.len());
+        let mut temp = String::new();
+        let mut end = true;
+        let mut in_macro_cont = false;
+        let mut in_macro_block_comment = false;
+        for (i, &line) in lines.iter().enumerate() {
+            if in_macro_cont {
+                parts.push(Cow::Borrowed(line));
+                if in_macro_block_comment {
+                    if line.contains("*/") {
+                        in_macro_block_comment = false;
+                    }
+                } else if has_unclosed_block_comment(line) {
+                    in_macro_block_comment = true;
+                }
+                in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+                continue;
+            }
+            let t_start = line.trim_start();
+            if t_start.starts_with('#') {
+                parts.push(Cow::Borrowed(line));
+                in_macro_block_comment = has_unclosed_block_comment(t_start);
+                in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+                continue;
+            }
+            if allman && i + 1 < lines.len() {
+                let check = line.trim();
+                let check2 = lines[i + 1].trim();
+                if check.starts_with("switch") && (!check2.ends_with('{') && !check.ends_with(';')) {
+                    temp.push_str(line.trim_end());
+                    temp.push(' ');
+                    end = false;
+                    continue;
+                }
+            } else {
+                let check = line.trim();
+                if check.starts_with("switch") && (!check.ends_with('{') && !check.ends_with(';')) {
+                    temp.push_str(line.trim_end());
+                    temp.push(' ');
+                    end = false;
+                    continue;
+                }
+            }
+            if !end && line.trim_end().ends_with(';') {
+                end = true;
+                temp.push_str(line.trim());
+                parts.push(Cow::Owned(std::mem::take(&mut temp)));
+                continue;
+            } else if !end {
+                temp.push_str(line.trim());
+                temp.push(' ');
+                continue;
+            }
+            parts.push(Cow::Borrowed(line));
+        }
+        parts.join("\n")
     };
-    let lines: Vec<String> = file.split("\n").map(|x| x.to_string()).collect();
-    let mut parts = Vec::<String>::new();
-    let mut temp = String::new();
-    let mut end = true;
-    let mut indent = 0;
-    for (i, line) in lines.iter().enumerate() {
-        if allman && i < lines.len()-1 {
-            let check = line.trim();
-            let check2 = lines.iter().nth(i+1).unwrap().trim();
-            if check.starts_with("switch") && (!check2.ends_with("{") && !check.ends_with(";")) {
-                // must be added here to preserve indentation
-                temp += format!("{} ", line.trim_end()).as_str();
-                end = false;
-                continue;
-            }
-        }
-        else {
-            let check = line.trim();
-            if check.starts_with("switch") && (!check.ends_with("{") && !check.ends_with(";")) {
-                temp += format!("{} ", line.trim_end()).as_str();
-                end = false;
-                continue;
-            }
-        }
-        if !end && line.trim_end().ends_with(";") {
-            end = true;
-            temp += line.trim();
-            parts.push(temp);
-            temp = "".to_string();
-            continue;
-        }
-        else if !end {
-            temp += format!("{} ", line.trim()).as_str();
-            continue;
-        }
-        parts.push(line.clone());
-    }
-    *file = parts.join("\n");
+    *file = updated;
 }
 
 fn shift_back_preproc_lines(file: &mut String) {
-    let lines: Vec<String> = file.split("\n").map(|x| x.to_string()).collect();
-    let mut parts = Vec::<String>::new();
-    for line in lines {
-        let trimmed = line_trimmed_for_comment_check(&line);
-        let code_only = strip_trailing_comment(&line);
-        if trimmed.starts_with('#') {
-            parts.push(line.trim_start().to_string());
+    let updated = {
+        let lines = file.split('\n');
+        let mut parts: Vec<&str> = Vec::new();
+        let mut in_macro_cont = false;
+        let mut in_macro_block_comment = false;
+        for line in lines {
+            if in_macro_cont {
+                parts.push(line);
+                if in_macro_block_comment {
+                    if line.contains("*/") {
+                        in_macro_block_comment = false;
+                    }
+                } else if has_unclosed_block_comment(line) {
+                    in_macro_block_comment = true;
+                }
+                in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+                continue;
+            }
+            let trimmed = line_trimmed_for_comment_check(line);
+            let code_only = strip_trailing_comment(line);
+            if trimmed.starts_with('#') {
+                parts.push(line.trim_start());
+                in_macro_block_comment = has_unclosed_block_comment(trimmed);
+                in_macro_cont = line.trim_end().ends_with('\\') || in_macro_block_comment;
+            } else if !trimmed.starts_with("//")
+                && !trimmed.starts_with("/*")
+                && !trimmed.starts_with('*')
+                && code_only.trim_end().ends_with(':')
+            {
+                parts.push(remove_single_tab(line));
+            } else {
+                parts.push(line);
+            }
         }
-        else if !trimmed.starts_with("//") && !trimmed.starts_with("/*") && !trimmed.starts_with('*') && code_only.trim_end().ends_with(':') {
-            let temp = remove_single_tab(&line);
-            parts.push(temp);
-        }
-        else {
-            parts.push(line);
-        }
-    }
-    *file = parts.join("\n");
+        parts.join("\n")
+    };
+    *file = updated;
 }
 
 pub fn close_empty_curly_brace_blocks(file: &mut String) {
@@ -3243,12 +3448,26 @@ pub fn close_empty_curly_brace_blocks(file: &mut String) {
     }
     let mut out = Vec::<String>::with_capacity(lines.len());
     let mut in_block_comment = false;
+    let mut in_macro_cont = false;
     let mut raw_end: Option<String> = None;
     let mut i = 0usize;
 
     while i < lines.len() {
         let l = &lines[i];
         let trimmed = line_trimmed_for_comment_check(l);
+
+        if in_macro_cont {
+            in_macro_cont = l.trim_end().ends_with('\\');
+            out.push(l.clone());
+            i += 1;
+            continue;
+        }
+        if trimmed.starts_with('#') && l.trim_end().ends_with('\\') {
+            in_macro_cont = true;
+            out.push(l.clone());
+            i += 1;
+            continue;
+        }
 
         if let Some(ref end_pat) = raw_end {
             if l.contains(end_pat.as_str()) {
@@ -3343,20 +3562,15 @@ pub fn close_empty_curly_brace_blocks(file: &mut String) {
     }
 }
 
-pub fn sort_include_groups(file: String) -> String {
-    let mut lines: Vec<String> = file.lines().map(|line| line.to_string()).collect();
-    let mut result = Vec::new();
-    let mut temp_group = Vec::new();
-    for line in lines.into_iter() {
+pub fn sort_include_groups(file: &str) -> String {
+    let mut result: Vec<&str> = Vec::new();
+    let mut temp_group: Vec<&str> = Vec::new();
+    for line in file.lines() {
         if line.trim_start().starts_with("#include") {
             temp_group.push(line);
-        }
-        else {
+        } else {
             if !temp_group.is_empty() {
-                for _ in 0..temp_group.len() {
-                    sort_includes(&mut temp_group);
-                }
-                // Add sorted group to the result
+                sort_includes(&mut temp_group);
                 result.extend(temp_group.drain(..));
             }
             result.push(line);
@@ -3366,23 +3580,20 @@ pub fn sort_include_groups(file: String) -> String {
         sort_includes(&mut temp_group);
         result.extend(temp_group.drain(..));
     }
-    return result.join("\n");
+    result.join("\n")
 }
 
-fn remove_comment(line: String) -> String {
-    let idx = line.find("//").unwrap_or(line.len());
-    let mut result: String;
-    if idx == line.len() { result = line; }
-    else { result = line[..idx].to_string(); }
-    return result;
+fn strip_include_comment(line: &str) -> &str {
+    match line.find("//") {
+        Some(idx) => &line[..idx],
+        None => line,
+    }
 }
 
-fn sort_includes(includes: &mut Vec<String>) {
+fn sort_includes(includes: &mut [&str]) {
     includes.sort_by(|a, b| {
-        let mut a2 = a.clone();
-        let mut b2 = b.clone();
-        a2 = remove_comment(a2);
-        b2 = remove_comment(b2);
+        let a2 = strip_include_comment(a);
+        let b2 = strip_include_comment(b);
         let a_has_angle = a2.contains('<') && a2.contains('>');
         let b_has_angle = b2.contains('<') && b2.contains('>');
         match (a_has_angle, b_has_angle) {
@@ -3393,14 +3604,16 @@ fn sort_includes(includes: &mut Vec<String>) {
     });
 }
 
-pub fn add_all_leading_tabs(text: String) -> String {
-    let lines: Vec<&str> = text.split("\n").collect();
-    let mut temp_vec = Vec::<String>::new();
-    for line in lines {
-        let temp_str = format!("\t{}", line);
-        temp_vec.push(temp_str);
+pub fn add_all_leading_tabs(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 8);
+    for (idx, line) in text.split('\n').enumerate() {
+        if idx > 0 {
+            out.push('\n');
+        }
+        out.push('\t');
+        out.push_str(line);
     }
-    return temp_vec.join("\n");
+    out
 }
 
 fn is_non_type_keyword(word: &str) -> bool {
@@ -3420,36 +3633,38 @@ fn last_word(s: &str) -> &str {
     return &trimmed[idx..];
 }
 
-pub fn fix_stars(file: String) -> String {
+pub fn fix_stars(file: &str) -> String {
     let has_trailing_newline = file.ends_with('\n');
-    let lines: Vec<String> = file.lines().map(|x| x.to_string()).collect();
-    let mut parts = Vec::<String>::new();
+    let mut parts: Vec<Cow<'_, str>> = Vec::new();
     let mut in_block_comment = false;
 
-    for line in lines {
-        let trimmed = line_trimmed_for_comment_check(&line);
+    for line in file.lines() {
+        let trimmed = line_trimmed_for_comment_check(line);
         if in_block_comment {
             if trimmed.contains("*/") {
                 in_block_comment = false;
             }
-            parts.push(line);
+            parts.push(Cow::Borrowed(line));
             continue;
         }
         if trimmed.starts_with("/*") {
             if !trimmed.contains("*/") {
                 in_block_comment = true;
             }
-            parts.push(line);
+            parts.push(Cow::Borrowed(line));
             continue;
         }
-        if trimmed.starts_with("//") || trimmed.starts_with('#') || line.contains("R\"") {
-            parts.push(line);
+        if trimmed.starts_with("//") || trimmed.starts_with('#') || line.contains("R\"") || !line.contains('*') {
+            if has_unclosed_block_comment(line) {
+                in_block_comment = true;
+            }
+            parts.push(Cow::Borrowed(line));
             continue;
         }
 
         let chars: Vec<char> = line.chars().collect();
         let len = chars.len();
-        let mut temp_line = String::new();
+        let mut temp_line = String::with_capacity(line.len() + 4);
         let mut in_string = false;
         let mut in_char = false;
         let mut escaped = false;
@@ -3588,7 +3803,7 @@ pub fn fix_stars(file: String) -> String {
             temp_line.push(c);
             i += 1;
         }
-        parts.push(temp_line);
+        parts.push(Cow::Owned(temp_line));
     }
     let mut joined = parts.join("\n");
     if has_trailing_newline {
@@ -3597,9 +3812,9 @@ pub fn fix_stars(file: String) -> String {
     return joined;
 }
 
-pub fn remove_dereference_spaces(line: String) -> String {
+pub fn remove_dereference_spaces(line: &str) -> String {
     let chars: Vec<char> = line.chars().collect();
-    let mut result = String::new();
+    let mut result = String::with_capacity(line.len());
     let mut skip = false;
     for i in 0..chars.len() {
         if skip {
@@ -3614,16 +3829,16 @@ pub fn remove_dereference_spaces(line: String) -> String {
     return result;
 }
 
-pub fn remove_pointer_spaces(line: String) -> String {
+pub fn remove_pointer_spaces(line: &str) -> String {
     if line.contains('\n') {
         return line
             .split('\n')
             .map(|l| {
                 let t = line_trimmed_for_comment_check(l);
                 if t.starts_with("//") || t.starts_with("/*") || t.starts_with('*') {
-                    l.to_string()
+                    Cow::Borrowed(l)
                 } else {
-                    remove_pointer_spaces_single(l.to_string())
+                    Cow::Owned(remove_pointer_spaces_single(l))
                 }
             })
             .collect::<Vec<_>>()
@@ -3632,9 +3847,9 @@ pub fn remove_pointer_spaces(line: String) -> String {
     remove_pointer_spaces_single(line)
 }
 
-fn remove_pointer_spaces_single(line: String) -> String {
+fn remove_pointer_spaces_single(line: &str) -> String {
     let chars: Vec<char> = line.chars().collect();
-    let mut result = String::new();
+    let mut result = String::with_capacity(line.len());
     let mut in_string = false;
     let mut in_char = false;
     let mut escaped = false;
@@ -3718,20 +3933,20 @@ fn remove_pointer_spaces_single(line: String) -> String {
     return result;
 }
 
-pub fn switch_pointer_spaces(line: String) -> String {
+pub fn switch_pointer_spaces(line: &str) -> String {
     return remove_pointer_spaces(line);
 }
 
-pub fn remove_reference_spaces(line: String) -> String {
+pub fn remove_reference_spaces(line: &str) -> String {
     if line.contains('\n') {
         return line
             .split('\n')
             .map(|l| {
                 let t = line_trimmed_for_comment_check(l);
                 if t.starts_with("//") || t.starts_with("/*") || t.starts_with('*') {
-                    l.to_string()
+                    Cow::Borrowed(l)
                 } else {
-                    remove_reference_spaces_single(l.to_string())
+                    Cow::Owned(remove_reference_spaces_single(l))
                 }
             })
             .collect::<Vec<_>>()
@@ -3740,9 +3955,9 @@ pub fn remove_reference_spaces(line: String) -> String {
     remove_reference_spaces_single(line)
 }
 
-fn remove_reference_spaces_single(line: String) -> String {
+fn remove_reference_spaces_single(line: &str) -> String {
     let chars: Vec<char> = line.chars().collect();
-    let mut result = String::new();
+    let mut result = String::with_capacity(line.len());
     let mut in_string = false;
     let mut in_char = false;
     let mut escaped = false;
@@ -3826,22 +4041,15 @@ fn remove_reference_spaces_single(line: String) -> String {
     return result;
 }
 
-fn remove_single_tab(line: &String) -> String {
-    let mut line = line.clone();
-    if line.starts_with("\t") { line.remove(0); }
-    return line;
+fn remove_single_tab(line: &str) -> &str {
+    line.strip_prefix('\t').unwrap_or(line)
 }
 
-pub fn remove_all_spaces(line: String) -> String {
-    let chars: Vec<char> = line.chars().filter(|c| *c != ' ').collect();
-    let mut result = String::new();
-    for c in chars {
-        result.push(c);
-    }
-    return result;
+pub fn remove_all_spaces(line: &str) -> String {
+    line.chars().filter(|&c| c != ' ').collect()
 }
 
-pub fn remove_object_constructor_space(line: String) -> String {
+pub fn remove_object_constructor_space(line: &str) -> String {
     let chars: Vec<char> = line.chars().collect();
     if let Some(pos) = chars.iter().position(|&c| c == '(') {
         if pos > 0 && chars[pos - 1] == ' ' {
@@ -3854,10 +4062,10 @@ pub fn remove_object_constructor_space(line: String) -> String {
             return out;
         }
     }
-    return line;
+    line.to_string()
 }
 
-pub fn remove_unnecessary_spaces(line: &String) -> String {
+pub fn remove_unnecessary_spaces(line: &str) -> String {
     if line.contains('\n') {
         let mut out = Vec::<String>::new();
         for (idx, sub) in line.split('\n').enumerate() {
@@ -3987,59 +4195,51 @@ fn remove_unnecessary_spaces_single(line: &str) -> String {
     return result.trim().to_string();
 }
 
-pub fn remove_double_spaces(line: &String) -> String {
-    let mut result = "".to_string();
-    for (i, c) in line.chars().enumerate() {
-        if i < line.len()-1 {
-            if c == ' ' && line.at(i+1) == Some(' ') { continue; }
+pub fn remove_double_spaces(line: &str) -> String {
+    let mut result = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == ' ' && chars.peek() == Some(&' ') {
+            continue;
         }
-        result += c.to_string().as_str();
+        result.push(c);
     }
-    return result;
+    result
 }
 
-pub fn remove_whitespace_before_commas(line: &String) -> String {
-    let mut result = "".to_string();
-    for (i, c) in line.chars().enumerate() {
-        if i < line.len()-1 {
-            if c == ' ' && line.at(i+1) == Some(',') { continue; }
+pub fn remove_whitespace_before_commas(line: &str) -> String {
+    let mut result = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == ' ' && chars.peek() == Some(&',') {
+            continue;
         }
-        result += c.to_string().as_str();
+        result.push(c);
     }
-    return result;
+    result
 }
 
-pub fn add_leading_whitespace(src: String, amount: usize) -> String {
-    let mut prefix: String = "".to_string();
-    for _ in 0..amount { prefix += " " };
-    return format!("{}{}", prefix, src);
-}
-
-pub fn count_leading_chars(src: &String, target: char) -> usize {
-    let mut count = 0;
-    for c in src.chars() {
-        if c != target {
-            break;
-        }
-        count += 1;
+pub fn add_leading_whitespace(src: &str, amount: usize) -> String {
+    let mut out = String::with_capacity(amount + src.len());
+    for _ in 0..amount {
+        out.push(' ');
     }
-    return count;
+    out.push_str(src);
+    out
 }
 
-pub fn sanitize(input: String) -> String {
+pub fn count_leading_chars(src: &str, target: char) -> usize {
+    src.chars().take_while(|&c| c == target).count()
+}
+
+pub fn sanitize(input: &str) -> String {
     let allowed_chars = Regex::new(r"[a-zA-Z0-9.\-_\+\=/\s]+").unwrap();
-    let captures = allowed_chars.captures(&input).unwrap();
-    let result = captures.get(0).unwrap().as_str().to_string();
-    return result;
+    let captures = allowed_chars.captures(input).unwrap();
+    captures.get(0).unwrap().as_str().to_string()
 }
 
 fn line_has_no_alphanumeric(line: &str) -> bool {
-    for c in line.chars() {
-        if c.is_alphanumeric() {
-            return false;
-        }
-    }
-    return true;
+    !line.chars().any(|c| c.is_alphanumeric())
 }
 
 pub fn remove_blank_lines(lines: Vec<&str>) -> String {
@@ -4047,10 +4247,9 @@ pub fn remove_blank_lines(lines: Vec<&str>) -> String {
     return result.join("\n");
 }
 
-pub fn write_file(path: &String, contents: &[u8]) -> Result<(), Error> {
+pub fn write_file(path: &str, contents: &[u8]) -> Result<(), Error> {
     let mut dest = File::create(path).unwrap();
-    let ok = dest.write_all(contents);
-    return ok;
+    dest.write_all(contents)
 }
 
 pub fn extract_txt_opts(args: Vec<&str>) -> options::TxtOpts {
@@ -4112,70 +4311,68 @@ pub fn check_for_even_line_length(lines: &Vec<&str>) -> bool {
     return count == 0;
 }
 
-pub fn ends_with_brace(line: &String) -> bool {
-    return line.trim_end().ends_with("{");
+pub const FILE_EXTENSIONS: &[&str] = &[
+    ".cpp", ".cc", ".C", ".c", ".hpp", ".hh", ".H", ".h", ".go", ".py", ".txt",
+];
+
+pub fn ends_with_brace(line: &str) -> bool {
+    line.trim_end().ends_with('{')
 }
 
-fn check_line_is_blank(line: &String) -> bool {
-    return line.is_empty() || line.chars().all(|x| x.is_whitespace() || x == '\t');
+fn check_line_is_blank(line: &str) -> bool {
+    line.is_empty() || line.chars().all(|x| x.is_whitespace() || x == '\t')
 }
 
-pub fn infer_file_type(filepath: &String) -> String {
-    let supported_types = get_file_extensions_list();
-    for item in supported_types {
-        if filepath.contains(&item) {
-            return item.to_string();
+pub fn infer_file_type(filepath: &str) -> &'static str {
+    for &item in FILE_EXTENSIONS {
+        if filepath.ends_with(item) {
+            return item;
         }
     }
-    return "unknown".to_string();
+    for &item in FILE_EXTENSIONS {
+        if filepath.contains(item) {
+            return item;
+        }
+    }
+    "unknown"
 }
 
-pub fn get_file_extensions_list() -> Vec<String> {
+pub fn get_file_extensions_list() -> &'static [&'static str] {
     // .cpp has to stay before .c, otherwise it breaks
-    let exts = {
-        vec![".cpp", ".cc", ".C", ".c", ".hpp", ".hh", ".H", ".h", ".go", ".py", ".txt"]
-            .into_iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>()
-    };
-    return exts;
+    FILE_EXTENSIONS
 }
 
 pub fn display_file_extensions() {
-    let lines = get_file_extensions_list();
-    for line in lines {
+    for &line in get_file_extensions_list() {
         println!("{}", line);
     }
 }
 
-pub fn check_valid_file_ext(path: &String) -> bool {
-    let exts = get_file_extensions_list();
-    for ext in exts {
-        if path.contains(&ext) { return true; }
-    }
-    return false;
+pub fn check_valid_file_ext(path: &str) -> bool {
+    get_file_extensions_list().iter().any(|&ext| path.contains(ext))
 }
 
 pub fn print_usage() {
 println!(
 "
-USAGE:\nblfmt <file-path> <flags + opts>
+USAGE:\nblfmt [flags + opts] <file-path>
 
 FLAGS:
     -h or --help
+    -w or --write
 (Code only):
     -  or --stdin <file-ext>
 (C/C++ only):
     -s or --style allman|knr|stroustrup(default)
 (Txt only):
-    -o or --options <columns> <spacing> (numbers)
+    -o, --opts, or --options <columns> <spacing> (numbers)
     -t or --titles \"Places\" \"where\" \"you\" \"want\" \"paragraphs\" ...
-    (The txt flags may be combined)
+    (Flags and options may be placed in any order)
 "
 );
 }
 
-pub fn write_results(path: &String, results: String) {
+pub fn write_results(path: &str, results: &str) {
     let ok = write_file(path, results.as_bytes());
     match ok {
         Ok(_) => println!("Successfully wrote: '{}'", path),
@@ -4183,7 +4380,543 @@ pub fn write_results(path: &String, results: String) {
     };
 }
 
-pub fn print_results(results: &String) {
+pub fn print_results(results: &str) {
     println!("{}", results);
 }
+
+pub fn find_define_end_byte(start_byte: usize, src: &str) -> usize {
+    let bytes = src.as_bytes();
+    let n = bytes.len();
+    let mut i = start_byte;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut in_block_comment = false;
+    let mut in_line_comment = false;
+
+    while i < n {
+        let b = bytes[i];
+        if in_line_comment {
+            if b == b'\n' {
+                return i;
+            }
+            i += 1;
+            continue;
+        }
+        if in_block_comment {
+            if i + 1 < n && b == b'*' && bytes[i + 1] == b'/' {
+                in_block_comment = false;
+                i += 2;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+        if in_string {
+            if b == b'\\' && i + 1 < n && bytes[i + 1] != b'\n' && bytes[i + 1] != b'\r' {
+                i += 2;
+                continue;
+            }
+            if b == b'"' {
+                in_string = false;
+                i += 1;
+                continue;
+            }
+            if b == b'\n' {
+                let mut k = i;
+                while k > start_byte && (bytes[k - 1] == b'\r' || bytes[k - 1] == b' ' || bytes[k - 1] == b'\t') {
+                    k -= 1;
+                }
+                if k > start_byte && bytes[k - 1] == b'\\' {
+                    i += 1;
+                    continue;
+                }
+                return i;
+            }
+            i += 1;
+            continue;
+        }
+        if in_char {
+            if b == b'\\' && i + 1 < n && bytes[i + 1] != b'\n' && bytes[i + 1] != b'\r' {
+                i += 2;
+                continue;
+            }
+            if b == b'\'' {
+                in_char = false;
+                i += 1;
+                continue;
+            }
+            if b == b'\n' {
+                return i;
+            }
+            i += 1;
+            continue;
+        }
+
+        if i + 1 < n && b == b'/' && bytes[i + 1] == b'*' {
+            in_block_comment = true;
+            i += 2;
+            continue;
+        }
+        if i + 1 < n && b == b'/' && bytes[i + 1] == b'/' {
+            in_line_comment = true;
+            i += 2;
+            continue;
+        }
+        if b == b'"' {
+            in_string = true;
+            i += 1;
+            continue;
+        }
+        if b == b'\'' {
+            in_char = true;
+            i += 1;
+            continue;
+        }
+        if b == b'\n' {
+            let mut k = i;
+            while k > start_byte && (bytes[k - 1] == b'\r' || bytes[k - 1] == b' ' || bytes[k - 1] == b'\t') {
+                k -= 1;
+            }
+            if k > start_byte && bytes[k - 1] == b'\\' {
+                i += 1;
+                continue;
+            }
+            return i;
+        }
+        i += 1;
+    }
+    n
+}
+
+pub fn consume_define_node(node: tree_sitter::Node, src: &str) -> (String, usize) {
+    let start = node.start_byte();
+    let full_end = find_define_end_byte(start, src).max(node.end_byte());
+    let mut effective_end = node.end_byte();
+    if full_end > node.end_byte() {
+        let mut safe_to_extend = true;
+        let mut sib_opt = node.next_sibling();
+        while let Some(sib) = sib_opt {
+            if sib.start_byte() >= full_end {
+                break;
+            }
+            if sib.end_byte() > full_end + 1 {
+                safe_to_extend = false;
+                break;
+            }
+            sib_opt = sib.next_sibling();
+        }
+        if safe_to_extend {
+            effective_end = full_end;
+        }
+    }
+    let formatted = format_define_directive(&src[start..effective_end]);
+    (formatted, effective_end)
+}
+
+fn strip_line_continuation(line: &str) -> (&str, bool) {
+    let rtrimmed = line.trim_end_matches(|c| c == ' ' || c == '\t' || c == '\r');
+    if let Some(without_slash) = rtrimmed.strip_suffix('\\') {
+        (without_slash.trim_end_matches(|c| c == ' ' || c == '\t'), true)
+    } else {
+        (rtrimmed, false)
+    }
+}
+
+fn visual_column_width(line: &str, tab_width: usize) -> usize {
+    let mut col = 0usize;
+    for c in line.chars() {
+        if c == '\t' {
+            col = (col / tab_width + 1) * tab_width;
+        } else {
+            col += 1;
+        }
+    }
+    col
+}
+
+fn format_macro_param_list(params_inner: &str) -> String {
+    if params_inner.trim().is_empty() {
+        return "()".to_string();
+    }
+    let formatted: Vec<&str> = params_inner.split(',').map(|p| p.trim()).collect();
+    format!("({})", formatted.join(", "))
+}
+
+fn parse_define_signature(line0_core: &str) -> Option<(String, &str, bool)> {
+    let s = line0_core.trim_start();
+    let after_hash = s.strip_prefix('#')?.trim_start();
+    let after_kw = after_hash.strip_prefix("define")?;
+    if !after_kw.is_empty() && !after_kw.starts_with(|c: char| c.is_ascii_whitespace()) {
+        return None;
+    }
+    let rest = after_kw.trim_start();
+    let name_len = rest
+        .bytes()
+        .take_while(|&b| b.is_ascii_alphanumeric() || b == b'_' || b == b'$')
+        .count();
+    if name_len == 0 {
+        return None;
+    }
+    let name = &rest[..name_len];
+    let after_name = &rest[name_len..];
+    if after_name.starts_with('(') {
+        // Function-like macro: '(' immediately follows NAME with no whitespace
+        let bytes = after_name.as_bytes();
+        let mut depth = 0usize;
+        let mut close_idx = None;
+        for (idx, &b) in bytes.iter().enumerate() {
+            if b == b'(' {
+                depth += 1;
+            } else if b == b')' {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    close_idx = Some(idx);
+                    break;
+                }
+            }
+        }
+        if let Some(cidx) = close_idx {
+            let params_fmt = format_macro_param_list(&after_name[1..cidx]);
+            let sig = format!("#define {}{}", name, params_fmt);
+            return Some((sig, &after_name[cidx + 1..], false));
+        } else {
+            // Parameter list itself spans multiple lines
+            let sig = format!("#define {}{}", name, after_name.trim_end());
+            return Some((sig, "", true));
+        }
+    }
+    Some((format!("#define {}", name), after_name, false))
+}
+
+fn pop_matching_delim(stack: &mut Vec<char>, closer: char) {
+    let target = match closer {
+        '}' => '{',
+        ')' => '(',
+        ']' => '[',
+        _ => return,
+    };
+    if target == '{' {
+        if let Some(pos) = stack.iter().rposition(|&c| c == '{') {
+            stack.truncate(pos);
+        }
+    } else if let Some(pos) = stack.iter().rposition(|&c| c == target || c == '{') {
+        if stack[pos] == target {
+            stack.remove(pos);
+        }
+    }
+}
+
+fn update_define_delim_stack(s: &str, stack: &mut Vec<char>, in_block_comment: &mut bool) {
+    let chars: Vec<char> = s.chars().collect();
+    let n = chars.len();
+    let mut i = 0usize;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+
+    while i < n {
+        let c = chars[i];
+        if *in_block_comment {
+            if i + 1 < n && c == '*' && chars[i + 1] == '/' {
+                *in_block_comment = false;
+                i += 2;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+        if escaped {
+            escaped = false;
+            i += 1;
+            continue;
+        }
+        if c == '\\' && (in_string || in_char) {
+            escaped = true;
+            i += 1;
+            continue;
+        }
+        if c == '"' && !in_char {
+            in_string = !in_string;
+            i += 1;
+            continue;
+        }
+        if c == '\'' && !in_string {
+            in_char = !in_char;
+            i += 1;
+            continue;
+        }
+        if !in_string && !in_char {
+            if i + 1 < n && c == '/' && chars[i + 1] == '/' {
+                break;
+            }
+            if i + 1 < n && c == '/' && chars[i + 1] == '*' {
+                *in_block_comment = true;
+                i += 2;
+                continue;
+            }
+            match c {
+                '{' | '(' | '[' => stack.push(c),
+                '}' | ')' | ']' => pop_matching_delim(stack, c),
+                _ => {}
+            }
+        }
+        i += 1;
+    }
+}
+
+pub fn format_define_directive(raw_define: &str) -> String {
+    let raw_define = raw_define.trim_end_matches(|c| c == '\n' || c == '\r');
+    let raw_lines: Vec<&str> = raw_define.split('\n').collect();
+    if raw_lines.len() <= 1 {
+        let line = raw_lines.first().copied().unwrap_or("").trim();
+        if let Some((sig, rem, _)) = parse_define_signature(line) {
+            let body = rem.trim();
+            if body.is_empty() {
+                return sig;
+            } else {
+                return format!("{} {}", sig, body);
+            }
+        }
+        return line.to_string();
+    }
+
+    let (line0_core, line0_has_slash) = strip_line_continuation(raw_lines[0]);
+    let Some((sig, rem0, unclosed_params_on_line0)) = parse_define_signature(line0_core) else {
+        return raw_define.trim_end().to_string();
+    };
+
+    let mut out_lines: Vec<(String, bool)> = Vec::with_capacity(raw_lines.len() + 1);
+    let mut body_items: Vec<(&str, bool)> = Vec::with_capacity(raw_lines.len());
+
+    let rem0_trim = rem0.trim();
+    let rem0_is_only_comment = !rem0_trim.is_empty()
+        && (rem0_trim.starts_with("//")
+            || (rem0_trim.starts_with("/*") && rem0_trim.ends_with("*/") && !rem0_trim[2..rem0_trim.len() - 2].contains("*/")));
+
+    if unclosed_params_on_line0 || rem0_trim.is_empty() {
+        out_lines.push((sig, line0_has_slash));
+    } else if rem0_is_only_comment {
+        out_lines.push((format!("{} {}", sig, rem0_trim), line0_has_slash));
+    } else {
+        out_lines.push((sig, true));
+        body_items.push((rem0_trim, line0_has_slash));
+    }
+
+    for &rl in &raw_lines[1..] {
+        body_items.push(strip_line_continuation(rl));
+    }
+
+    let mut delim_stack: Vec<char> = Vec::new();
+    let mut in_block_comment = false;
+    let mut prev_incomplete_expr = false;
+    if unclosed_params_on_line0 {
+        delim_stack.push('(');
+    }
+
+    for (raw_core, has_slash) in body_items {
+        let trimmed = raw_core.trim();
+        if trimmed.is_empty() {
+            out_lines.push((String::new(), has_slash));
+            continue;
+        }
+
+        if in_block_comment {
+            let brace_count = delim_stack.iter().filter(|&&c| c == '{').count();
+            let in_open_paren = delim_stack.last().map(|&c| c == '(' || c == '[').unwrap_or(false);
+            let tabs = 1 + brace_count + usize::from(in_open_paren);
+            out_lines.push((format!("{}{}", "\t".repeat(tabs), trimmed), has_slash));
+            update_define_delim_stack(trimmed, &mut delim_stack, &mut in_block_comment);
+            continue;
+        }
+
+        // Pop leading closing delimiters at the start of this line before computing its indentation
+        let mut lead_bytes = 0usize;
+        for ch in trimmed.chars() {
+            if matches!(ch, '}' | ')' | ']') {
+                pop_matching_delim(&mut delim_stack, ch);
+                lead_bytes += ch.len_utf8();
+            } else if ch == ' ' || ch == '\t' {
+                lead_bytes += ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+
+        let brace_count = delim_stack.iter().filter(|&&c| c == '{').count();
+        let in_open_paren = delim_stack.last().map(|&c| c == '(' || c == '[').unwrap_or(false);
+        let is_case_or_default = brace_count > 0
+            && (trimmed.starts_with("case ")
+                || trimmed.starts_with("case(")
+                || trimmed.starts_with("default:")
+                || trimmed.starts_with("default :"));
+        let effective_brace = if is_case_or_default {
+            brace_count - 1
+        } else {
+            brace_count
+        };
+        let extra_expr = if !in_open_paren
+            && prev_incomplete_expr
+            && !trimmed.starts_with('{')
+            && !trimmed.starts_with('}')
+            && !trimmed.starts_with("else")
+            && !trimmed.starts_with("while")
+        {
+            1
+        } else {
+            0
+        };
+        let tabs = if trimmed.starts_with('#') && !trimmed.starts_with("##") && trimmed.len() > 1 && trimmed[1..].trim_start().starts_with(|c: char| c.starts_with_preproc_kw(trimmed)) {
+            0
+        } else {
+            1 + effective_brace + usize::from(in_open_paren) + extra_expr
+        };
+
+        out_lines.push((format!("{}{}", "\t".repeat(tabs), trimmed), has_slash));
+
+        update_define_delim_stack(&trimmed[lead_bytes..], &mut delim_stack, &mut in_block_comment);
+
+        let code_no_comment = strip_trailing_comment(trimmed).trim_end();
+        if !code_no_comment.is_empty() && !trimmed.starts_with("/*") {
+            let in_paren_after = delim_stack.last().map(|&c| c == '(' || c == '[').unwrap_or(false);
+            let is_colon_label = code_no_comment.ends_with(':')
+                && !code_no_comment.ends_with("::")
+                && (is_case_or_default || !code_no_comment.contains('?'));
+            prev_incomplete_expr = !in_paren_after
+                && !is_colon_label
+                && code_no_comment.ends_with(|c: char| {
+                    matches!(c, '=' | '+' | '-' | '*' | '/' | '%' | '|' | '&' | '^' | '<' | '>' | '?' | ':')
+                });
+        }
+    }
+
+    let mut rendered = Vec::<String>::with_capacity(out_lines.len());
+    for (content, has_slash) in out_lines {
+        if has_slash {
+            if content.is_empty() {
+                rendered.push("\\".to_string());
+            } else {
+                rendered.push(format!("{} \\", content));
+            }
+        } else {
+            rendered.push(content);
+        }
+    }
+    rendered.join("\n")
+}
+
+trait PreprocKwHelper {
+    fn starts_with_preproc_kw(self, full_trimmed: &str) -> bool;
+}
+
+impl PreprocKwHelper for char {
+    fn starts_with_preproc_kw(self, full_trimmed: &str) -> bool {
+        let after = full_trimmed.strip_prefix('#').unwrap_or("").trim_start();
+        after.starts_with("if ")
+            || after.starts_with("if(")
+            || after.starts_with("ifdef ")
+            || after.starts_with("ifndef ")
+            || after.starts_with("elif ")
+            || after.starts_with("elif(")
+            || after == "else"
+            || after.starts_with("else ")
+            || after == "endif"
+            || after.starts_with("endif ")
+            || after.starts_with("endif/")
+    }
+}
+
+pub fn align_multiline_define_backslashes(file: &mut String, target_col_limit: usize) {
+    let has_trailing_nl = file.ends_with('\n');
+    let mut lines: Vec<String> = file.lines().map(|s| s.to_string()).collect();
+    let n = lines.len();
+    let mut i = 0usize;
+
+    while i < n {
+        let t = lines[i].trim_start();
+        if t.starts_with("#define") && lines[i].trim_end().ends_with('\\') {
+            let start = i;
+            let mut end = i;
+            let mut in_comment = has_unclosed_block_comment(&lines[i]);
+            while end + 1 < n && (lines[end].trim_end().ends_with('\\') || in_comment) {
+                end += 1;
+                if in_comment {
+                    if lines[end].contains("*/") {
+                        in_comment = false;
+                    }
+                } else if has_unclosed_block_comment(&lines[end]) {
+                    in_comment = true;
+                }
+            }
+
+            let mut max_w = 0usize;
+            let mut stripped: Vec<(String, bool, usize)> = Vec::with_capacity(end - start + 1);
+            for line in &lines[start..=end] {
+                let (core, has_slash) = strip_line_continuation(line);
+                let w = if has_slash { visual_column_width(core, 4) } else { 0 };
+                if has_slash && w > max_w {
+                    max_w = w;
+                }
+                stripped.push((core.to_string(), has_slash, w));
+            }
+
+            let slash_col = target_col_limit.saturating_sub(1).max(max_w + 1);
+            for (offset, (core, has_slash, w)) in stripped.into_iter().enumerate() {
+                if has_slash {
+                    let pad = slash_col.saturating_sub(w).max(usize::from(!core.is_empty()));
+                    lines[start + offset] = format!("{}{}\\", core, " ".repeat(pad));
+                }
+            }
+
+            i = end + 1;
+        } else {
+            i += 1;
+        }
+    }
+
+    let mut out = lines.join("\n");
+    if has_trailing_nl && !out.ends_with('\n') {
+        out.push('\n');
+    }
+    *file = out;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn keeps_single_line_defines_on_one_line() {
+        assert_eq!(
+            format_define_directive("#define PATH_BUFFER_MAX 1024\n"),
+            "#define PATH_BUFFER_MAX 1024"
+        );
+        assert_eq!(
+            format_define_directive("#define CLAMP(val,lo,hi) ((val) < (lo) ? (lo) : (val))\n"),
+            "#define CLAMP(val, lo, hi) ((val) < (lo) ? (lo) : (val))"
+        );
+        assert_eq!(
+            format_define_directive("#define GLAD_GLX\n"),
+            "#define GLAD_GLX"
+        );
+    }
+
+    #[test]
+    fn formats_and_aligns_multiline_define_backslashes() {
+        let raw = "#define P(a,b,c) \\\ndo { \\\n  if (a) { \\\n    b = c; \\\n  } \\\n} while (0)\n";
+        let mut formatted = format_define_directive(raw);
+        align_multiline_define_backslashes(&mut formatted, 100);
+        let lines: Vec<&str> = formatted.lines().collect();
+        assert_eq!(lines.len(), 6);
+        for line in &lines[..5] {
+            assert!(line.ends_with('\\'));
+            assert_eq!(visual_column_width(line, 4), 100);
+        }
+        assert!(lines[1].starts_with("\tdo {"));
+        assert!(lines[2].starts_with("\t\tif (a) {"));
+        assert!(lines[3].starts_with("\t\t\tb = c;"));
+        assert!(lines[4].starts_with("\t\t}"));
+        assert_eq!(lines[5], "\t} while (0)");
+    }
+}
+
 

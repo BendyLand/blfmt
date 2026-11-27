@@ -22,8 +22,8 @@ the original reference files in safe/ using unified diff, prints a status table,
 and writes the overview + full diffs to a report file.
 
 Targets:
-  todo | easy | adv       Run only the specified test suite(s) (default: all three)
-  path/to/file            Run on specific file(s), e.g. tests/todo/commands.c
+  todo | easy | adv | long  Run only the specified test suite(s) (default: todo easy adv)
+  path/to/file              Run on specific file(s), e.g. tests/todo/commands.c
 
 Options:
   -o, --output <file>     Output report path (default: diffs_fmt.diff)
@@ -201,7 +201,7 @@ for rel in "${REL_FILES[@]}"; do
 	set -e
 
 	# Detect unhandled AST println! diagnostics from c_ast.rs / cpp_ast.rs
-	grep -nE "^(You shouldn't be here \(|Unknown (c |cpp )?grammar name)" "$fmt_out" >"$ast_hits_file" || true
+	grep -nE "^(You shouldn't be here[: ]|Unknown (c |cpp )?grammar name|Using declaration:|Gnu asm expression:)" "$fmt_out" >"$ast_hits_file" || true
 	ast_warn_count="$(wc -l <"$ast_hits_file" | tr -d ' ')"
 	TOTAL_AST_WARNS=$((TOTAL_AST_WARNS + ast_warn_count))
 
