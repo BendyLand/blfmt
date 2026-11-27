@@ -4,41 +4,47 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::process::Command;
 
-pub fn format_c_file(path: String, style: utils::Style, write_arg: bool, text: String) {
-    let ast = if text.len() > 0 { c_format::parse_existing_c_file(text.clone()) }
-              else { c_format::parse_c_file(path.clone()) };
-    let contents = std::fs::read_to_string(&path).unwrap_or(text);
-    if contents == "".to_string() {
+pub fn format_c_file(path: &str, style: utils::Style, write_arg: bool, text: String) {
+    let contents = if !text.is_empty() {
+        text
+    } else {
+        std::fs::read_to_string(path).unwrap_or_default()
+    };
+    if contents.is_empty() {
         println!("'{}' not found.", path);
         return;
     }
-    let result = c_ast::traverse_c_ast(ast, contents, style);
-    if write_arg { utils::write_results(&path, result); }
+    let ast = c_format::parse_existing_c_file(&contents);
+    let result = c_ast::traverse_c_ast(&ast, &contents, style);
+    if write_arg { utils::write_results(path, &result); }
     else { utils::print_results(&result); }
 }
 
-pub fn format_cpp_file(path: String, style: utils::Style, write_arg: bool, text: String) {
-    let ast = if text.len() > 0 { cpp_format::parse_existing_cpp_file(text.clone()) }
-              else { cpp_format::parse_cpp_file(path.clone()) };
-    let contents = std::fs::read_to_string(&path).unwrap_or(text);
-    if contents == "".to_string() {
+pub fn format_cpp_file(path: &str, style: utils::Style, write_arg: bool, text: String) {
+    let contents = if !text.is_empty() {
+        text
+    } else {
+        std::fs::read_to_string(path).unwrap_or_default()
+    };
+    if contents.is_empty() {
         println!("'{}' not found.", path);
         return;
     }
-    let result = cpp_ast::traverse_cpp_ast(ast, contents, style);
-    if write_arg { utils::write_results(&path, result); }
+    let ast = cpp_format::parse_existing_cpp_file(&contents);
+    let result = cpp_ast::traverse_cpp_ast(&ast, &contents, style);
+    if write_arg { utils::write_results(path, &result); }
     else { utils::print_results(&result); }
 }
 
-pub fn format_py_file(path: String) {
-    let command = utils::sanitize(format!("black {}", path));
+pub fn format_py_file(path: &str) {
+    let command = utils::sanitize(&format!("black {}", path));
     let res = Command::new("sh").arg("-c").arg(command).output().unwrap();
     let res = String::from_utf8(res.stderr).unwrap_or_default();
     println!("{}", res);
 }
 
-pub fn format_go_file(path: String) {
-    let command = utils::sanitize(format!("gofmt -w {}", path));
+pub fn format_go_file(path: &str) {
+    let command = utils::sanitize(&format!("gofmt -w {}", path));
     let res = Command::new("sh").arg("-c").arg(command).output().unwrap();
     let err = String::from_utf8(res.stderr).unwrap_or_default();
     if err.as_str() != "" {
@@ -49,10 +55,16 @@ pub fn format_go_file(path: String) {
     }
 }
 
-pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[String], write_arg: bool) {
-    let path_clone = path.clone();
-    let file_contents = fs::read_to_string(&path).unwrap();
-    let result = String::new();
+pub fn format_txt_file(path: &str, opts: options::TxtOpts, opt_titles: &[String], write_arg: bool, text: String) {
+    let file_contents = if !text.is_empty() {
+        text
+    } else {
+        fs::read_to_string(path).unwrap_or_default()
+    };
+    if file_contents.is_empty() {
+        println!("'{}' not found.", path);
+        return;
+    }
     let (cols, spacing) = (opts.columns, opts.spacing);
     let paragraphs = group::group_paragraphs(&file_contents, opt_titles);
     let mut result = Vec::<String>::new();
@@ -65,6 +77,6 @@ pub fn format_txt_file(path: String, opts: options::TxtOpts, opt_titles: &[Strin
         sep += "\n";
     }
     let paragraphs = result.join(sep.as_str());
-    if write_arg { utils::write_results(&path, paragraphs); }
+    if write_arg { utils::write_results(path, &paragraphs); }
     else { utils::print_results(&paragraphs); }
 }

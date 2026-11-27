@@ -14,44 +14,44 @@ mod utils;
 mod options;
 mod c_format;
 mod cpp_format;
+mod ast;
 mod c_ast;
 mod cpp_ast;
 mod txt_format;
 
 fn main() {
-    let maybe_args: Option<(String, Vec<String>)> = parser::parse_args();
-    let (filepath, args) = {
-        match maybe_args {
-            Option::Some((a, b)) => (a, b),
-            Option::None => return,
-        }
+    let Some(cli) = parser::parse_args() else {
+        return;
     };
-    let help_arg: usize = options::check_help_arg(&args);
-    if help_arg == 1 { return; }
-    let stdin_arg: String = options::check_stdin_arg(&args);
-    let write_arg: bool = options::check_write_arg(&args);
-    // the variable being operated on is called "filepath",
-    // but that is where the ext was saved if stdin.len > 0
-    let file_type: String = if stdin_arg.len() > 0 { filepath.clone() } 
-                    else { utils::infer_file_type(&filepath) }; 
-    match file_type.as_str() {
+    if cli.help {
+        options::print_help_menu();
+        return;
+    }
+    let stdin_text = if cli.is_stdin {
+        options::read_stdin_text()
+    } else {
+        String::new()
+    };
+    let file_type: &str = if cli.is_stdin {
+        utils::infer_file_type(&cli.filepath)
+    } else {
+        utils::infer_file_type(&cli.filepath)
+    };
+    match file_type {
         ".txt" => {
-            let opts: options::TxtOpts = options::get_txt_opts(&args);
-            format::format_txt_file(filepath, opts, &args, write_arg);
+            format::format_txt_file(&cli.filepath, cli.txt_opts, &cli.titles, cli.write, stdin_text);
         },
         ".go" => {
-            format::format_go_file(filepath);
+            format::format_go_file(&cli.filepath);
         },
         ".cpp" | ".cc" | ".C" | ".h" | ".hpp" | ".hh" | ".H" => {
-            let style = options::get_c_style(&args);
-            format::format_cpp_file(filepath, style, write_arg, stdin_arg);
+            format::format_cpp_file(&cli.filepath, cli.style, cli.write, stdin_text);
         },
         ".c" => {
-            let style = options::get_c_style(&args);
-            format::format_c_file(filepath, style, write_arg, stdin_arg);
+            format::format_c_file(&cli.filepath, cli.style, cli.write, stdin_text);
         },
         ".py" => {
-            format::format_py_file(filepath);
+            format::format_py_file(&cli.filepath);
         },
         _ => {
             println!("Unsupported file type.");
@@ -61,4 +61,3 @@ fn main() {
         },
     };
 }
-

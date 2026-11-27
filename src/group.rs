@@ -39,11 +39,11 @@ fn group_paragraphs_by_line_length(lines: Vec<&str>) -> Vec<String> {
     return final_res;
 }
 
-pub fn group_paragraphs(text: &String, args: &[String]) -> Vec<String> {
+pub fn group_paragraphs(text: &str, titles: &[String]) -> Vec<String> {
     let result;
     let lines = text.split("\n").collect::<Vec<&str>>();
-    if args.contains(&"-t".to_string()) || args.contains(&"--titles".to_string()) {
-        result = group_paragraph_by_titles(lines, args);
+    if !titles.is_empty() {
+        result = group_paragraph_by_titles(lines, titles);
     }
     else if utils::check_for_even_line_length(&lines) {
         result = lines.into_iter().map(|line| line.to_string()).collect::<Vec<String>>();
